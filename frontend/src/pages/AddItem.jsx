@@ -33,14 +33,14 @@ const AddItem = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: CATEGORIES[0],
+    category: '',
     imageUrl: '',
   });
 
   // Structured Indian location states for lending pickup point
   const [locationData, setLocationData] = useState({
     pincode: '',
-    state: 'Tamil Nadu',
+    state: '',
     district: '',
     area: '',
     landmark: '',
@@ -56,24 +56,6 @@ const AddItem = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Pre-populate with logged-in user's profile location if present
-  useEffect(() => {
-    if (user) {
-      const userState = user.state || 'Tamil Nadu';
-      const userDistrict = user.district || INDIAN_LOCATIONS[userState]?.[0] || '';
-      setLocationData({
-        pincode: user.pincode || '',
-        state: userState,
-        district: userDistrict,
-        area: user.city || '',
-        landmark: user.address || '',
-      });
-      if (user.city) {
-        setAvailablePostOffices([user.city]);
-      }
-    }
-  }, [user]);
 
   // Handle Indian Postal PIN code auto-lookup (6 digits)
   const handlePincodeChange = async (e) => {
@@ -128,31 +110,30 @@ const AddItem = () => {
 
   const handleStateChange = (e) => {
     const selectedState = e.target.value;
-    const defaultDistrict = INDIAN_LOCATIONS[selectedState]?.[0] || '';
     setLocationData((prev) => ({
       ...prev,
       state: selectedState,
-      district: defaultDistrict,
+      district: '',
       area: '',
     }));
     setAvailablePostOffices([]);
   };
 
   const handleUseProfileAddress = () => {
-    if (user) {
-      const userState = user.state || 'Tamil Nadu';
-      const userDistrict = user.district || INDIAN_LOCATIONS[userState]?.[0] || '';
+    if (user && (user.state || user.district || user.city || user.pincode)) {
       setLocationData({
         pincode: user.pincode || '',
-        state: userState,
-        district: userDistrict,
+        state: user.state || '',
+        district: user.district || '',
         area: user.city || '',
         landmark: user.address || '',
       });
       if (user.city) {
         setAvailablePostOffices([user.city]);
       }
-      setPincodeMessage(user.district ? `✅ Loaded from your profile: ${user.district}` : '');
+      setPincodeMessage(user.district ? `✅ Loaded from profile: ${user.district}, ${user.state || ''}` : '');
+    } else {
+      setPincodeMessage('⚠️ No saved address in profile. Please enter your 6-digit PIN code below.');
     }
   };
 
@@ -194,6 +175,12 @@ const AddItem = () => {
     e.preventDefault();
     setError('');
 
+    // Category is mandatory
+    if (!formData.category) {
+      setError('Please choose a valid Category for your item.');
+      return;
+    }
+
     // Photo is mandatory (file upload OR image URL)
     if (!selectedFile && !formData.imageUrl.trim()) {
       setError('Item photo is required. Please upload an image from your device or paste an image URL.');
@@ -208,7 +195,7 @@ const AddItem = () => {
 
     // Location validation
     if (!locationData.district || !locationData.state) {
-      setError('Please select your State and District for the pickup location.');
+      setError('Please select your State and District for the pickup location (or enter 6-digit PIN code).');
       return;
     }
 
@@ -298,8 +285,9 @@ const AddItem = () => {
                 required
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm bg-white"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm bg-white font-medium"
               >
+                <option value="">-- Choose Category * --</option>
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -364,8 +352,10 @@ const AddItem = () => {
                 <select
                   value={locationData.state}
                   onChange={handleStateChange}
+                  required
                   className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
                 >
+                  <option value="">-- Choose State / UT * --</option>
                   {Object.keys(INDIAN_LOCATIONS).map((st) => (
                     <option key={st} value={st}>
                       {st}
@@ -379,9 +369,13 @@ const AddItem = () => {
                 <select
                   value={locationData.district}
                   onChange={(e) => setLocationData((prev) => ({ ...prev, district: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                  required
+                  disabled={!locationData.state}
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium disabled:bg-gray-100 disabled:text-gray-400"
                 >
-                  <option value="">-- Choose District --</option>
+                  <option value="">
+                    {locationData.state ? '-- Choose District * --' : '-- Choose State First --'}
+                  </option>
                   {locationData.district && !availableDistricts.includes(locationData.district) && (
                     <option value={locationData.district}>{locationData.district}</option>
                   )}
