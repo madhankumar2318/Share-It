@@ -37,7 +37,7 @@ const Register = () => {
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumber = /\d/.test(password);
-  const hasSpecialChar = /[@$!%*?&]/.test(password);
+  const hasSpecialChar = /[@$!%*?&#_~^+=.-]/.test(password);
   const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
   const passwordsMatch = formData.password && formData.password === formData.confirmPassword;
 
@@ -415,7 +415,7 @@ const Register = () => {
                 </div>
                 <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>1 Special character (@$!%*?&)</span>
+                  <span>1 Special character (@$!%*?&_)</span>
                 </div>
                 <div className={`flex items-center gap-1.5 ${passwordsMatch && formData.confirmPassword ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
