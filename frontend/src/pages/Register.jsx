@@ -173,10 +173,17 @@ const Register = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Mobile Number *</label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-gray-300 bg-slate-100 text-gray-600 text-xs font-bold select-none">
-                  🇮🇳 +91
-                </span>
+              <div className="flex items-center rounded-xl border border-gray-300 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
+                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 border-r border-gray-200 text-gray-700 text-xs font-bold select-none whitespace-nowrap flex-shrink-0">
+                  <span className="w-4 h-2.5 rounded-xs overflow-hidden flex flex-col border border-gray-300 flex-shrink-0 shadow-xs">
+                    <span className="h-1/3 bg-[#FF9933] w-full block"></span>
+                    <span className="h-1/3 bg-white w-full flex items-center justify-center block">
+                      <span className="w-0.5 h-0.5 rounded-full bg-[#000080] block"></span>
+                    </span>
+                    <span className="h-1/3 bg-[#138808] w-full block"></span>
+                  </span>
+                  <span>+91</span>
+                </div>
                 <input
                   name="phone"
                   type="tel"
@@ -189,10 +196,10 @@ const Register = () => {
                     setFormData({ ...formData, phone: onlyNums });
                   }}
                   placeholder="9876543210"
-                  className="w-full px-3.5 py-2.5 rounded-r-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3 py-2.5 text-xs text-gray-800 placeholder-gray-400 bg-transparent outline-none"
                 />
               </div>
-              <p className="text-[10px] text-gray-400 mt-0.5">Enter 10-digit mobile number</p>
+              <p className="text-[10px] text-gray-400 mt-1">Enter 10-digit mobile number</p>
             </div>
           </div>
 
