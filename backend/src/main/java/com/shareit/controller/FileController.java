@@ -43,12 +43,32 @@ public class FileController {
 
     @GetMapping("/{fileName:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
+        com.shareit.model.StoredFile storedFile = fileStorageService.getStoredFile(fileName);
+        if (storedFile != null) {
+            String contentType = storedFile.getContentType();
+            if (contentType == null || contentType.isBlank()) {
+                contentType = "image/jpeg";
+            }
+            org.springframework.core.io.ByteArrayResource resource =
+                    new org.springframework.core.io.ByteArrayResource(storedFile.getData()) {
+                        @Override
+                        public String getFilename() {
+                            return storedFile.getId();
+                        }
+                    };
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + storedFile.getId() + "\"")
+                    .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                    .body(resource);
+        }
+
         Resource resource = fileStorageService.loadFileAsResource(fileName);
 
         String contentType = null;
         try {
             contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
-        } catch (IOException ignored) {
+        } catch (Exception ignored) {
         }
 
         if (contentType == null) {
@@ -58,6 +78,7 @@ public class FileController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
                 .body(resource);
     }
 }
