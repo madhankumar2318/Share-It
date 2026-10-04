@@ -66,6 +66,10 @@ const Register = () => {
     setLoading(true);
     try {
       const { confirmPassword, ...registerPayload } = formData;
+      // Ensure phone has +91 prefix
+      if (registerPayload.phone && !registerPayload.phone.startsWith('+91')) {
+        registerPayload.phone = `+91 ${registerPayload.phone}`;
+      }
       await register(registerPayload);
       navigate('/');
     } catch (err) {
@@ -114,15 +118,26 @@ const Register = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Mobile Number *</label>
-              <input
-                name="phone"
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="e.g. +91 98765 43210"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-gray-300 bg-slate-100 text-gray-600 text-xs font-bold select-none">
+                  🇮🇳 +91
+                </span>
+                <input
+                  name="phone"
+                  type="tel"
+                  required
+                  maxLength={10}
+                  pattern="[6-9][0-9]{9}"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const onlyNums = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, phone: onlyNums });
+                  }}
+                  placeholder="9876543210"
+                  className="w-full px-3.5 py-2.5 rounded-r-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-0.5">Enter 10-digit mobile number</p>
             </div>
           </div>
 
