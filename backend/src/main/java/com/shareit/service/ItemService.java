@@ -43,10 +43,32 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemResponseDto> getAllItems(String category, String search, ItemStatus status) {
-        String cleanCategory = (category != null && !category.trim().isEmpty()) ? category.trim() : null;
+        String cleanCategory = (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All")) ? category.trim() : null;
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
 
-        List<Item> items = itemRepository.searchItems(cleanCategory, cleanSearch, status);
+        org.springframework.data.jpa.domain.Specification<Item> spec = (root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+
+            if (cleanCategory != null) {
+                predicates.add(cb.equal(cb.lower(root.get("category")), cleanCategory.toLowerCase()));
+            }
+
+            if (cleanSearch != null) {
+                String pattern = "%" + cleanSearch.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                ));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        List<Item> items = itemRepository.findAll(spec);
         return items.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 

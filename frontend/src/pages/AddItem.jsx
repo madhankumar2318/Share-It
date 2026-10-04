@@ -298,7 +298,7 @@ const AddItem = () => {
           </div>
 
           {/* Structured Indian Pickup Location Box */}
-          <div className="p-5 bg-slate-50/80 dark:bg-slate-850/60 border border-gray-200 dark:border-slate-800 rounded-2xl space-y-4">
+          <div className="p-5 bg-slate-50/80 dark:bg-slate-950/50 border border-gray-200 dark:border-slate-800 rounded-2xl space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
                 <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
