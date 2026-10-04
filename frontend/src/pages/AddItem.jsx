@@ -340,7 +340,7 @@ const AddItem = () => {
                   maxLength={6}
                   value={locationData.pincode}
                   onChange={handlePincodeChange}
-                  placeholder="e.g. 621211 or 560001 or 600001"
+                  placeholder="Enter 6-digit PIN code"
                   className="w-full pl-3.5 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
                 />
                 <div className="absolute right-3 top-2.5">
@@ -419,7 +419,7 @@ const AddItem = () => {
                     type="text"
                     value={locationData.area}
                     onChange={(e) => setLocationData((prev) => ({ ...prev, area: e.target.value }))}
-                    placeholder="e.g. Musiri or Gandhipuram"
+                    placeholder="Enter town or locality"
                     className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 )}
@@ -433,7 +433,7 @@ const AddItem = () => {
                   type="text"
                   value={locationData.landmark}
                   onChange={(e) => setLocationData((prev) => ({ ...prev, landmark: e.target.value }))}
-                  placeholder="e.g. Near Bus Stand or College Gate 2"
+                  placeholder="Enter landmark or street (optional)"
                   className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
