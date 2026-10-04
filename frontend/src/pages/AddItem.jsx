@@ -2,7 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { PlusCircle, AlertCircle, ArrowLeft, Upload, CheckCircle2, Image as ImageIcon, MapPin, Loader2, Sparkles } from 'lucide-react';
+import { INDIAN_LOCATIONS } from '../data/indianLocations';
+import { 
+  PlusCircle, 
+  AlertCircle, 
+  ArrowLeft, 
+  Upload, 
+  CheckCircle2, 
+  Image as ImageIcon, 
+  MapPin, 
+  Loader2, 
+  Sparkles, 
+  Search 
+} from 'lucide-react';
 
 const CATEGORIES = [
   'Electronics',
@@ -18,34 +30,25 @@ const AddItem = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Derive registered profile location if available
-  const userProfileLocation = [
-    user?.city,
-    user?.district,
-    user?.state,
-    user?.pincode ? `(${user.pincode})` : ''
-  ]
-    .filter(Boolean)
-    .join(', ');
-
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: CATEGORIES[0],
     imageUrl: '',
-    location: '',
   });
 
-  // Pre-fill location from logged-in user profile once available
-  useEffect(() => {
-    if (userProfileLocation && !formData.location) {
-      setFormData((prev) => ({ ...prev, location: userProfileLocation }));
-    }
-  }, [userProfileLocation]);
+  // Structured Indian location states for lending pickup point
+  const [locationData, setLocationData] = useState({
+    pincode: '',
+    state: 'Tamil Nadu',
+    district: '',
+    area: '',
+    landmark: '',
+  });
 
-  const [quickPin, setQuickPin] = useState('');
-  const [pinLoading, setPinLoading] = useState(false);
-  const [pinStatus, setPinStatus] = useState('');
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [pincodeMessage, setPincodeMessage] = useState('');
+  const [availablePostOffices, setAvailablePostOffices] = useState([]);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -54,35 +57,107 @@ const AddItem = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  // Pre-populate with logged-in user's profile location if present
+  useEffect(() => {
+    if (user) {
+      const userState = user.state || 'Tamil Nadu';
+      const userDistrict = user.district || INDIAN_LOCATIONS[userState]?.[0] || '';
+      setLocationData({
+        pincode: user.pincode || '',
+        state: userState,
+        district: userDistrict,
+        area: user.city || '',
+        landmark: user.address || '',
+      });
+      if (user.city) {
+        setAvailablePostOffices([user.city]);
+      }
+    }
+  }, [user]);
 
-  // Quick 6-digit PIN code auto-fill for item location
-  const handleQuickPinChange = async (e) => {
+  // Handle Indian Postal PIN code auto-lookup (6 digits)
+  const handlePincodeChange = async (e) => {
     const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setQuickPin(pin);
-    setPinStatus('');
+    setLocationData((prev) => ({ ...prev, pincode: pin }));
+    setPincodeMessage('');
+    setAvailablePostOffices([]);
 
     if (pin.length === 6) {
-      setPinLoading(true);
+      setPincodeLoading(true);
       try {
         const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
         const data = await response.json();
+
         if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
-          const po = data[0].PostOffice[0];
-          const autoLoc = `${po.Name}, ${po.District}, ${po.State} (${pin})`;
-          setFormData((prev) => ({ ...prev, location: autoLoc }));
-          setPinStatus(`✅ Auto-filled: ${po.District}`);
+          const poList = data[0].PostOffice;
+          const firstPO = poList[0];
+
+          const apiState = firstPO.State || '';
+          const matchedState = Object.keys(INDIAN_LOCATIONS).find(
+            (s) => s.toLowerCase() === apiState.toLowerCase()
+          ) || apiState || locationData.state;
+
+          const districtList = INDIAN_LOCATIONS[matchedState] || [];
+          const apiDistrict = firstPO.District || '';
+          const matchedDistrict = districtList.find(
+            (d) => d.toLowerCase() === apiDistrict.toLowerCase()
+          ) || apiDistrict;
+
+          const poNames = poList.map((po) => po.Name);
+          setAvailablePostOffices(poNames);
+
+          setLocationData((prev) => ({
+            ...prev,
+            pincode: pin,
+            state: matchedState,
+            district: matchedDistrict,
+            area: poNames[0] || prev.area,
+          }));
+
+          setPincodeMessage(`✅ Verified: ${matchedDistrict}, ${matchedState}`);
         } else {
-          setPinStatus('⚠️ Invalid PIN code');
+          setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
         }
       } catch (err) {
-        setPinStatus('⚠️ Could not lookup PIN');
+        setPincodeMessage('⚠️ Could not verify PIN code online. You can choose manually.');
       } finally {
-        setPinLoading(false);
+        setPincodeLoading(false);
       }
     }
+  };
+
+  const handleStateChange = (e) => {
+    const selectedState = e.target.value;
+    const defaultDistrict = INDIAN_LOCATIONS[selectedState]?.[0] || '';
+    setLocationData((prev) => ({
+      ...prev,
+      state: selectedState,
+      district: defaultDistrict,
+      area: '',
+    }));
+    setAvailablePostOffices([]);
+  };
+
+  const handleUseProfileAddress = () => {
+    if (user) {
+      const userState = user.state || 'Tamil Nadu';
+      const userDistrict = user.district || INDIAN_LOCATIONS[userState]?.[0] || '';
+      setLocationData({
+        pincode: user.pincode || '',
+        state: userState,
+        district: userDistrict,
+        area: user.city || '',
+        landmark: user.address || '',
+      });
+      if (user.city) {
+        setAvailablePostOffices([user.city]);
+      }
+      setPincodeMessage(user.district ? `✅ Loaded from your profile: ${user.district}` : '');
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFileChange = (e) => {
@@ -120,15 +195,21 @@ const AddItem = () => {
     e.preventDefault();
     setError('');
 
-    // Fix 4 Validation: Either a device photo or an image URL is mandatory
+    // Photo is mandatory (file upload OR image URL)
     if (!selectedFile && !formData.imageUrl.trim()) {
-      setError('Item photo is mandatory. Please upload an image from your device or provide an image URL.');
+      setError('Item photo is required. Please upload an image from your device or paste an image URL.');
       return;
     }
 
-    // Fix 3 Validation: Description is mandatory
+    // Description is mandatory
     if (!formData.description.trim()) {
-      setError('Description & Guidelines are required. Please describe the item condition and instructions.');
+      setError('Description & Guidelines are required. Please describe the item condition and rules.');
+      return;
+    }
+
+    // Location validation
+    if (!locationData.district || !locationData.state) {
+      setError('Please select your State and District for the pickup location.');
       return;
     }
 
@@ -142,9 +223,21 @@ const AddItem = () => {
         finalImageUrl = await handleUploadImage();
       }
 
+      // Combine structured location into comprehensive pickup address
+      const formattedLocation = [
+        locationData.landmark,
+        locationData.area,
+        locationData.district,
+        locationData.state,
+        locationData.pincode ? `(${locationData.pincode})` : ''
+      ]
+        .filter(Boolean)
+        .join(', ');
+
       await api.post('/items', {
         ...formData,
         imageUrl: finalImageUrl,
+        location: formattedLocation,
       });
 
       navigate('/dashboard');
@@ -155,6 +248,7 @@ const AddItem = () => {
     }
   };
 
+  const availableDistricts = INDIAN_LOCATIONS[locationData.state] || [];
   const hasPhoto = !!selectedFile || !!formData.imageUrl.trim();
 
   return (
@@ -183,22 +277,21 @@ const AddItem = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Item Title */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Item Title *</label>
-            <input
-              type="text"
-              name="title"
-              required
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="e.g. Sony Alpha A6400 Camera or DeWalt Cordless Drill"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm"
-            />
-          </div>
+          {/* Item Title & Category */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Item Title *</label>
+              <input
+                type="text"
+                name="title"
+                required
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="e.g. Sony Alpha A6400 Camera or DeWalt Drill"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm"
+              />
+            </div>
 
-          {/* Category & Location */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Category *</label>
               <select
@@ -206,7 +299,7 @@ const AddItem = () => {
                 required
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm bg-white"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm bg-white"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -215,54 +308,136 @@ const AddItem = () => {
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Location with Auto-fill helper */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-semibold text-gray-700">Location *</label>
-                {userProfileLocation && (
-                  <button
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, location: userProfileLocation }))}
-                    className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 hover:underline"
-                    title="Auto-fill with your registered profile address"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    Use Profile Location
-                  </button>
-                )}
+          {/* Structured Indian Pickup Location Box */}
+          <div className="p-5 bg-slate-50/80 border border-gray-200 rounded-2xl space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+                <span>Pickup / Handover Location 🇮🇳 *</span>
               </div>
+              {user && (user.district || user.city || user.pincode) && (
+                <button
+                  type="button"
+                  onClick={handleUseProfileAddress}
+                  className="text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 bg-white px-3 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition shadow-2xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  Use My Profile Address
+                </button>
+              )}
+            </div>
+
+            {/* PIN Code Lookup */}
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                6-Digit Indian PIN Code (Auto-Fills State, District & Town)
+              </label>
               <div className="relative">
                 <input
                   type="text"
-                  name="location"
-                  required
-                  value={formData.location}
-                  onChange={handleChange}
-                  placeholder="e.g. Musiri, Tiruchirappalli, Tamil Nadu"
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm"
+                  maxLength={6}
+                  value={locationData.pincode}
+                  onChange={handlePincodeChange}
+                  placeholder="e.g. 621211 or 560001 or 600001"
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
                 />
-                <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                <div className="absolute right-3 top-2.5">
+                  {pincodeLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  ) : (
+                    <Search className="w-4 h-4 text-gray-400" />
+                  )}
+                </div>
+              </div>
+              {pincodeMessage && (
+                <p className={`text-[11px] mt-1 font-medium ${pincodeMessage.includes('✅') ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {pincodeMessage}
+                </p>
+              )}
+            </div>
+
+            {/* State and District Dropdowns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">State / UT *</label>
+                <select
+                  value={locationData.state}
+                  onChange={handleStateChange}
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                >
+                  {Object.keys(INDIAN_LOCATIONS).map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">District / City *</label>
+                <select
+                  value={locationData.district}
+                  onChange={(e) => setLocationData((prev) => ({ ...prev, district: e.target.value }))}
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                >
+                  <option value="">-- Choose District --</option>
+                  {locationData.district && !availableDistricts.includes(locationData.district) && (
+                    <option value={locationData.district}>{locationData.district}</option>
+                  )}
+                  {availableDistricts.map((dist) => (
+                    <option key={dist} value={dist}>
+                      {dist}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          </div>
 
-          {/* Location PIN Code Quick-Lookup Bar */}
-          <div className="flex flex-wrap items-center gap-2 p-2.5 bg-slate-50 border border-gray-200 rounded-xl text-xs">
-            <span className="font-semibold text-gray-600 whitespace-nowrap flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              PIN Auto-Fill:
-            </span>
-            <input
-              type="text"
-              maxLength={6}
-              value={quickPin}
-              onChange={handleQuickPinChange}
-              placeholder="Type 6-digit PIN (e.g. 621211)"
-              className="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 tracking-wider font-semibold w-52"
-            />
-            {pinLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />}
-            {pinStatus && <span className="text-[11px] font-medium text-emerald-700">{pinStatus}</span>}
+            {/* Town / Pickup Locality Dropdown & Landmark */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  Town / Area / Locality *
+                </label>
+                {availablePostOffices.length > 0 ? (
+                  <select
+                    value={locationData.area}
+                    onChange={(e) => setLocationData((prev) => ({ ...prev, area: e.target.value }))}
+                    className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                  >
+                    <option value="">-- Choose Locality --</option>
+                    {availablePostOffices.map((po) => (
+                      <option key={po} value={po}>
+                        {po}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={locationData.area}
+                    onChange={(e) => setLocationData((prev) => ({ ...prev, area: e.target.value }))}
+                    placeholder="e.g. Musiri or Gandhipuram"
+                    className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  Landmark / Street / Gate (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={locationData.landmark}
+                  onChange={(e) => setLocationData((prev) => ({ ...prev, landmark: e.target.value }))}
+                  placeholder="e.g. Near Bus Stand or College Gate 2"
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Photo Upload Box - MANDATORY */}
