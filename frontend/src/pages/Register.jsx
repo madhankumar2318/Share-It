@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff, MapPin } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff, MapPin, Search, Loader2 } from 'lucide-react';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
 
 const Register = () => {
@@ -11,6 +11,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     phone: '',
+    pincode: '',
     state: 'Tamil Nadu',
     district: '',
     city: '',
@@ -21,6 +22,11 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Pincode auto-lookup states
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [pincodeMessage, setPincodeMessage] = useState('');
+  const [availablePostOffices, setAvailablePostOffices] = useState([]);
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +40,44 @@ const Register = () => {
   const hasSpecialChar = /[@$!%*?&]/.test(password);
   const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
   const passwordsMatch = formData.password && formData.password === formData.confirmPassword;
+
+  // Indian Postal API Auto-Lookup when 6 digits are entered
+  const handlePincodeChange = async (e) => {
+    const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setFormData((prev) => ({ ...prev, pincode: pin }));
+    setPincodeMessage('');
+    setAvailablePostOffices([]);
+
+    if (pin.length === 6) {
+      setPincodeLoading(true);
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const data = await response.json();
+
+        if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+          const poList = data[0].PostOffice;
+          const firstPO = poList[0];
+
+          // Auto-fill State and District directly from Indian Postal Database
+          setFormData((prev) => ({
+            ...prev,
+            state: firstPO.State || prev.state,
+            district: firstPO.District || prev.district,
+            city: firstPO.Name || prev.city,
+          }));
+
+          setAvailablePostOffices(poList.map((po) => po.Name));
+          setPincodeMessage(`✅ Verified: ${firstPO.District}, ${firstPO.State}`);
+        } else {
+          setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
+        }
+      } catch (err) {
+        setPincodeMessage('⚠️ Could not verify PIN code online. You can choose manually.');
+      } finally {
+        setPincodeLoading(false);
+      }
+    }
+  };
 
   const handleStateChange = (e) => {
     const selectedState = e.target.value;
@@ -66,7 +110,6 @@ const Register = () => {
     setLoading(true);
     try {
       const { confirmPassword, ...registerPayload } = formData;
-      // Ensure phone has +91 prefix
       if (registerPayload.phone && !registerPayload.phone.startsWith('+91')) {
         registerPayload.phone = `+91 ${registerPayload.phone}`;
       }
@@ -90,7 +133,7 @@ const Register = () => {
         <div className="text-center space-y-1">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Join Share-It 🇮🇳</h2>
           <p className="text-sm text-gray-500">
-            India's community borrowing & lending network
+            India's trusted community borrowing & lending network
           </p>
         </div>
 
@@ -155,11 +198,45 @@ const Register = () => {
             />
           </div>
 
-          {/* Indian Location Selectors: State & District */}
+          {/* Indian Location Box with 6-Digit PIN Code Auto-Lookup */}
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-              <MapPin className="w-4 h-4 text-emerald-600" />
-              <span>Your Community Location in India</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+                <span>Verified Community Location</span>
+              </div>
+              <span className="text-[10px] text-gray-400">Postal Auto-Detect</span>
+            </div>
+
+            {/* PIN Code Input with Auto-Lookup Indicator */}
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                6-Digit Indian PIN Code * (Auto-Fills City & State)
+              </label>
+              <div className="relative">
+                <input
+                  name="pincode"
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={formData.pincode}
+                  onChange={handlePincodeChange}
+                  placeholder="e.g. 641001 or 560001 or 600001"
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
+                />
+                <div className="absolute right-3 top-2.5">
+                  {pincodeLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                  ) : (
+                    <Search className="w-4 h-4 text-gray-400" />
+                  )}
+                </div>
+              </div>
+              {pincodeMessage && (
+                <p className={`text-[11px] mt-1 font-medium ${pincodeMessage.includes('✅') ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {pincodeMessage}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -180,43 +257,55 @@ const Register = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">District / Major City *</label>
-                <select
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">District / City *</label>
+                <input
                   name="district"
+                  type="text"
+                  required
                   value={formData.district}
                   onChange={handleChange}
+                  placeholder="Auto-filled from PIN code"
                   className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                >
-                  <option value="">-- Choose District/City --</option>
-                  {availableDistricts.map((dst) => (
-                    <option key={dst} value={dst}>
-                      {dst}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Town / Area Name</label>
-                <input
-                  name="city"
-                  type="text"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="e.g. T. Nagar, Gandhipuram, or Campus"
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Town / Area / Locality</label>
+                {availablePostOffices.length > 0 ? (
+                  <select
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="">-- Choose Locality --</option>
+                    {availablePostOffices.map((po) => (
+                      <option key={po} value={po}>
+                        {po}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    name="city"
+                    type="text"
+                    value={formData.city}
+                    onChange={handleChange}
+                    placeholder="e.g. Gandhipuram or T. Nagar"
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                )}
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Street / Landmark</label>
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Street / House / Landmark</label>
                 <input
                   name="address"
                   type="text"
                   value={formData.address}
                   onChange={handleChange}
-                  placeholder="e.g. 4th Cross Street, Near Bus Stand"
+                  placeholder="e.g. Flat 3B, 2nd Cross Street"
                   className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>

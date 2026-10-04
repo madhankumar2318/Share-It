@@ -45,6 +45,8 @@ public class User {
 
     private String city;
 
+    private String pincode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

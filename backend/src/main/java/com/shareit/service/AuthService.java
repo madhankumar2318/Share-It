@@ -38,6 +38,7 @@ public class AuthService {
                 .state(request.getState())
                 .district(request.getDistrict())
                 .city(request.getCity())
+                .pincode(request.getPincode())
                 .role(Role.USER)
                 .build();
 
