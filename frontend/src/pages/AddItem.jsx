@@ -180,12 +180,11 @@ const AddItem = () => {
 
     setUploadingImage(true);
     try {
-      const response = await api.post('/files/upload', uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await api.post('/files/upload', uploadData);
       return response.data.fileUrl;
     } catch (err) {
-      throw new Error(err.response?.data?.message || 'Failed to upload photo');
+      const msg = err.response?.data?.message || err.message || 'Failed to upload photo';
+      throw new Error(msg);
     } finally {
       setUploadingImage(false);
     }
@@ -263,7 +262,7 @@ const AddItem = () => {
 
       <div className="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm space-y-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">List an Item for Lending</h1>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Post an Item for Lending</h1>
           <p className="text-sm text-gray-500 mt-1">
             Share what you don't regularly use with your community 🇮🇳
           </p>
@@ -522,7 +521,7 @@ const AddItem = () => {
             className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition disabled:opacity-50"
           >
             <PlusCircle className="w-4 h-4" />
-            {loading || uploadingImage ? 'Uploading & Publishing...' : 'List Item Now'}
+            {loading || uploadingImage ? 'Uploading Photo & Publishing...' : 'Post Item for Lending'}
           </button>
         </form>
       </div>
