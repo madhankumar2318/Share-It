@@ -445,13 +445,11 @@ const AddItem = () => {
               <label className="block text-sm font-semibold text-gray-700">
                 Item Photo * <span className="text-xs font-normal text-gray-500">(Upload from device OR paste Image URL)</span>
               </label>
-              {hasPhoto ? (
+              {hasPhoto && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   Photo Ready
                 </span>
-              ) : (
-                <span className="text-xs text-amber-600 font-medium">Required *</span>
               )}
             </div>
 
