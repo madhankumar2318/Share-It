@@ -39,6 +39,12 @@ public class User {
 
     private String address;
 
+    private String state;
+
+    private String district;
+
+    private String city;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

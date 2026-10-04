@@ -35,6 +35,9 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
                 .address(request.getAddress())
+                .state(request.getState())
+                .district(request.getDistrict())
+                .city(request.getCity())
                 .role(Role.USER)
                 .build();
 
