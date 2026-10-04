@@ -100,7 +100,7 @@ const Home = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search cameras, tents, drill, monitor, textbooks..."
-              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-sm text-gray-800"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
           <button
@@ -120,7 +120,7 @@ const Home = () => {
               className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
                 selectedCategory === cat
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-800'
               }`}
             >
               {cat}
@@ -133,18 +133,18 @@ const Home = () => {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse bg-white rounded-2xl p-4 space-y-4 border border-gray-100">
-              <div className="bg-gray-200 h-44 rounded-xl"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <div key={i} className="animate-pulse bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-4 border border-gray-100 dark:border-slate-800">
+              <div className="bg-gray-200 dark:bg-slate-800 h-44 rounded-xl"></div>
+              <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/2"></div>
             </div>
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300">
-          <Tag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-700">No items found</h3>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800">
+          <Tag className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">No items found</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Be the first person to list an item in this category!
           </p>
           <Link
@@ -159,9 +159,9 @@ const Home = () => {
           {items.map((item) => (
             <div
               key={item.id}
-              className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 flex flex-col"
+              className="group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden hover:shadow-lg dark:hover:shadow-slate-900/40 transition-all duration-200 flex flex-col"
             >
-              <div className="relative h-48 bg-slate-100 overflow-hidden">
+              <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <img
                   src={
                     item.imageUrl ||
@@ -182,22 +182,22 @@ const Home = () => {
 
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition line-clamp-1">
+                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-500 transition line-clamp-1">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
                     {item.description || 'No description provided.'}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-gray-400" />
                     <span>{item.location || 'Local Community'}</span>
                   </div>
                   <Link
                     to={`/items/${item.id}`}
-                    className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-700"
+                    className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     View

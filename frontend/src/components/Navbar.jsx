@@ -1,9 +1,11 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Share2, PlusCircle, LayoutDashboard, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { Share2, PlusCircle, LayoutDashboard, LogOut, LogIn, UserPlus, Sun, Moon } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,7 +19,7 @@ const Navbar = () => {
   const isDashboard = location.pathname === '/dashboard';
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50 shadow-sm transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
@@ -25,19 +27,19 @@ const Navbar = () => {
             <div className="bg-emerald-600 text-white p-2 rounded-xl group-hover:bg-emerald-700 transition">
               <Share2 className="w-5 h-5" />
             </div>
-            <span className="font-extrabold text-2xl tracking-tight text-gray-900">
+            <span className="font-extrabold text-2xl tracking-tight text-gray-900 dark:text-white">
               Share<span className="text-emerald-600">It</span>
             </span>
           </Link>
 
           {/* Links & Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/"
               className={`font-medium px-3.5 py-2 rounded-lg transition text-sm ${
                 isBrowse
-                  ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
-                  : 'text-gray-600 hover:text-emerald-600'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
               Browse Items
@@ -49,11 +51,11 @@ const Navbar = () => {
                   to="/add-item"
                   className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
                     isAddItem
-                      ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
-                      : 'text-gray-600 hover:text-emerald-600'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                   }`}
                 >
-                  <PlusCircle className={`w-4 h-4 ${isAddItem ? 'text-emerald-600' : 'text-gray-500'}`} />
+                  <PlusCircle className={`w-4 h-4 ${isAddItem ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
                   List an Item
                 </Link>
 
@@ -61,23 +63,38 @@ const Navbar = () => {
                   to="/dashboard"
                   className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
                     isDashboard
-                      ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
-                      : 'text-gray-600 hover:text-emerald-600'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                   }`}
                 >
-                  <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-emerald-600' : 'text-gray-500'}`} />
+                  <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
                   Dashboard
                 </Link>
 
-                <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
-                  <div className="flex flex-col text-right">
-                    <span className="text-sm font-semibold text-gray-800">{user?.fullName}</span>
-                    <span className="text-xs text-gray-500">{user?.email}</span>
+                {/* Dark / Light Mode Toggle Button */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  aria-label="Toggle theme"
+                  className="p-2 rounded-xl text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition"
+                >
+                  {isDark ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-slate-600" />
+                  )}
+                </button>
+
+                <div className="flex items-center gap-3 pl-2 border-l border-gray-200 dark:border-slate-800">
+                  <div className="hidden sm:flex flex-col text-right">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{user?.fullName}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</span>
                   </div>
                   <button
                     onClick={handleLogout}
                     title="Sign Out"
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
                   >
                     <LogOut className="w-5 h-5" />
                   </button>
@@ -85,9 +102,24 @@ const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center gap-2">
+                {/* Dark / Light Mode Toggle Button for guest */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  aria-label="Toggle theme"
+                  className="p-2 rounded-xl text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition"
+                >
+                  {isDark ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-slate-600" />
+                  )}
+                </button>
+
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-1.5 text-gray-700 hover:text-emerald-600 font-medium px-4 py-2 rounded-lg transition text-sm"
+                  className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium px-4 py-2 rounded-lg transition text-sm"
                 >
                   <LogIn className="w-4 h-4" />
                   Log In

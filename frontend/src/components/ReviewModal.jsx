@@ -37,13 +37,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 p-6 space-y-5">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-slate-800 p-6 space-y-5">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
           <div>
-            <h3 className="font-extrabold text-gray-900 text-lg">Leave a Review</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{request.itemTitle}</p>
+            <h3 className="font-extrabold text-gray-900 dark:text-white text-lg">Leave a Review</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{request.itemTitle}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -51,20 +51,20 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSuccess }) => {
         {success ? (
           <div className="py-8 text-center space-y-2">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-            <h4 className="font-bold text-gray-800 text-base">Thank You!</h4>
-            <p className="text-xs text-gray-500">Your feedback helps build trust in the community.</p>
+            <h4 className="font-bold text-gray-800 dark:text-gray-100 text-base">Thank You!</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Your feedback helps build trust in the community.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+              <div className="p-2.5 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs rounded-xl border border-red-200 dark:border-red-900">
                 {error}
               </div>
             )}
 
             {/* Star Selector */}
             <div className="space-y-1 text-center py-2">
-              <label className="block text-xs font-semibold text-gray-600">Rate your experience</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">Rate your experience</label>
               <div className="flex justify-center gap-1.5 pt-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -79,7 +79,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSuccess }) => {
                       className={`w-7 h-7 ${
                         star <= (hoverRating || rating)
                           ? 'fill-amber-400 text-amber-400'
-                          : 'text-gray-200'
+                          : 'text-gray-200 dark:text-slate-700'
                       }`}
                     />
                   </button>
@@ -89,13 +89,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSuccess }) => {
 
             {/* Comment Field */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Your Feedback</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Your Feedback</label>
               <textarea
                 rows={3}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Was the item in good shape? How was communication with the lender?"
-                className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
 

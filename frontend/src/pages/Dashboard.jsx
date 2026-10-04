@@ -88,7 +88,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-500">Loading your dashboard...</div>;
+    return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-500 dark:text-gray-400">Loading your dashboard...</div>;
   }
 
   return (
@@ -96,8 +96,8 @@ const Dashboard = () => {
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Community Hub</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Community Hub</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Manage your items as a Lender and your requests as a Borrower
           </p>
         </div>
@@ -111,18 +111,18 @@ const Dashboard = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 gap-8">
+      <div className="flex border-b border-gray-200 dark:border-slate-800 gap-8">
         <button
           onClick={() => setActiveTab('lender')}
           className={`flex items-center gap-2 pb-4 text-sm font-bold border-b-2 transition ${
             activeTab === 'lender'
-              ? 'border-emerald-600 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
           }`}
         >
           <ArrowUpRight className="w-4 h-4" />
           Lender Hub
-          <span className="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+          <span className="ml-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
             {myItems.length} items / {receivedRequests.length} requests
           </span>
         </button>
@@ -131,13 +131,13 @@ const Dashboard = () => {
           onClick={() => setActiveTab('borrower')}
           className={`flex items-center gap-2 pb-4 text-sm font-bold border-b-2 transition ${
             activeTab === 'borrower'
-              ? 'border-emerald-600 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
           }`}
         >
           <ArrowDownLeft className="w-4 h-4" />
           Borrower Hub
-          <span className="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+          <span className="ml-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
             {myBorrowRequests.length} requests
           </span>
         </button>
@@ -148,13 +148,13 @@ const Dashboard = () => {
         <div className="space-y-10">
           {/* Incoming Borrow Requests */}
           <div className="space-y-4">
-            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               Incoming Requests For Your Items
             </h2>
 
             {receivedRequests.length === 0 ? (
-              <div className="p-8 bg-white rounded-2xl border border-gray-200 text-center text-gray-500 text-sm">
+              <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-center text-gray-500 dark:text-gray-400 text-sm">
                 No incoming borrow requests yet.
               </div>
             ) : (
@@ -162,15 +162,15 @@ const Dashboard = () => {
                 {receivedRequests.map((req) => (
                   <div
                     key={req.id}
-                    className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-gray-900 text-base">{req.itemTitle}</span>
+                        <span className="font-bold text-gray-900 dark:text-white text-base">{req.itemTitle}</span>
                         {getStatusBadge(req.status)}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                         <span className="flex items-center gap-1 font-medium">
                           <User className="w-3.5 h-3.5 text-gray-400" />
                           Borrower: {req.borrowerName} ({req.borrowerEmail})
@@ -182,7 +182,7 @@ const Dashboard = () => {
                       </div>
 
                       {req.message && (
-                        <p className="text-xs text-gray-500 italic bg-slate-50 p-2.5 rounded-xl border border-gray-100">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                           "{req.message}"
                         </p>
                       )}
@@ -192,10 +192,10 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 self-end md:self-center">
                       <button
                         onClick={() => setSelectedChatRequest(req)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
                         title="Chat with Borrower"
                       >
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         Chat
                       </button>
 
@@ -210,7 +210,7 @@ const Dashboard = () => {
                           </button>
                           <button
                             onClick={() => handleUpdateStatus(req.id, 'REJECTED')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-semibold transition border border-red-200"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 rounded-xl text-xs font-semibold transition border border-red-200 dark:border-red-900"
                           >
                             <XCircle className="w-4 h-4" />
                             Reject
@@ -236,13 +236,13 @@ const Dashboard = () => {
 
           {/* My Listed Items */}
           <div className="space-y-4">
-            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-              <Package className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+              <Package className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               My Listed Items
             </h2>
 
             {myItems.length === 0 ? (
-              <div className="p-8 bg-white rounded-2xl border border-gray-200 text-center text-gray-500 text-sm space-y-3">
+              <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-center text-gray-500 dark:text-gray-400 text-sm space-y-3">
                 <p>You haven't listed any items yet.</p>
                 <Link
                   to="/add-item"
@@ -256,7 +256,7 @@ const Dashboard = () => {
                 {myItems.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 bg-white rounded-2xl border border-gray-200 shadow-sm space-y-3 flex flex-col justify-between"
+                    className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-3 flex flex-col justify-between"
                   >
                     <div className="flex gap-4">
                       <img
@@ -265,21 +265,21 @@ const Dashboard = () => {
                           'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
                         }
                         alt={item.title}
-                        className="w-20 h-20 rounded-xl object-cover bg-slate-100 flex-shrink-0"
+                        className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0"
                       />
                       <div className="overflow-hidden">
-                        <span className="text-xs font-bold text-emerald-600">{item.category}</span>
-                        <h4 className="font-bold text-gray-900 text-sm truncate">{item.title}</h4>
-                        <span className="mt-1 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.category}</span>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate">{item.title}</h4>
+                        <span className="mt-1 inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                           {item.status}
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
                       <Link
                         to={`/items/${item.id}`}
-                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+                        className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
                       >
                         View Page
                       </Link>
@@ -302,13 +302,13 @@ const Dashboard = () => {
       {/* Borrower View */}
       {activeTab === 'borrower' && (
         <div className="space-y-4">
-          <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-emerald-600" />
+          <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             Your Borrow Requests
           </h2>
 
           {myBorrowRequests.length === 0 ? (
-            <div className="p-8 bg-white rounded-2xl border border-gray-200 text-center text-gray-500 text-sm space-y-3">
+            <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-center text-gray-500 dark:text-gray-400 text-sm space-y-3">
               <p>You haven't requested to borrow any items yet.</p>
               <Link
                 to="/"
@@ -322,20 +322,20 @@ const Dashboard = () => {
               {myBorrowRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <Link
                         to={`/items/${req.itemId}`}
-                        className="font-bold text-gray-900 text-base hover:text-emerald-600 transition"
+                        className="font-bold text-gray-900 dark:text-white text-base hover:text-emerald-600 dark:hover:text-emerald-400 transition"
                       >
                         {req.itemTitle}
                       </Link>
                       {getStatusBadge(req.status)}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                       <span className="flex items-center gap-1 font-medium">
                         <User className="w-3.5 h-3.5 text-gray-400" />
                         Owner: {req.ownerName} ({req.ownerEmail}
@@ -348,7 +348,7 @@ const Dashboard = () => {
                     </div>
 
                     {req.message && (
-                      <p className="text-xs text-gray-500 italic bg-slate-50 p-2.5 rounded-xl border border-gray-100">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                         Your message: "{req.message}"
                       </p>
                     )}
@@ -358,17 +358,17 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2 self-end md:self-center">
                     <button
                       onClick={() => setSelectedChatRequest(req)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
                       title="Chat with Owner"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Chat
                     </button>
 
                     {req.status === 'PENDING' && (
                       <button
                         onClick={() => handleUpdateStatus(req.id, 'CANCELLED')}
-                        className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition"
+                        className="px-3.5 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-semibold transition"
                       >
                         Cancel Request
                       </button>
@@ -385,7 +385,7 @@ const Dashboard = () => {
                     {req.status === 'RETURNED' && (
                       <button
                         onClick={() => setSelectedReviewRequest(req)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-semibold transition border border-amber-200"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-semibold transition border border-amber-200 dark:border-amber-900"
                       >
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         Leave Review

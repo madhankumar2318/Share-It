@@ -9,4 +9,10 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: #f8fafc;
   color: #0f172a;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html.dark body {
+  background-color: #090d16;
+  color: #f8fafc;
 }

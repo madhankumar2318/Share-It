@@ -145,17 +145,17 @@ const Register = () => {
   const availableDistricts = INDIAN_LOCATIONS[formData.state] || [];
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="max-w-xl w-full space-y-6 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors">
+      <div className="max-w-xl w-full space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
         <div className="text-center space-y-1">
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Join Share-It 🇮🇳</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Join Share-It 🇮🇳</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             India's trusted community borrowing & lending network
           </p>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs">
+          <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 rounded-2xl text-xs">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -165,7 +165,7 @@ const Register = () => {
           {/* Full Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Full Name *</label>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
               <input
                 name="fullName"
                 type="text"
@@ -173,13 +173,13 @@ const Register = () => {
                 value={formData.fullName}
                 onChange={handleChange}
                 placeholder="e.g. Madhan Kumar"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Mobile Number *</label>
-              <div className="flex items-center rounded-xl border border-gray-300 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
-                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 border-r border-gray-200 text-gray-700 text-xs font-bold select-none whitespace-nowrap flex-shrink-0">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Mobile Number *</label>
+              <div className="flex items-center rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
+                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-700/60 border-r border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold select-none whitespace-nowrap flex-shrink-0">
                   <span className="w-4 h-2.5 rounded-xs overflow-hidden flex flex-col border border-gray-300 flex-shrink-0 shadow-xs">
                     <span className="h-1/3 bg-[#FF9933] w-full block"></span>
                     <span className="h-1/3 bg-white w-full flex items-center justify-center block">
@@ -201,16 +201,16 @@ const Register = () => {
                     setFormData({ ...formData, phone: onlyNums });
                   }}
                   placeholder="9876543210"
-                  className="w-full px-3 py-2.5 text-xs text-gray-800 placeholder-gray-400 bg-transparent outline-none"
+                  className="w-full px-3 py-2.5 text-xs text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent outline-none"
                 />
               </div>
-              <p className="text-[10px] text-gray-400 mt-1">Enter 10-digit mobile number</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Enter 10-digit mobile number</p>
             </div>
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Email Address *</label>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
             <input
               name="email"
               type="email"
@@ -218,23 +218,23 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="e.g. madhan@example.com"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
             />
           </div>
 
           {/* Indian Location Box with 6-Digit PIN Code Auto-Lookup */}
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-                <MapPin className="w-4 h-4 text-emerald-600" />
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-400">
+                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Verified Community Location</span>
               </div>
-              <span className="text-[10px] text-gray-400">Postal Auto-Detect</span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">Postal Auto-Detect</span>
             </div>
 
             {/* PIN Code Input with Auto-Lookup Indicator */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+              <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 6-Digit Indian PIN Code * (Auto-Fills City & State)
               </label>
               <div className="relative">
@@ -246,18 +246,18 @@ const Register = () => {
                   value={formData.pincode}
                   onChange={handlePincodeChange}
                   placeholder="Enter 6-digit PIN code"
-                  className="w-full pl-3.5 pr-10 py-2.5 bg-white rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
                 />
                 <div className="absolute right-3 top-2.5">
                   {pincodeLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <Search className="w-4 h-4 text-gray-400" />
                   )}
                 </div>
               </div>
               {pincodeMessage && (
-                <p className={`text-[11px] mt-1 font-medium ${pincodeMessage.includes('✅') ? 'text-emerald-700' : 'text-amber-700'}`}>
+                <p className={`text-[11px] mt-1 font-medium ${pincodeMessage.includes('✅') ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
                   {pincodeMessage}
                 </p>
               )}
@@ -265,12 +265,12 @@ const Register = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">State / UT *</label>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">State / UT *</label>
                 <select
                   name="state"
                   value={formData.state}
                   onChange={handleStateChange}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   {Object.keys(INDIAN_LOCATIONS).map((st) => (
                     <option key={st} value={st}>
@@ -281,13 +281,13 @@ const Register = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">District / City *</label>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">District / City *</label>
                 <select
                   name="district"
                   required
                   value={formData.district}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="">-- Choose District --</option>
                   {formData.district && !availableDistricts.includes(formData.district) && (
@@ -306,13 +306,13 @@ const Register = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Town / Area / Locality</label>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Town / Area / Locality</label>
                 {availablePostOffices.length > 0 ? (
                   <select
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                   >
                     <option value="">-- Choose Locality --</option>
                     {availablePostOffices.map((po) => (
@@ -328,19 +328,19 @@ const Register = () => {
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="Enter town or locality"
-                    className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 )}
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">Street / House / Landmark</label>
+                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Street / House / Landmark</label>
                 <input
                   name="address"
                   type="text"
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Enter street, house no., or landmark"
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
             </div>
@@ -349,7 +349,7 @@ const Register = () => {
           {/* Password & Re-enter Password */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Password *</label>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Password *</label>
               <div className="relative">
                 <input
                   name="password"
@@ -358,12 +358,12 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -371,7 +371,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Re-enter Password *</label>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Re-enter Password *</label>
               <div className="relative">
                 <input
                   name="confirmPassword"
@@ -380,16 +380,16 @@ const Register = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs focus:ring-2 outline-none ${
+                  className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border text-xs focus:ring-2 outline-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${
                     formData.confirmPassword && !passwordsMatch
                       ? 'border-red-400 focus:ring-red-400'
-                      : 'border-gray-300 focus:ring-emerald-500'
+                      : 'border-gray-300 dark:border-slate-700 focus:ring-emerald-500'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -399,30 +399,30 @@ const Register = () => {
 
           {/* Password Rule Checklist */}
           {formData.password && (
-            <div className="p-3 bg-slate-50 rounded-xl border border-gray-200 text-[11px] space-y-1.5">
-              <span className="font-bold text-gray-700 block">Password Requirements:</span>
-              <div className="grid grid-cols-2 gap-1 text-gray-600">
-                <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-gray-200 dark:border-slate-800 text-[11px] space-y-1.5">
+              <span className="font-bold text-gray-700 dark:text-gray-300 block">Password Requirements:</span>
+              <div className="grid grid-cols-2 gap-1 text-gray-600 dark:text-gray-400">
+                <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>8+ characters</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasUpperCase ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasUpperCase ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>1 Uppercase letter (A-Z)</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasLowerCase ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasLowerCase ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>1 Lowercase letter (a-z)</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>1 Number (0-9)</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>1 Special character (@$!%*?&_)</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${passwordsMatch && formData.confirmPassword ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${passwordsMatch && formData.confirmPassword ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Passwords match</span>
                 </div>
@@ -440,9 +440,9 @@ const Register = () => {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-500">
+        <p className="text-center text-xs text-gray-500 dark:text-gray-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-bold text-emerald-600 hover:text-emerald-500">
+          <Link to="/login" className="font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">
             Sign in
           </Link>
         </p>
