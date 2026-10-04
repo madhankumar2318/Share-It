@@ -52,6 +52,12 @@ public class AuthService {
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
+                .phone(savedUser.getPhone())
+                .address(savedUser.getAddress())
+                .state(savedUser.getState())
+                .district(savedUser.getDistrict())
+                .city(savedUser.getCity())
+                .pincode(savedUser.getPincode())
                 .build();
     }
 
@@ -79,6 +85,12 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .state(user.getState())
+                .district(user.getDistrict())
+                .city(user.getCity())
+                .pincode(user.getPincode())
                 .build();
     }
 }

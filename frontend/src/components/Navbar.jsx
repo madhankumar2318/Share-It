@@ -1,16 +1,20 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Share2, PlusCircle, LayoutDashboard, LogOut, LogIn, UserPlus } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const isBrowse = location.pathname === '/';
+  const isAddItem = location.pathname === '/add-item';
+  const isDashboard = location.pathname === '/dashboard';
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -27,10 +31,14 @@ const Navbar = () => {
           </Link>
 
           {/* Links & Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="text-gray-600 hover:text-emerald-600 font-medium px-3 py-2 rounded-md transition text-sm"
+              className={`font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                isBrowse
+                  ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
+                  : 'text-gray-600 hover:text-emerald-600'
+              }`}
             >
               Browse Items
             </Link>
@@ -39,17 +47,25 @@ const Navbar = () => {
               <>
                 <Link
                   to="/add-item"
-                  className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium px-3.5 py-2 rounded-lg transition text-sm border border-emerald-200"
+                  className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                    isAddItem
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
+                      : 'text-gray-600 hover:text-emerald-600'
+                  }`}
                 >
-                  <PlusCircle className="w-4 h-4 text-emerald-600" />
+                  <PlusCircle className={`w-4 h-4 ${isAddItem ? 'text-emerald-600' : 'text-gray-500'}`} />
                   List an Item
                 </Link>
 
                 <Link
                   to="/dashboard"
-                  className="inline-flex items-center gap-1.5 text-gray-700 hover:text-emerald-600 font-medium px-3 py-2 rounded-md transition text-sm"
+                  className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                    isDashboard
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 shadow-xs'
+                      : 'text-gray-600 hover:text-emerald-600'
+                  }`}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
+                  <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-emerald-600' : 'text-gray-500'}`} />
                   Dashboard
                 </Link>
 
