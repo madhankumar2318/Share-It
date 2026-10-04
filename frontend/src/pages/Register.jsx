@@ -128,9 +128,14 @@ const Register = () => {
       await register(registerPayload);
       navigate('/');
     } catch (err) {
-      const msg = err.response?.data?.details
-        ? Object.values(err.response.data.details).join(', ')
-        : (err.response?.data?.message || 'Registration failed');
+      let msg = 'Registration failed. Please try again.';
+      if (err.response?.data?.details) {
+        msg = Object.values(err.response.data.details).join(', ');
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (!err.response || err.response?.status === 404 || err.response?.status === 502) {
+        msg = 'Backend server is waking up or deploying on Render. Please wait 30 seconds and try again.';
+      }
       setError(msg);
     } finally {
       setLoading(false);
