@@ -1,32 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff, MapPin, Search, Loader2 } from 'lucide-react';
-import { INDIAN_LOCATIONS } from '../data/indianLocations';
+import { UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    pincode: '',
-    state: 'Tamil Nadu',
-    district: '',
-    city: '',
-    address: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Pincode auto-lookup states
-  const [pincodeLoading, setPincodeLoading] = useState(false);
-  const [pincodeMessage, setPincodeMessage] = useState('');
-  const [availablePostOffices, setAvailablePostOffices] = useState([]);
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -40,66 +29,6 @@ const Register = () => {
   const hasSpecialChar = /[@$!%*?&#_~^+=.-]/.test(password);
   const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
   const passwordsMatch = formData.password && formData.password === formData.confirmPassword;
-
-  // Indian Postal API Auto-Lookup when 6 digits are entered
-  const handlePincodeChange = async (e) => {
-    const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setFormData((prev) => ({ ...prev, pincode: pin }));
-    setPincodeMessage('');
-    setAvailablePostOffices([]);
-
-    if (pin.length === 6) {
-      setPincodeLoading(true);
-      try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
-        const data = await response.json();
-
-        if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
-          const poList = data[0].PostOffice;
-          const firstPO = poList[0];
-
-          // Auto-fill State and District directly from Indian Postal Database
-          const apiState = firstPO.State || '';
-          const matchedState = Object.keys(INDIAN_LOCATIONS).find(
-            (s) => s.toLowerCase() === apiState.toLowerCase()
-          ) || apiState || prev.state;
-
-          const districtList = INDIAN_LOCATIONS[matchedState] || [];
-          const apiDistrict = firstPO.District || '';
-          const matchedDistrict = districtList.find(
-            (d) => d.toLowerCase() === apiDistrict.toLowerCase()
-          ) || apiDistrict || prev.district;
-
-          setFormData((prev) => ({
-            ...prev,
-            state: matchedState,
-            district: matchedDistrict,
-            city: firstPO.Name || prev.city,
-          }));
-
-          setAvailablePostOffices(poList.map((po) => po.Name));
-          setPincodeMessage(`✅ Verified: ${matchedDistrict}, ${matchedState}`);
-        } else {
-          setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
-        }
-      } catch (err) {
-        setPincodeMessage('⚠️ Could not verify PIN code online. You can choose manually.');
-      } finally {
-        setPincodeLoading(false);
-      }
-    }
-  };
-
-  const handleStateChange = (e) => {
-    const selectedState = e.target.value;
-    const defaultDistrict = INDIAN_LOCATIONS[selectedState]?.[0] || '';
-    setFormData({
-      ...formData,
-      state: selectedState,
-      district: defaultDistrict,
-      city: '',
-    });
-  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -123,7 +52,7 @@ const Register = () => {
     try {
       const { confirmPassword, ...registerPayload } = formData;
       if (registerPayload.phone && !registerPayload.phone.startsWith('+91')) {
-        registerPayload.phone = `+91 ${registerPayload.phone}`;
+        registerPayload.phone = `+91 ${registerPayload.phone.trim()}`;
       }
       await register(registerPayload);
       navigate('/');
@@ -142,15 +71,13 @@ const Register = () => {
     }
   };
 
-  const availableDistricts = INDIAN_LOCATIONS[formData.state] || [];
-
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors">
-      <div className="max-w-xl w-full space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+      <div className="max-w-md w-full space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
         <div className="text-center space-y-1">
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Join Share-It 🇮🇳</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            India's trusted community borrowing & lending network
+            Create an account in seconds to borrow & lend in your community
           </p>
         </div>
 
@@ -162,50 +89,50 @@ const Register = () => {
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          {/* Full Name & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
+          {/* Full Name */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
+            <input
+              name="fullName"
+              type="text"
+              required
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="e.g. Madhan Kumar"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
+
+          {/* Mobile Number */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Mobile Number *</label>
+            <div className="flex items-center rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
+              <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-700/60 border-r border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold select-none whitespace-nowrap flex-shrink-0">
+                <span className="w-4 h-2.5 rounded-xs overflow-hidden flex flex-col border border-gray-300 flex-shrink-0 shadow-xs">
+                  <span className="h-1/3 bg-[#FF9933] w-full block"></span>
+                  <span className="h-1/3 bg-white w-full flex items-center justify-center block">
+                    <span className="w-0.5 h-0.5 rounded-full bg-[#000080] block"></span>
+                  </span>
+                  <span className="h-1/3 bg-[#138808] w-full block"></span>
+                </span>
+                <span>+91</span>
+              </div>
               <input
-                name="fullName"
-                type="text"
+                name="phone"
+                type="tel"
                 required
-                value={formData.fullName}
-                onChange={handleChange}
-                placeholder="e.g. Madhan Kumar"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                maxLength={10}
+                pattern="[6-9][0-9]{9}"
+                value={formData.phone}
+                onChange={(e) => {
+                  const onlyNums = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, phone: onlyNums });
+                }}
+                placeholder="9876543210"
+                className="w-full px-3 py-2.5 text-xs text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent outline-none"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Mobile Number *</label>
-              <div className="flex items-center rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 overflow-hidden transition-all">
-                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 dark:bg-slate-700/60 border-r border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-xs font-bold select-none whitespace-nowrap flex-shrink-0">
-                  <span className="w-4 h-2.5 rounded-xs overflow-hidden flex flex-col border border-gray-300 flex-shrink-0 shadow-xs">
-                    <span className="h-1/3 bg-[#FF9933] w-full block"></span>
-                    <span className="h-1/3 bg-white w-full flex items-center justify-center block">
-                      <span className="w-0.5 h-0.5 rounded-full bg-[#000080] block"></span>
-                    </span>
-                    <span className="h-1/3 bg-[#138808] w-full block"></span>
-                  </span>
-                  <span>+91</span>
-                </div>
-                <input
-                  name="phone"
-                  type="tel"
-                  required
-                  maxLength={10}
-                  pattern="[6-9][0-9]{9}"
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const onlyNums = e.target.value.replace(/\D/g, '');
-                    setFormData({ ...formData, phone: onlyNums });
-                  }}
-                  placeholder="9876543210"
-                  className="w-full px-3 py-2.5 text-xs text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent outline-none"
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Enter 10-digit mobile number</p>
-            </div>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">10-digit mobile number for lender-borrower contact</p>
           </div>
 
           {/* Email */}
@@ -220,130 +147,6 @@ const Register = () => {
               placeholder="e.g. madhan@example.com"
               className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
             />
-          </div>
-
-          {/* Indian Location Box with 6-Digit PIN Code Auto-Lookup */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-400">
-                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Verified Community Location</span>
-              </div>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">Postal Auto-Detect</span>
-            </div>
-
-            {/* PIN Code Input with Auto-Lookup Indicator */}
-            <div>
-              <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                6-Digit Indian PIN Code * (Auto-Fills City & State)
-              </label>
-              <div className="relative">
-                <input
-                  name="pincode"
-                  type="text"
-                  maxLength={6}
-                  required
-                  value={formData.pincode}
-                  onChange={handlePincodeChange}
-                  placeholder="Enter 6-digit PIN code"
-                  className="w-full pl-3.5 pr-10 py-2.5 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none tracking-widest"
-                />
-                <div className="absolute right-3 top-2.5">
-                  {pincodeLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Search className="w-4 h-4 text-gray-400" />
-                  )}
-                </div>
-              </div>
-              {pincodeMessage && (
-                <p className={`text-[11px] mt-1 font-medium ${pincodeMessage.includes('✅') ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                  {pincodeMessage}
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">State / UT *</label>
-                <select
-                  name="state"
-                  value={formData.state}
-                  onChange={handleStateChange}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                >
-                  {Object.keys(INDIAN_LOCATIONS).map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">District / City *</label>
-                <select
-                  name="district"
-                  required
-                  value={formData.district}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                >
-                  <option value="">-- Choose District --</option>
-                  {formData.district && !availableDistricts.includes(formData.district) && (
-                    <option value={formData.district}>
-                      {formData.district}
-                    </option>
-                  )}
-                  {availableDistricts.map((dist) => (
-                    <option key={dist} value={dist}>
-                      {dist}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Town / Area / Locality</label>
-                {availablePostOffices.length > 0 ? (
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                  >
-                    <option value="">-- Choose Locality --</option>
-                    {availablePostOffices.map((po) => (
-                      <option key={po} value={po}>
-                        {po}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    name="city"
-                    type="text"
-                    value={formData.city}
-                    onChange={handleChange}
-                    placeholder="Enter town or locality"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                )}
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Street / House / Landmark</label>
-                <input
-                  name="address"
-                  type="text"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Enter street, house no., or landmark"
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Password & Re-enter Password */}
@@ -408,11 +211,11 @@ const Register = () => {
                 </div>
                 <div className={`flex items-center gap-1.5 ${hasUpperCase ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>1 Uppercase letter (A-Z)</span>
+                  <span>1 Uppercase letter</span>
                 </div>
                 <div className={`flex items-center gap-1.5 ${hasLowerCase ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>1 Lowercase letter (a-z)</span>
+                  <span>1 Lowercase letter</span>
                 </div>
                 <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -420,7 +223,7 @@ const Register = () => {
                 </div>
                 <div className={`flex items-center gap-1.5 ${hasSpecialChar ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>1 Special character (@$!%*?&_)</span>
+                  <span>1 Symbol (@$!%*?&_)</span>
                 </div>
                 <div className={`flex items-center gap-1.5 ${passwordsMatch && formData.confirmPassword ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -433,7 +236,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-sm text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition disabled:opacity-50 mt-2"
+            className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-sm text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition disabled:opacity-50 mt-2 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             {loading ? 'Creating account...' : 'Create Account'}
