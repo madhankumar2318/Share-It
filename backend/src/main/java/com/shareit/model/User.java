@@ -37,16 +37,6 @@ public class User {
 
     private String phone;
 
-    private String address;
-
-    private String state;
-
-    private String district;
-
-    private String city;
-
-    private String pincode;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

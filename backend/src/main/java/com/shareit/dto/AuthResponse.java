@@ -16,9 +16,4 @@ public class AuthResponse {
     private String email;
     private String role;
     private String phone;
-    private String address;
-    private String state;
-    private String district;
-    private String city;
-    private String pincode;
 }

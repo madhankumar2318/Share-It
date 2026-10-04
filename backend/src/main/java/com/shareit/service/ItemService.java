@@ -32,7 +32,7 @@ public class ItemService {
                 .description(dto.getDescription())
                 .category(dto.getCategory())
                 .imageUrl(dto.getImageUrl())
-                .location(dto.getLocation() != null ? dto.getLocation() : user.getAddress())
+                .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? dto.getLocation() : "Local Community")
                 .status(dto.getStatus() != null ? dto.getStatus() : ItemStatus.AVAILABLE)
                 .owner(user)
                 .build();

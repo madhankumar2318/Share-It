@@ -31,9 +31,4 @@ public class RegisterRequest {
     private String password;
 
     private String phone;
-    private String address;
-    private String state;
-    private String district;
-    private String city;
-    private String pincode;
 }

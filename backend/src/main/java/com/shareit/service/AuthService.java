@@ -14,6 +14,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,9 +25,10 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
+        if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
+            throw new IllegalArgumentException("Email is already registered");
         }
 
         User user = User.builder()
@@ -34,11 +36,6 @@ public class AuthService {
                 .email(request.getEmail().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
-                .address(request.getAddress())
-                .state(request.getState())
-                .district(request.getDistrict())
-                .city(request.getCity())
-                .pincode(request.getPincode())
                 .role(Role.USER)
                 .build();
 
@@ -53,11 +50,6 @@ public class AuthService {
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
                 .phone(savedUser.getPhone())
-                .address(savedUser.getAddress())
-                .state(savedUser.getState())
-                .district(savedUser.getDistrict())
-                .city(savedUser.getCity())
-                .pincode(savedUser.getPincode())
                 .build();
     }
 
@@ -86,11 +78,6 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .phone(user.getPhone())
-                .address(user.getAddress())
-                .state(user.getState())
-                .district(user.getDistrict())
-                .city(user.getCity())
-                .pincode(user.getPincode())
                 .build();
     }
 }

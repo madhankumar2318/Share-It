@@ -119,24 +119,6 @@ const AddItem = () => {
     setAvailablePostOffices([]);
   };
 
-  const handleUseProfileAddress = () => {
-    if (user && (user.state || user.district || user.city || user.pincode)) {
-      setLocationData({
-        pincode: user.pincode || '',
-        state: user.state || '',
-        district: user.district || '',
-        area: user.city || '',
-        landmark: user.address || '',
-      });
-      if (user.city) {
-        setAvailablePostOffices([user.city]);
-      }
-      setPincodeMessage(user.district ? `✅ Loaded from profile: ${user.district}, ${user.state || ''}` : '');
-    } else {
-      setPincodeMessage('⚠️ No saved address in profile. Please enter your 6-digit PIN code below.');
-    }
-  };
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -299,21 +281,9 @@ const AddItem = () => {
 
           {/* Structured Indian Pickup Location Box */}
           <div className="p-5 bg-slate-50/80 dark:bg-slate-950/50 border border-gray-200 dark:border-slate-800 rounded-2xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
-                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Pickup / Handover Location 🇮🇳 *</span>
-              </div>
-              {user && (user.district || user.city || user.pincode) && (
-                <button
-                  type="button"
-                  onClick={handleUseProfileAddress}
-                  className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-slate-700 transition shadow-2xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  Use My Profile Address
-                </button>
-              )}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Pickup / Handover Location 🇮🇳 *</span>
             </div>
 
             {/* PIN Code Lookup */}
