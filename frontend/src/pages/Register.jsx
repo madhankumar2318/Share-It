@@ -59,15 +59,26 @@ const Register = () => {
           const firstPO = poList[0];
 
           // Auto-fill State and District directly from Indian Postal Database
+          const apiState = firstPO.State || '';
+          const matchedState = Object.keys(INDIAN_LOCATIONS).find(
+            (s) => s.toLowerCase() === apiState.toLowerCase()
+          ) || apiState || prev.state;
+
+          const districtList = INDIAN_LOCATIONS[matchedState] || [];
+          const apiDistrict = firstPO.District || '';
+          const matchedDistrict = districtList.find(
+            (d) => d.toLowerCase() === apiDistrict.toLowerCase()
+          ) || apiDistrict || prev.district;
+
           setFormData((prev) => ({
             ...prev,
-            state: firstPO.State || prev.state,
-            district: firstPO.District || prev.district,
+            state: matchedState,
+            district: matchedDistrict,
             city: firstPO.Name || prev.city,
           }));
 
           setAvailablePostOffices(poList.map((po) => po.Name));
-          setPincodeMessage(`✅ Verified: ${firstPO.District}, ${firstPO.State}`);
+          setPincodeMessage(`✅ Verified: ${matchedDistrict}, ${matchedState}`);
         } else {
           setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
         }
@@ -81,10 +92,11 @@ const Register = () => {
 
   const handleStateChange = (e) => {
     const selectedState = e.target.value;
+    const defaultDistrict = INDIAN_LOCATIONS[selectedState]?.[0] || '';
     setFormData({
       ...formData,
       state: selectedState,
-      district: INDIAN_LOCATIONS[selectedState]?.[0] || '',
+      district: defaultDistrict,
       city: '',
     });
   };
@@ -258,15 +270,25 @@ const Register = () => {
 
               <div>
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">District / City *</label>
-                <input
+                <select
                   name="district"
-                  type="text"
                   required
                   value={formData.district}
                   onChange={handleChange}
-                  placeholder="Auto-filled from PIN code"
                   className="w-full px-3 py-2 bg-white rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
+                >
+                  <option value="">-- Choose District --</option>
+                  {formData.district && !availableDistricts.includes(formData.district) && (
+                    <option value={formData.district}>
+                      {formData.district}
+                    </option>
+                  )}
+                  {availableDistricts.map((dist) => (
+                    <option key={dist} value={dist}>
+                      {dist}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
