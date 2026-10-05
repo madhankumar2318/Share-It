@@ -69,7 +69,9 @@ public class BorrowRequestController {
         if (otp == null || otp.trim().isEmpty()) {
             throw new IllegalArgumentException("4-digit Pickup PIN is required");
         }
-        return ResponseEntity.ok(borrowRequestService.verifyPickupOtp(id, otp, userDetails.getUsername()));
+        String photoUrl = payload.get("photoUrl");
+        String conditionNote = payload.get("conditionNote");
+        return ResponseEntity.ok(borrowRequestService.verifyPickupOtp(id, otp, photoUrl, conditionNote, userDetails.getUsername()));
     }
 
     @PostMapping("/{id}/verify-return")
@@ -81,6 +83,8 @@ public class BorrowRequestController {
         if (otp == null || otp.trim().isEmpty()) {
             throw new IllegalArgumentException("4-digit Return PIN is required");
         }
-        return ResponseEntity.ok(borrowRequestService.verifyReturnOtp(id, otp, userDetails.getUsername()));
+        String photoUrl = payload.get("photoUrl");
+        String conditionNote = payload.get("conditionNote");
+        return ResponseEntity.ok(borrowRequestService.verifyReturnOtp(id, otp, photoUrl, conditionNote, userDetails.getUsername()));
     }
 }

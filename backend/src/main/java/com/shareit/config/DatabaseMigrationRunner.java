@@ -28,6 +28,10 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_otp VARCHAR(10);");
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS handover_at TIMESTAMP;");
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS returned_at TIMESTAMP;");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS pickup_photo_url VARCHAR(500);");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS pickup_condition_note VARCHAR(500);");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_photo_url VARCHAR(500);");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_condition_note VARCHAR(500);");
             log.info("borrow_requests schema verified successfully.");
         } catch (Exception e) {
             log.warn("Migration warning: {}", e.getMessage());

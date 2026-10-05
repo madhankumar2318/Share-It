@@ -20,9 +20,12 @@ import {
   ShieldCheck,
   AlertTriangle,
   Send,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
+import ConditionProofModal from '../components/ConditionProofModal';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import TrustBadge from '../components/TrustBadge';
@@ -70,6 +73,15 @@ const Dashboard = () => {
   const [verifyingId, setVerifyingId] = useState(null);
   const [verifyingReturnId, setVerifyingReturnId] = useState(null);
 
+  // Condition Proof states
+  const [pickupPhotos, setPickupPhotos] = useState({});
+  const [pickupNotes, setPickupNotes] = useState({});
+  const [returnPhotos, setReturnPhotos] = useState({});
+  const [returnNotes, setReturnNotes] = useState({});
+  const [uploadingPickupPhoto, setUploadingPickupPhoto] = useState({});
+  const [uploadingReturnPhoto, setUploadingReturnPhoto] = useState({});
+  const [selectedProofRequest, setSelectedProofRequest] = useState(null);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
@@ -111,6 +123,27 @@ const Dashboard = () => {
     setReturnPinInputs((prev) => ({ ...prev, [requestId]: clean }));
   };
 
+  const handlePhotoUpload = async (requestId, file, type) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    const setUploading = type === 'pickup' ? setUploadingPickupPhoto : setUploadingReturnPhoto;
+    const setPhotos = type === 'pickup' ? setPickupPhotos : setReturnPhotos;
+
+    setUploading((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      const res = await api.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = res.data?.fileUrl;
+      setPhotos((prev) => ({ ...prev, [requestId]: url }));
+    } catch (err) {
+      alert('Failed to upload condition photo. Please try again.');
+    } finally {
+      setUploading((prev) => ({ ...prev, [requestId]: false }));
+    }
+  };
+
   const handleVerifyPickup = async (requestId) => {
     const pin = pinInputs[requestId];
     if (!pin || pin.length !== 4) {
@@ -119,7 +152,11 @@ const Dashboard = () => {
     }
     setVerifyingId(requestId);
     try {
-      await api.post(`/requests/${requestId}/verify-pickup`, { otp: pin });
+      await api.post(`/requests/${requestId}/verify-pickup`, {
+        otp: pin,
+        photoUrl: pickupPhotos[requestId] || '',
+        conditionNote: pickupNotes[requestId] || '',
+      });
       setPinInputs((prev) => ({ ...prev, [requestId]: '' }));
       fetchDashboardData();
     } catch (err) {
@@ -137,7 +174,11 @@ const Dashboard = () => {
     }
     setVerifyingReturnId(requestId);
     try {
-      await api.post(`/requests/${requestId}/verify-return`, { otp: pin });
+      await api.post(`/requests/${requestId}/verify-return`, {
+        otp: pin,
+        photoUrl: returnPhotos[requestId] || '',
+        conditionNote: returnNotes[requestId] || '',
+      });
       setReturnPinInputs((prev) => ({ ...prev, [requestId]: '' }));
       fetchDashboardData();
     } catch (err) {
@@ -326,73 +367,137 @@ const Dashboard = () => {
 
                       {/* In-App Uber-style PIN Handover Verification for Lender */}
                       {req.status === 'ACCEPTED' && !req.handoverAt && (
-                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs flex-shrink-0">
-                              <KeyRound className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                                🔑 Handover Pickup PIN Verification
+                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl space-y-3">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs flex-shrink-0">
+                                <KeyRound className="w-4 h-4" />
                               </div>
-                              <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                Ask <strong>{req.borrowerName}</strong> for their 4-digit code at pickup:
-                              </p>
+                              <div>
+                                <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                  🔑 Handover Pickup PIN Verification
+                                </div>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                  Ask <strong>{req.borrowerName}</strong> for their 4-digit code at pickup:
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="PIN"
+                                value={pinInputs[req.id] || ''}
+                                onChange={(e) => handlePinChange(req.id, e.target.value)}
+                                className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleVerifyPickup(req.id)}
+                                disabled={verifyingId === req.id || (pinInputs[req.id] || '').length < 4}
+                                className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
+                              >
+                                {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto">
+
+                          {/* Pickup Condition Proof Snapshot (Optional but Recommended) */}
+                          <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 border border-dashed border-emerald-400 dark:border-emerald-700 rounded-xl text-xs font-medium text-emerald-700 dark:text-emerald-300 cursor-pointer hover:bg-emerald-50 dark:hover:bg-slate-800 transition shadow-2xs">
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>{uploadingPickupPhoto[req.id] ? 'Uploading...' : pickupPhotos[req.id] ? '✓ Photo Snapped' : '📸 Snap Pickup Condition'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                disabled={uploadingPickupPhoto[req.id]}
+                                onChange={(e) => e.target.files?.[0] && handlePhotoUpload(req.id, e.target.files[0], 'pickup')}
+                              />
+                            </label>
                             <input
                               type="text"
-                              maxLength={4}
-                              placeholder="PIN"
-                              value={pinInputs[req.id] || ''}
-                              onChange={(e) => handlePinChange(req.id, e.target.value)}
-                              className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
+                              placeholder="Condition note (e.g. scratch on handle, full battery)"
+                              value={pickupNotes[req.id] || ''}
+                              onChange={(e) => setPickupNotes((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none focus:ring-1 focus:ring-emerald-500"
                             />
-                            <button
-                              type="button"
-                              onClick={() => handleVerifyPickup(req.id)}
-                              disabled={verifyingId === req.id || (pinInputs[req.id] || '').length < 4}
-                              className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
-                            >
-                              {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
-                            </button>
+                            {pickupPhotos[req.id] && (
+                              <img
+                                src={pickupPhotos[req.id]}
+                                alt="Pickup preview"
+                                className="w-8 h-8 rounded-lg object-cover border border-emerald-400 self-center"
+                              />
+                            )}
                           </div>
                         </div>
                       )}
 
                       {req.status === 'ACCEPTED' && req.handoverAt && (
-                        <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs flex-shrink-0">
-                              <ShieldCheck className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-blue-900 dark:text-blue-200">
-                                🛡️ Item Handed Over &bull; Return Verification
+                        <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl space-y-3">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs flex-shrink-0">
+                                <ShieldCheck className="w-4 h-4" />
                               </div>
-                              <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                When {req.borrowerName} returns item, ask for their 4-digit Return PIN:
-                              </p>
+                              <div>
+                                <div className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                                  🛡️ Item Handed Over &bull; Return Verification
+                                </div>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                  When {req.borrowerName} returns item, ask for their 4-digit Return PIN:
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="PIN"
+                                value={returnPinInputs[req.id] || ''}
+                                onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
+                                className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleVerifyReturn(req.id)}
+                                disabled={verifyingReturnId === req.id || (returnPinInputs[req.id] || '').length < 4}
+                                className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
+                              >
+                                {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto">
+
+                          {/* Return Condition Proof Snapshot */}
+                          <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 border border-dashed border-blue-400 dark:border-blue-700 rounded-xl text-xs font-medium text-blue-700 dark:text-blue-300 cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800 transition shadow-2xs">
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>{uploadingReturnPhoto[req.id] ? 'Uploading...' : returnPhotos[req.id] ? '✓ Photo Snapped' : '📸 Snap Return Condition'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                disabled={uploadingReturnPhoto[req.id]}
+                                onChange={(e) => e.target.files?.[0] && handlePhotoUpload(req.id, e.target.files[0], 'return')}
+                              />
+                            </label>
                             <input
                               type="text"
-                              maxLength={4}
-                              placeholder="PIN"
-                              value={returnPinInputs[req.id] || ''}
-                              onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
-                              className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                              placeholder="Return note (e.g. returned clean and undamaged)"
+                              value={returnNotes[req.id] || ''}
+                              onChange={(e) => setReturnNotes((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-blue-200 dark:border-blue-800/80 bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none focus:ring-1 focus:ring-blue-500"
                             />
-                            <button
-                              type="button"
-                              onClick={() => handleVerifyReturn(req.id)}
-                              disabled={verifyingReturnId === req.id || (returnPinInputs[req.id] || '').length < 4}
-                              className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
-                            >
-                              {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
-                            </button>
+                            {returnPhotos[req.id] && (
+                              <img
+                                src={returnPhotos[req.id]}
+                                alt="Return preview"
+                                className="w-8 h-8 rounded-lg object-cover border border-blue-400 self-center"
+                              />
+                            )}
                           </div>
                         </div>
                       )}
@@ -400,6 +505,18 @@ const Dashboard = () => {
 
                     {/* Lender Action Buttons */}
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+                      {/* Condition Proof Button if item handed over or photos recorded */}
+                      {(req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
+                        <button
+                          onClick={() => setSelectedProofRequest(req)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
+                          title="View item condition proof photos"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Condition Proof
+                        </button>
+                      )}
+
                       <button
                         onClick={() => setSelectedChatRequest(req)}
                         className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
@@ -661,6 +778,18 @@ const Dashboard = () => {
 
                   {/* Borrower Action Button */}
                   <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+                    {/* Condition Proof Button if item handed over or photos recorded */}
+                    {(req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
+                      <button
+                        onClick={() => setSelectedProofRequest(req)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
+                        title="View item condition proof photos"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        Condition Proof
+                      </button>
+                    )}
+
                     <button
                       onClick={() => setSelectedChatRequest(req)}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
@@ -733,6 +862,13 @@ const Dashboard = () => {
         onClose={() => setSelectedReviewRequest(null)}
         request={selectedReviewRequest}
         onReviewSuccess={fetchDashboardData}
+      />
+
+      {/* Item Condition Proof Modal (Before & After Photos) */}
+      <ConditionProofModal
+        isOpen={!!selectedProofRequest}
+        onClose={() => setSelectedProofRequest(null)}
+        request={selectedProofRequest}
       />
     </div>
   );

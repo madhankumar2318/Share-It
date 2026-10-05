@@ -45,6 +45,11 @@ public class BorrowResponseDto {
     private LocalDateTime handoverAt;
     private LocalDateTime returnedAt;
 
+    private String pickupPhotoUrl;
+    private String pickupConditionNote;
+    private String returnPhotoUrl;
+    private String returnConditionNote;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

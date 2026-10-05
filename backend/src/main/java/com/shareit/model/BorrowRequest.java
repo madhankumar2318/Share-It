@@ -61,6 +61,18 @@ public class BorrowRequest {
 
     private LocalDateTime returnedAt;
 
+    @Column(length = 500)
+    private String pickupPhotoUrl;
+
+    @Column(length = 500)
+    private String pickupConditionNote;
+
+    @Column(length = 500)
+    private String returnPhotoUrl;
+
+    @Column(length = 500)
+    private String returnConditionNote;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

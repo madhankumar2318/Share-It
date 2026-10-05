@@ -237,7 +237,7 @@ public class BorrowRequestService {
     }
 
     @Transactional
-    public BorrowResponseDto verifyPickupOtp(Long requestId, String otp, String ownerEmail) {
+    public BorrowResponseDto verifyPickupOtp(Long requestId, String otp, String photoUrl, String conditionNote, String ownerEmail) {
         BorrowRequest request = borrowRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
 
@@ -261,12 +261,19 @@ public class BorrowRequestService {
         }
 
         request.setHandoverAt(java.time.LocalDateTime.now());
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setPickupPhotoUrl(photoUrl.trim());
+        }
+        if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+            request.setPickupConditionNote(conditionNote.trim());
+        }
+
         BorrowRequest saved = borrowRequestRepository.save(request);
 
         notificationService.sendNotification(
                 request.getBorrower(),
                 "🔑 Handover Confirmed!",
-                currentUser.getFullName() + " verified your pickup PIN for \"" + request.getItem().getTitle() + "\". Enjoy using it!",
+                currentUser.getFullName() + " verified your pickup PIN for \"" + request.getItem().getTitle() + "\". Condition snapshot saved! Enjoy using it!",
                 "HANDOVER_CONFIRMED",
                 "/dashboard"
         );
@@ -275,7 +282,12 @@ public class BorrowRequestService {
     }
 
     @Transactional
-    public BorrowResponseDto verifyReturnOtp(Long requestId, String otp, String ownerEmail) {
+    public BorrowResponseDto verifyPickupOtp(Long requestId, String otp, String ownerEmail) {
+        return verifyPickupOtp(requestId, otp, null, null, ownerEmail);
+    }
+
+    @Transactional
+    public BorrowResponseDto verifyReturnOtp(Long requestId, String otp, String photoUrl, String conditionNote, String ownerEmail) {
         BorrowRequest request = borrowRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
 
@@ -296,6 +308,12 @@ public class BorrowRequestService {
 
         request.setReturnedAt(java.time.LocalDateTime.now());
         request.setStatus(RequestStatus.RETURNED);
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setReturnPhotoUrl(photoUrl.trim());
+        }
+        if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+            request.setReturnConditionNote(conditionNote.trim());
+        }
 
         Item item = request.getItem();
         item.setStatus(ItemStatus.AVAILABLE);
@@ -306,12 +324,17 @@ public class BorrowRequestService {
         notificationService.sendNotification(
                 request.getBorrower(),
                 "🛡️ Return Verified!",
-                currentUser.getFullName() + " verified your return PIN for \"" + request.getItem().getTitle() + "\". Safe return confirmed!",
+                currentUser.getFullName() + " verified your return PIN for \"" + request.getItem().getTitle() + "\". Return condition snapshot recorded safely!",
                 "RETURN_CONFIRMED",
                 "/dashboard"
         );
 
         return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto verifyReturnOtp(Long requestId, String otp, String ownerEmail) {
+        return verifyReturnOtp(requestId, otp, null, null, ownerEmail);
     }
 
     @Transactional(readOnly = true)
@@ -359,6 +382,10 @@ public class BorrowRequestService {
                 .returnOtp(isBorrower ? req.getReturnOtp() : null)
                 .handoverAt(req.getHandoverAt())
                 .returnedAt(req.getReturnedAt())
+                .pickupPhotoUrl(req.getPickupPhotoUrl())
+                .pickupConditionNote(req.getPickupConditionNote())
+                .returnPhotoUrl(req.getReturnPhotoUrl())
+                .returnConditionNote(req.getReturnConditionNote())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();
