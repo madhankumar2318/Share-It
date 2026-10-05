@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { Search, Tag, MapPin, Eye, Sparkles } from 'lucide-react';
+import { useLocationFilter } from '../context/LocationContext';
+import { Search, Tag, MapPin, Eye, Sparkles, Navigation, X, SlidersHorizontal } from 'lucide-react';
 
 const CATEGORIES = [
   'All',
@@ -15,6 +16,7 @@ const CATEGORIES = [
 ];
 
 const Home = () => {
+  const { selectedLocation, setIsModalOpen, clearLocation, detectLocation, detectingLocation } = useLocationFilter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -30,6 +32,9 @@ const Home = () => {
       if (search.trim()) {
         params.search = search.trim();
       }
+      if (selectedLocation && selectedLocation.type !== 'ALL' && selectedLocation.value) {
+        params.location = selectedLocation.value;
+      }
       const response = await api.get('/items', { params });
       setItems(response.data);
     } catch (err) {
@@ -41,7 +46,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchItems();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedLocation]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -127,6 +132,49 @@ const Home = () => {
             </button>
           ))}
         </div>
+
+        {/* Location Status Bar */}
+        {selectedLocation?.type !== 'ALL' ? (
+          <div className="flex items-center justify-between p-3 px-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs">
+            <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>
+                Showing items near <strong className="font-bold underline decoration-emerald-500 underline-offset-2">{selectedLocation.label}</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+              >
+                Change
+              </button>
+              <span className="text-gray-300 dark:text-gray-700">|</span>
+              <button
+                type="button"
+                onClick={clearLocation}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                Show All
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3 px-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>Showing items across all locations in India.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              📍 Filter by my neighborhood
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Items Grid */}
@@ -141,19 +189,46 @@ const Home = () => {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800">
-          <Tag className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">No items found</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Be the first person to list an item in this category!
-          </p>
-          <Link
-            to="/add-item"
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"
-          >
-            List an Item Now
-          </Link>
-        </div>
+        selectedLocation?.type !== 'ALL' ? (
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6">
+            <MapPin className="w-12 h-12 text-emerald-500 dark:text-emerald-400 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              No items listed in {selectedLocation.label}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+              Nobody has shared an item in your area yet. Be the first neighbor to list something or browse nationwide items!
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/add-item"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition shadow-sm"
+              >
+                List an Item Here
+              </Link>
+              <button
+                type="button"
+                onClick={clearLocation}
+                className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+              >
+                View Nationwide Items
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800">
+            <Tag className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">No items found</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Be the first person to list an item in this category!
+            </p>
+            <Link
+              to="/add-item"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"
+            >
+              List an Item Now
+            </Link>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {items.map((item) => (

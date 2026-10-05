@@ -1,11 +1,25 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Share2, PlusCircle, LayoutDashboard, LogOut, LogIn, UserPlus, Sun, Moon } from 'lucide-react';
+import { useLocationFilter } from '../context/LocationContext';
+import LocationModal from './LocationModal';
+import { 
+  Share2, 
+  PlusCircle, 
+  LayoutDashboard, 
+  LogOut, 
+  LogIn, 
+  UserPlus, 
+  Sun, 
+  Moon, 
+  MapPin, 
+  ChevronDown 
+} from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { toggleTheme, isDark } = useTheme();
+  const { selectedLocation, setIsModalOpen } = useLocationFilter();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,21 +33,38 @@ const Navbar = () => {
   const isDashboard = location.pathname === '/dashboard';
 
   return (
-    <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50 shadow-sm transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="bg-emerald-600 text-white p-2 rounded-xl group-hover:bg-emerald-700 transition">
-              <Share2 className="w-5 h-5" />
-            </div>
-            <span className="font-extrabold text-2xl tracking-tight text-gray-900 dark:text-white">
-              Share<span className="text-emerald-600">It</span>
-            </span>
-          </Link>
+    <>
+      <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            {/* Logo & Location Pill */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link to="/" className="flex items-center gap-2 group">
+                <div className="bg-emerald-600 text-white p-2 rounded-xl group-hover:bg-emerald-700 transition">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <span className="font-extrabold text-2xl tracking-tight text-gray-900 dark:text-white">
+                  Share<span className="text-emerald-600">It</span>
+                </span>
+              </Link>
 
-          {/* Links & Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+              {/* Location Pill */}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 text-gray-700 dark:text-gray-200 transition group shadow-2xs"
+                title="Filter items by location"
+              >
+                <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition flex-shrink-0" />
+                <span className="max-w-[100px] sm:max-w-[170px] truncate font-semibold">
+                  {selectedLocation?.type !== 'ALL' ? selectedLocation.label : 'All India'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex-shrink-0" />
+              </button>
+            </div>
+
+            {/* Links & Actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/"
               className={`font-medium px-3.5 py-2 rounded-lg transition text-sm ${
@@ -136,7 +167,9 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-    </nav>
+      </nav>
+      <LocationModal />
+    </>
   );
 };
 

@@ -26,8 +26,9 @@ public class ItemController {
     public ResponseEntity<List<ItemResponseDto>> getAllItems(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String location,
             @RequestParam(required = false) ItemStatus status) {
-        return ResponseEntity.ok(itemService.getAllItems(category, search, status));
+        return ResponseEntity.ok(itemService.getAllItems(category, search, location, status));
     }
 
     @GetMapping("/{id}")

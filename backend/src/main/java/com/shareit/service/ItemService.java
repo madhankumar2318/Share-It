@@ -42,9 +42,10 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
-    public List<ItemResponseDto> getAllItems(String category, String search, ItemStatus status) {
+    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status) {
         String cleanCategory = (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All")) ? category.trim() : null;
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanLocation = (location != null && !location.trim().isEmpty() && !location.equalsIgnoreCase("All") && !location.equalsIgnoreCase("All India")) ? location.trim() : null;
 
         org.springframework.data.jpa.domain.Specification<Item> spec = (root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
@@ -59,6 +60,11 @@ public class ItemService {
                         cb.like(cb.lower(root.get("title")), pattern),
                         cb.like(cb.lower(root.get("description")), pattern)
                 ));
+            }
+
+            if (cleanLocation != null) {
+                String locPattern = "%" + cleanLocation.toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("location")), locPattern));
             }
 
             if (status != null) {
