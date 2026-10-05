@@ -21,8 +21,12 @@ import {
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
+import { useAuth } from '../context/AuthContext';
+import WhatsAppButton from '../components/WhatsAppButton';
+import { buildTransactionWhatsAppUrl } from '../utils/whatsapp';
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('lender'); // 'lender' | 'borrower'
   const [myItems, setMyItems] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -345,6 +349,22 @@ const Dashboard = () => {
                         Chat
                       </button>
 
+                      {req.borrowerPhone && (
+                        <WhatsAppButton
+                          href={buildTransactionWhatsAppUrl({
+                            phone: req.borrowerPhone,
+                            recipientName: req.borrowerName,
+                            itemName: req.itemTitle,
+                            role: 'borrower',
+                            myRoleName: user?.fullName,
+                          })}
+                          recipientName={req.borrowerName}
+                          label="WhatsApp"
+                          size="sm"
+                          variant="compact"
+                        />
+                      )}
+
                       {req.status === 'PENDING' && (
                         <>
                           <button
@@ -559,6 +579,22 @@ const Dashboard = () => {
                       <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Chat
                     </button>
+
+                    {req.ownerPhone && (
+                      <WhatsAppButton
+                        href={buildTransactionWhatsAppUrl({
+                          phone: req.ownerPhone,
+                          recipientName: req.ownerName,
+                          itemName: req.itemTitle,
+                          role: 'lender',
+                          myRoleName: user?.fullName,
+                        })}
+                        recipientName={req.ownerName}
+                        label="WhatsApp"
+                        size="sm"
+                        variant="compact"
+                      />
+                    )}
 
                     {req.status === 'PENDING' && (
                       <button

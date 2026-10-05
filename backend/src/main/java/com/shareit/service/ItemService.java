@@ -75,7 +75,7 @@ public class ItemService {
         };
 
         List<Item> items = itemRepository.findAll(spec);
-        return items.stream().map(this::mapToDto).collect(Collectors.toList());
+        return items.stream().map(item -> this.mapToDto(item, false)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +135,10 @@ public class ItemService {
     }
 
     public ItemResponseDto mapToDto(Item item) {
+        return mapToDto(item, true);
+    }
+
+    public ItemResponseDto mapToDto(Item item, boolean includePhone) {
         return ItemResponseDto.builder()
                 .id(item.getId())
                 .title(item.getTitle())
@@ -146,7 +150,7 @@ public class ItemService {
                 .ownerId(item.getOwner().getId())
                 .ownerName(item.getOwner().getFullName())
                 .ownerEmail(item.getOwner().getEmail())
-                .ownerPhone(item.getOwner().getPhone())
+                .ownerPhone(includePhone ? item.getOwner().getPhone() : null)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();

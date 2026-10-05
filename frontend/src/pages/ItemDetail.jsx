@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock } from 'lucide-react';
+import WhatsAppButton from '../components/WhatsAppButton';
+import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -91,6 +93,18 @@ const ItemDetail = () => {
   const isOwner = user && user.id === item.ownerId;
   const isAvailable = item.status === 'AVAILABLE';
 
+  const whatsAppUrl =
+    !isOwner && item.ownerPhone
+      ? buildItemWhatsAppUrl({
+          phone: item.ownerPhone,
+          itemName: item.title,
+          ownerName: item.ownerName,
+          borrowerName: user?.fullName,
+          location: item.location,
+          dates: startDate && endDate ? `${startDate} to ${endDate}` : null,
+        })
+      : null;
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <Link
@@ -129,23 +143,47 @@ const ItemDetail = () => {
             </div>
           </div>
 
-          {/* Owner Info Card */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-800 space-y-2">
+          {/* Owner Info Card & Direct WhatsApp Connect */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-800 space-y-3">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Listed By Owner</h4>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
                 {item.ownerName ? item.ownerName.charAt(0).toUpperCase() : 'U'}
               </div>
-              <div>
-                <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{item.ownerName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{item.ownerEmail}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{item.ownerName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.ownerEmail}</p>
               </div>
             </div>
-            {item.ownerPhone && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1.5 pt-1">
-                <Phone className="w-3.5 h-3.5 text-gray-400" />
-                {item.ownerPhone}
-              </p>
+
+            {/* Direct WhatsApp Contact Button (Only for Authenticated Non-Owners) */}
+            {!isOwner && (
+              <div className="pt-2 border-t border-gray-200/60 dark:border-slate-700/60">
+                {isAuthenticated ? (
+                  item.ownerPhone ? (
+                    <WhatsAppButton
+                      href={whatsAppUrl}
+                      recipientName={item.ownerName}
+                      label="Connect on WhatsApp"
+                      className="w-full justify-center"
+                      size="md"
+                    />
+                  ) : (
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 italic text-center">
+                      Owner has not added a mobile number for WhatsApp.
+                    </p>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="w-full py-2.5 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100/70 dark:hover:bg-emerald-950/60 transition flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Log in to Chat on WhatsApp with Owner</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
