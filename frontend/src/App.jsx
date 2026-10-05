@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import ItemDetail from './pages/ItemDetail';
 import AddItem from './pages/AddItem';
 import Dashboard from './pages/Dashboard';
+import CommunityWishlist from './pages/CommunityWishlist';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -30,6 +31,7 @@ function App() {
             <main className="flex-1">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/wishlist" element={<CommunityWishlist />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/items/:id" element={<ItemDetail />} />

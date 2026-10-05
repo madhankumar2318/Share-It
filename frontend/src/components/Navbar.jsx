@@ -29,6 +29,7 @@ const Navbar = () => {
   };
 
   const isBrowse = location.pathname === '/';
+  const isWishlist = location.pathname === '/wishlist';
   const isAddItem = location.pathname === '/add-item';
   const isDashboard = location.pathname === '/dashboard';
 
@@ -67,13 +68,24 @@ const Navbar = () => {
             <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/"
-              className={`font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+              className={`font-medium px-3 py-2 rounded-lg transition text-sm ${
                 isBrowse
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
                   : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
-              Browse Items
+              Browse
+            </Link>
+
+            <Link
+              to="/wishlist"
+              className={`font-medium px-3 py-2 rounded-lg transition text-sm ${
+                isWishlist
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+              }`}
+            >
+              Wishlist 🙋
             </Link>
 
             {isAuthenticated ? (
