@@ -79,3 +79,39 @@ export const buildTransactionWhatsAppUrl = ({
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
 };
+
+/**
+ * Computes due-date status from an endDate string (YYYY-MM-DD).
+ * Returns null if endDate is falsy.
+ * Returns { type: 'ok'|'due'|'overdue', label: string, color: 'green'|'amber'|'red' }
+ */
+export const getDueDateStatus = (endDate) => {
+  if (!endDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((end - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 1) return { type: 'ok', label: `${diffDays} days remaining`, color: 'green' };
+  if (diffDays === 1) return { type: 'ok', label: '1 day remaining', color: 'green' };
+  if (diffDays === 0) return { type: 'due', label: 'Due Today', color: 'amber' };
+  return { type: 'overdue', label: `Overdue by ${Math.abs(diffDays)} day(s)`, color: 'red' };
+};
+
+/**
+ * Constructs a friendly return-ping WhatsApp URL for lenders to nudge borrowers.
+ * Uses wa.me deep link — zero paid APIs, zero server-side calls.
+ */
+export const buildReturnPingWhatsAppUrl = ({ phone, borrowerName, itemTitle, endDate }) => {
+  const cleanPhone = sanitizeIndianPhone(phone);
+  if (!cleanPhone) return null;
+
+  const message =
+    `Hi ${borrowerName || 'there'}! Hope the "${itemTitle || 'item'}" was helpful! 😊 ` +
+    `Just a gentle reminder that the scheduled return date is ${endDate}. ` +
+    `Let me know what time works best for drop-off. ` +
+    `Thank you for being an amazing neighbor! 🏠\n— via Share-It`;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+};

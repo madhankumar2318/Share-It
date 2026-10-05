@@ -18,12 +18,40 @@ import {
   Star,
   KeyRound,
   ShieldCheck,
+  AlertTriangle,
+  Send,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
-import { buildTransactionWhatsAppUrl } from '../utils/whatsapp';
+import { buildTransactionWhatsAppUrl, buildReturnPingWhatsAppUrl, getDueDateStatus } from '../utils/whatsapp';
+
+/** Color-coded due-date countdown badge shown on ACCEPTED requests */
+const DueDateBadge = ({ endDate }) => {
+  const status = getDueDateStatus(endDate);
+  if (!status) return null;
+
+  const colorMap = {
+    green: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+    amber: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+    red: 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/60',
+  };
+  const iconMap = {
+    green: <Clock className="w-3 h-3" />,
+    amber: <AlertTriangle className="w-3 h-3" />,
+    red: <AlertTriangle className="w-3 h-3" />,
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${colorMap[status.color]}`}
+    >
+      {iconMap[status.color]}
+      {status.label}
+    </span>
+  );
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -258,6 +286,13 @@ const Dashboard = () => {
                         </span>
                       </div>
 
+                      {/* Due Date Countdown Badge — only for active borrows */}
+                      {req.status === 'ACCEPTED' && (
+                        <div className="flex items-center gap-2">
+                          <DueDateBadge endDate={req.endDate} />
+                        </div>
+                      )}
+
                       {req.message && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                           "{req.message}"
@@ -364,6 +399,29 @@ const Dashboard = () => {
                           variant="compact"
                         />
                       )}
+
+                      {/* 1-Click Friendly Return Ping — only shown once item is handed over */}
+                      {req.status === 'ACCEPTED' && req.handoverAt && req.borrowerPhone && (() => {
+                        const pingUrl = buildReturnPingWhatsAppUrl({
+                          phone: req.borrowerPhone,
+                          borrowerName: req.borrowerName,
+                          itemTitle: req.itemTitle,
+                          endDate: req.endDate,
+                        });
+                        if (!pingUrl) return null;
+                        return (
+                          <a
+                            href={pingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Send a friendly return reminder to ${req.borrowerName}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/60 text-violet-700 dark:text-violet-300 rounded-xl text-xs font-semibold transition border border-violet-200 dark:border-violet-800"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Return Ping
+                          </a>
+                        );
+                      })()}
 
                       {req.status === 'PENDING' && (
                         <>
@@ -512,6 +570,13 @@ const Dashboard = () => {
                         Dates: {req.startDate} to {req.endDate}
                       </span>
                     </div>
+
+                    {/* Due Date Countdown Badge — only for active borrows */}
+                    {req.status === 'ACCEPTED' && (
+                      <div className="flex items-center gap-2">
+                        <DueDateBadge endDate={req.endDate} />
+                      </div>
+                    )}
 
                     {req.message && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
