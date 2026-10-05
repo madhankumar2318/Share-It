@@ -61,6 +61,16 @@ public class BorrowRequest {
 
     private LocalDateTime returnedAt;
 
+    @Builder.Default
+    private Integer pickupAttempts = 0;
+
+    private LocalDateTime pickupLockoutUntil;
+
+    @Builder.Default
+    private Integer returnAttempts = 0;
+
+    private LocalDateTime returnLockoutUntil;
+
     @Column(length = 500)
     private String pickupPhotoUrl;
 

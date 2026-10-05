@@ -472,50 +472,60 @@ const Dashboard = () => {
                       )}
 
                       {/* In-App Uber-style PIN Handover Verification for Lender */}
-                      {req.status === 'ACCEPTED' && !req.handoverAt && (
-                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl space-y-3">
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs flex-shrink-0">
-                                <KeyRound className="w-4 h-4" />
+                      {req.status === 'ACCEPTED' && !req.handoverAt && (() => {
+                        const isPickupLocked = req.pickupLockoutUntil && new Date(req.pickupLockoutUntil) > new Date();
+                        return (
+                          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl space-y-3">
+                            {isPickupLocked && (
+                              <div className="p-2.5 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center gap-2 font-bold animate-pulse">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+                                <span>🚨 Security Lockout: 5 failed PIN attempts reached. Handover locked until {new Date(req.pickupLockoutUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</span>
                               </div>
-                              <div>
-                                <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                                  🔑 Handover Pickup PIN Verification
+                            )}
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs flex-shrink-0">
+                                  <KeyRound className="w-4 h-4" />
                                 </div>
-                                <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                  Ask <strong>{req.borrowerName}</strong> for their 6-digit code at pickup:
-                                </p>
+                                <div>
+                                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                    🔑 Handover Pickup PIN Verification
+                                  </div>
+                                  <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                    Ask <strong>{req.borrowerName}</strong> for their 6-digit code at pickup:
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                <input
+                                  type="text"
+                                  maxLength={6}
+                                  placeholder="PIN"
+                                  disabled={isPickupLocked}
+                                  value={pinInputs[req.id] || ''}
+                                  onChange={(e) => handlePinChange(req.id, e.target.value)}
+                                  className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerifyPickup(req.id)}
+                                  disabled={isPickupLocked || verifyingId === req.id || !((pinInputs[req.id] || '').length === 6 || (pinInputs[req.id] || '').length === 4)}
+                                  className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
+                                >
+                                  {verifyingId === req.id ? 'Verifying...' : 'Verify'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isPickupLocked}
+                                  onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'pickup' })}
+                                  className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap disabled:opacity-50"
+                                  title="Scan borrower QR code with camera"
+                                >
+                                  <QrCode className="w-3.5 h-3.5" />
+                                  <span>Scan QR</span>
+                                </button>
                               </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                              <input
-                                type="text"
-                                maxLength={6}
-                                placeholder="PIN"
-                                value={pinInputs[req.id] || ''}
-                                onChange={(e) => handlePinChange(req.id, e.target.value)}
-                                className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleVerifyPickup(req.id)}
-                                disabled={verifyingId === req.id || !((pinInputs[req.id] || '').length === 6 || (pinInputs[req.id] || '').length === 4)}
-                                className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
-                              >
-                                {verifyingId === req.id ? 'Verifying...' : 'Verify'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'pickup' })}
-                                className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap"
-                                title="Scan borrower QR code with camera"
-                              >
-                                <QrCode className="w-3.5 h-3.5" />
-                                <span>Scan QR</span>
-                              </button>
-                            </div>
-                          </div>
 
                           {/* Pickup Condition Proof Snapshot (Optional but Recommended) */}
                           <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -547,52 +557,63 @@ const Dashboard = () => {
                             )}
                           </div>
                         </div>
-                      )}
+                      );
+                    })()}
 
-                      {req.status === 'ACCEPTED' && req.handoverAt && (
-                        <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl space-y-3">
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs flex-shrink-0">
-                                <ShieldCheck className="w-4 h-4" />
+                      {req.status === 'ACCEPTED' && req.handoverAt && (() => {
+                        const isReturnLocked = req.returnLockoutUntil && new Date(req.returnLockoutUntil) > new Date();
+                        return (
+                          <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl space-y-3">
+                            {isReturnLocked && (
+                              <div className="p-2.5 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-center gap-2 font-bold animate-pulse">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+                                <span>🚨 Security Lockout: 5 failed Return PIN attempts reached. Return verification locked until {new Date(req.returnLockoutUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</span>
                               </div>
-                              <div>
-                                <div className="text-xs font-bold text-blue-900 dark:text-blue-200">
-                                  🛡️ Item Handed Over &bull; Return Verification
+                            )}
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs flex-shrink-0">
+                                  <ShieldCheck className="w-4 h-4" />
                                 </div>
-                                <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                  When {req.borrowerName} returns item, ask for their 6-digit Return PIN:
-                                </p>
+                                <div>
+                                  <div className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                                    🛡️ Item Handed Over &bull; Return Verification
+                                  </div>
+                                  <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                    When {req.borrowerName} returns item, ask for their 6-digit Return PIN:
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                <input
+                                  type="text"
+                                  maxLength={6}
+                                  placeholder="PIN"
+                                  disabled={isReturnLocked}
+                                  value={returnPinInputs[req.id] || ''}
+                                  onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
+                                  className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerifyReturn(req.id)}
+                                  disabled={isReturnLocked || verifyingReturnId === req.id || !((returnPinInputs[req.id] || '').length === 6 || (returnPinInputs[req.id] || '').length === 4)}
+                                  className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
+                                >
+                                  {verifyingReturnId === req.id ? 'Verifying...' : 'Verify'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isReturnLocked}
+                                  onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'return' })}
+                                  className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-blue-300 dark:border-blue-700 shadow-2xs whitespace-nowrap disabled:opacity-50"
+                                  title="Scan borrower return QR code with camera"
+                                >
+                                  <QrCode className="w-3.5 h-3.5" />
+                                  <span>Scan QR</span>
+                                </button>
                               </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                              <input
-                                type="text"
-                                maxLength={6}
-                                placeholder="PIN"
-                                value={returnPinInputs[req.id] || ''}
-                                onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
-                                className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleVerifyReturn(req.id)}
-                                disabled={verifyingReturnId === req.id || !((returnPinInputs[req.id] || '').length === 6 || (returnPinInputs[req.id] || '').length === 4)}
-                                className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
-                              >
-                                {verifyingReturnId === req.id ? 'Verifying...' : 'Verify'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'return' })}
-                                className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-blue-300 dark:border-blue-700 shadow-2xs whitespace-nowrap"
-                                title="Scan borrower return QR code with camera"
-                              >
-                                <QrCode className="w-3.5 h-3.5" />
-                                <span>Scan QR</span>
-                              </button>
-                            </div>
-                          </div>
 
                           {/* Return Condition Proof Snapshot */}
                           <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -624,7 +645,8 @@ const Dashboard = () => {
                             )}
                           </div>
                         </div>
-                      )}
+                      );
+                    })()}
                     </div>
 
                     {/* Lender Action Buttons */}

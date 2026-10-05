@@ -44,6 +44,8 @@ public class BorrowResponseDto {
     private String returnOtp;
     private LocalDateTime handoverAt;
     private LocalDateTime returnedAt;
+    private LocalDateTime pickupLockoutUntil;
+    private LocalDateTime returnLockoutUntil;
 
     private String pickupPhotoUrl;
     private String pickupConditionNote;

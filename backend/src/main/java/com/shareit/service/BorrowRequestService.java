@@ -256,10 +256,54 @@ public class BorrowRequestService {
             throw new IllegalArgumentException("Handover PIN has already been verified!");
         }
 
-        if (otp == null || !otp.trim().equals(request.getPickupOtp())) {
-            throw new IllegalArgumentException("Invalid Pickup PIN! Please check with the borrower.");
+        // 1. Check if security lockout is active
+        if (request.getPickupLockoutUntil() != null) {
+            if (java.time.LocalDateTime.now().isBefore(request.getPickupLockoutUntil())) {
+                long minutesLeft = java.time.Duration.between(java.time.LocalDateTime.now(), request.getPickupLockoutUntil()).toMinutes() + 1;
+                throw new IllegalArgumentException("🚨 Security Lockout: Too many failed PIN attempts! Verification is locked. Please try again in " + minutesLeft + " minute(s).");
+            } else {
+                // Lockout window expired, clear lockout and reset attempts
+                request.setPickupLockoutUntil(null);
+                request.setPickupAttempts(0);
+            }
         }
 
+        // 2. Validate OTP with Brute-Force Rate Limiting
+        if (otp == null || !otp.trim().equals(request.getPickupOtp())) {
+            int attempts = (request.getPickupAttempts() != null ? request.getPickupAttempts() : 0) + 1;
+            request.setPickupAttempts(attempts);
+
+            if (attempts >= 5) {
+                request.setPickupLockoutUntil(java.time.LocalDateTime.now().plusMinutes(10));
+                borrowRequestRepository.save(request);
+
+                // Send security alerts
+                notificationService.sendNotification(
+                        currentUser,
+                        "🚨 Security Lockout: Pickup Verification Locked",
+                        "Handover for \"" + request.getItem().getTitle() + "\" has been temporarily locked for 10 minutes due to 5 consecutive incorrect PIN attempts.",
+                        "SECURITY_LOCKOUT",
+                        "/dashboard"
+                );
+                notificationService.sendNotification(
+                        request.getBorrower(),
+                        "🚨 Security Lockout: Pickup Verification Locked",
+                        "Pickup PIN verification for \"" + request.getItem().getTitle() + "\" has been locked for 10 minutes due to 5 consecutive incorrect attempts.",
+                        "SECURITY_LOCKOUT",
+                        "/dashboard"
+                );
+
+                throw new IllegalArgumentException("Maximum attempts reached! Verification locked for 10 minutes for account security.");
+            }
+
+            borrowRequestRepository.save(request);
+            int remaining = 5 - attempts;
+            throw new IllegalArgumentException("Invalid Pickup PIN! " + remaining + " attempt(s) remaining before security lockout.");
+        }
+
+        // 3. Success: Reset attempt counters
+        request.setPickupAttempts(0);
+        request.setPickupLockoutUntil(null);
         request.setHandoverAt(java.time.LocalDateTime.now());
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setPickupPhotoUrl(photoUrl.trim());
@@ -302,10 +346,54 @@ public class BorrowRequestService {
             throw new IllegalArgumentException("Item is not in active accepted status");
         }
 
-        if (otp == null || !otp.trim().equals(request.getReturnOtp())) {
-            throw new IllegalArgumentException("Invalid Return PIN! Please check with the borrower.");
+        // 1. Check if return security lockout is active
+        if (request.getReturnLockoutUntil() != null) {
+            if (java.time.LocalDateTime.now().isBefore(request.getReturnLockoutUntil())) {
+                long minutesLeft = java.time.Duration.between(java.time.LocalDateTime.now(), request.getReturnLockoutUntil()).toMinutes() + 1;
+                throw new IllegalArgumentException("🚨 Security Lockout: Too many failed PIN attempts! Return verification is locked. Please try again in " + minutesLeft + " minute(s).");
+            } else {
+                // Lockout window expired, clear lockout and reset attempts
+                request.setReturnLockoutUntil(null);
+                request.setReturnAttempts(0);
+            }
         }
 
+        // 2. Validate Return OTP with Brute-Force Rate Limiting
+        if (otp == null || !otp.trim().equals(request.getReturnOtp())) {
+            int attempts = (request.getReturnAttempts() != null ? request.getReturnAttempts() : 0) + 1;
+            request.setReturnAttempts(attempts);
+
+            if (attempts >= 5) {
+                request.setReturnLockoutUntil(java.time.LocalDateTime.now().plusMinutes(10));
+                borrowRequestRepository.save(request);
+
+                // Send security alerts
+                notificationService.sendNotification(
+                        currentUser,
+                        "🚨 Security Lockout: Return Verification Locked",
+                        "Return verification for \"" + request.getItem().getTitle() + "\" has been temporarily locked for 10 minutes due to 5 consecutive incorrect PIN attempts.",
+                        "SECURITY_LOCKOUT",
+                        "/dashboard"
+                );
+                notificationService.sendNotification(
+                        request.getBorrower(),
+                        "🚨 Security Lockout: Return Verification Locked",
+                        "Return PIN verification for \"" + request.getItem().getTitle() + "\" has been locked for 10 minutes due to 5 consecutive incorrect attempts.",
+                        "SECURITY_LOCKOUT",
+                        "/dashboard"
+                );
+
+                throw new IllegalArgumentException("Maximum attempts reached! Return verification locked for 10 minutes for account security.");
+            }
+
+            borrowRequestRepository.save(request);
+            int remaining = 5 - attempts;
+            throw new IllegalArgumentException("Invalid Return PIN! " + remaining + " attempt(s) remaining before security lockout.");
+        }
+
+        // 3. Success: Reset return attempt counters
+        request.setReturnAttempts(0);
+        request.setReturnLockoutUntil(null);
         request.setReturnedAt(java.time.LocalDateTime.now());
         request.setStatus(RequestStatus.RETURNED);
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
@@ -382,6 +470,8 @@ public class BorrowRequestService {
                 .returnOtp(isBorrower ? req.getReturnOtp() : null)
                 .handoverAt(req.getHandoverAt())
                 .returnedAt(req.getReturnedAt())
+                .pickupLockoutUntil(req.getPickupLockoutUntil())
+                .returnLockoutUntil(req.getReturnLockoutUntil())
                 .pickupPhotoUrl(req.getPickupPhotoUrl())
                 .pickupConditionNote(req.getPickupConditionNote())
                 .returnPhotoUrl(req.getReturnPhotoUrl())
