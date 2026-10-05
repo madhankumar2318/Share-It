@@ -26,6 +26,7 @@ public class BorrowRequestService {
     private final BorrowRequestRepository borrowRequestRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public BorrowResponseDto createRequest(BorrowRequestDto dto, String borrowerEmail) {
@@ -74,6 +75,16 @@ public class BorrowRequestService {
                 .build();
 
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        // Notify item owner of incoming borrow request
+        notificationService.sendNotification(
+                item.getOwner(),
+                "New Borrow Request",
+                borrower.getFullName() + " wants to borrow \"" + item.getTitle() + "\" (" + dto.getStartDate() + " to " + dto.getEndDate() + ").",
+                "REQUEST_RECEIVED",
+                "/dashboard"
+        );
+
         return mapToDto(saved, true);
     }
 
@@ -191,6 +202,35 @@ public class BorrowRequestService {
         }
 
         BorrowRequest updated = borrowRequestRepository.save(request);
+
+        // Send alerts based on status change
+        if (newStatus == RequestStatus.ACCEPTED) {
+            notificationService.sendNotification(
+                    request.getBorrower(),
+                    "🎉 Request Approved!",
+                    item.getOwner().getFullName() + " accepted your request for \"" + item.getTitle() + "\". Your 4-digit pickup PIN is ready in your dashboard!",
+                    "REQUEST_ACCEPTED",
+                    "/dashboard"
+            );
+        } else if (newStatus == RequestStatus.REJECTED) {
+            notificationService.sendNotification(
+                    request.getBorrower(),
+                    "Request Declined",
+                    item.getOwner().getFullName() + " was unable to accept your request for \"" + item.getTitle() + "\".",
+                    "REQUEST_REJECTED",
+                    "/dashboard"
+            );
+        } else if (newStatus == RequestStatus.RETURNED) {
+            User notifyTarget = isOwner ? request.getBorrower() : item.getOwner();
+            notificationService.sendNotification(
+                    notifyTarget,
+                    "Item Return Confirmed",
+                    "\"" + item.getTitle() + "\" has been marked as returned.",
+                    "RETURN_CONFIRMED",
+                    "/dashboard"
+            );
+        }
+
         return mapToDto(updated, isBorrower);
     }
 
@@ -220,6 +260,15 @@ public class BorrowRequestService {
 
         request.setHandoverAt(java.time.LocalDateTime.now());
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "🔑 Handover Confirmed!",
+                currentUser.getFullName() + " verified your pickup PIN for \"" + request.getItem().getTitle() + "\". Enjoy using it!",
+                "HANDOVER_CONFIRMED",
+                "/dashboard"
+        );
+
         return mapToDto(saved, false);
     }
 
@@ -251,6 +300,15 @@ public class BorrowRequestService {
         itemRepository.save(item);
 
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "🛡️ Return Verified!",
+                currentUser.getFullName() + " verified your return PIN for \"" + request.getItem().getTitle() + "\". Safe return confirmed!",
+                "RETURN_CONFIRMED",
+                "/dashboard"
+        );
+
         return mapToDto(saved, false);
     }
 

@@ -27,6 +27,7 @@ public class ItemWishlistService {
     private final ItemWishlistRepository wishlistRepository;
     private final WishlistOfferRepository offerRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public WishlistResponseDto createWishlist(WishlistRequestDto dto, String userEmail) {
@@ -152,6 +153,16 @@ public class ItemWishlistService {
                 .build();
 
         WishlistOffer saved = offerRepository.save(offer);
+
+        // Notify wishlist requester about the new offer
+        notificationService.sendNotification(
+                wishlist.getUser(),
+                "🙋 New Offer for Your Wishlist!",
+                lender.getFullName() + " offered to lend their item for your request \"" + wishlist.getTitle() + "\"!",
+                "WISHLIST_OFFER",
+                "/wishlist"
+        );
+
         return mapOfferToDto(saved);
     }
 

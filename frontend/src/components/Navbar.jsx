@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLocationFilter } from '../context/LocationContext';
 import LocationModal from './LocationModal';
+import NotificationBell from './NotificationBell';
 import { 
   Share2, 
   PlusCircle, 
@@ -126,6 +127,9 @@ const Navbar = () => {
                     Dashboard
                   </Link>
 
+                  {/* In-App Live Notification Bell */}
+                  <NotificationBell />
+
                   {/* Dark / Light Mode Toggle */}
                   <button
                     type="button"
@@ -189,8 +193,11 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile Actions: Theme Toggle & Hamburger Button (Visible only on mobile) */}
+            {/* Mobile Actions: Notifications, Theme Toggle & Hamburger Button (Visible only on mobile) */}
             <div className="flex md:hidden items-center gap-1.5">
+              {/* In-App Live Notification Bell */}
+              <NotificationBell />
+
               <button
                 type="button"
                 onClick={toggleTheme}
