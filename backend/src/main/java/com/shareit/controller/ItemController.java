@@ -23,13 +23,30 @@ public class ItemController {
     private final ItemService itemService;
 
     @GetMapping
-    public ResponseEntity<List<ItemResponseDto>> getAllItems(
+    public ResponseEntity<?> getAllItems(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) ItemStatus status,
-            @RequestParam(required = false) Boolean availableToday) {
+            @RequestParam(required = false) Boolean availableToday,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "12") Integer size) {
+        if (page != null) {
+            return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, page, size));
+        }
         return ResponseEntity.ok(itemService.getAllItems(category, search, location, status, availableToday));
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<com.shareit.dto.PageResponseDto<ItemResponseDto>> getPagedItems(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) ItemStatus status,
+            @RequestParam(required = false) Boolean availableToday,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, page, size));
     }
 
     @GetMapping("/{id}")

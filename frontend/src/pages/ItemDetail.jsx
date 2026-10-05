@@ -10,6 +10,7 @@ import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
+import { ItemDetailSkeleton } from '../components/SkeletonCard';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -120,11 +121,7 @@ const ItemDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-gray-500">
-        Loading item details...
-      </div>
-    );
+    return <ItemDetailSkeleton />;
   }
 
   if (error || !item) {

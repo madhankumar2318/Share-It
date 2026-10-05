@@ -23,6 +23,7 @@ import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
+import { ItemCardSkeleton } from '../components/SkeletonCard';
 
 const CATEGORIES = [
   'All',
@@ -568,12 +569,8 @@ const Home = () => {
         /* Items Grid */
         loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="animate-pulse bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-4 border border-gray-100 dark:border-slate-800">
-                <div className="bg-gray-200 dark:bg-slate-800 h-44 rounded-xl"></div>
-                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/2"></div>
-              </div>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <ItemCardSkeleton key={i} />
             ))}
           </div>
         ) : displayItems.length === 0 ? (

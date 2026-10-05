@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
+import { useToast } from '../context/ToastContext';
 import CreateWishlistModal from '../components/CreateWishlistModal';
 import WhatsAppButton from '../components/WhatsAppButton';
 import {
@@ -37,6 +38,7 @@ const CommunityWishlist = () => {
   const { user, isAuthenticated } = useAuth();
   const { selectedLocation, setIsModalOpen: openLocationModal, clearLocation } = useLocationFilter();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [wishlists, setWishlists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ const CommunityWishlist = () => {
 
   const handleCreateClick = () => {
     if (!isAuthenticated) {
-      alert('Please log in to post an item request.');
+      toast.warning('Please log in to post an item request.');
       navigate('/login');
       return;
     }
@@ -92,9 +94,10 @@ const CommunityWishlist = () => {
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       await api.patch(`/wishlists/${id}/status`, { status: newStatus });
+      toast.success('Request status updated!');
       fetchWishlists();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update request status');
+      toast.error(err.response?.data?.message || 'Failed to update request status');
     }
   };
 
@@ -102,16 +105,17 @@ const CommunityWishlist = () => {
     if (window.confirm('Are you sure you want to delete this community request?')) {
       try {
         await api.delete(`/wishlists/${id}`);
+        toast.success('Request deleted.');
         fetchWishlists();
       } catch (err) {
-        alert(err.response?.data?.message || 'Failed to delete request');
+        toast.error(err.response?.data?.message || 'Failed to delete request');
       }
     }
   };
 
   const handleSendInAppOffer = async (wishlistId) => {
     if (!isAuthenticated) {
-      alert('Please log in to offer lending an item.');
+      toast.warning('Please log in to offer lending an item.');
       navigate('/login');
       return;
     }
@@ -120,12 +124,12 @@ const CommunityWishlist = () => {
       await api.post(`/wishlists/${wishlistId}/offers`, {
         message: offerMessage.trim() || 'I have this item available and can lend it to you!',
       });
-      alert('Your offer was sent to the neighbor successfully! 🎉');
+      toast.success('Your offer was sent to the neighbor successfully! 🎉');
       setOfferingId(null);
       setOfferMessage('');
       fetchWishlists();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send offer');
+      toast.error(err.response?.data?.message || 'Failed to send offer');
     } finally {
       setSubmittingOffer(false);
     }

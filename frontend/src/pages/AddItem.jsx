@@ -16,6 +16,8 @@ import {
   Sparkles, 
   Search 
 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { compressImage } from '../utils/imageCompressor';
 
 const CATEGORIES = [
   'Electronics',
@@ -30,6 +32,7 @@ const CATEGORIES = [
 const AddItem = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -139,11 +142,12 @@ const AddItem = () => {
 
   const handleUploadImage = async () => {
     if (!selectedFile) return null;
-    const uploadData = new FormData();
-    uploadData.append('file', selectedFile);
-
     setUploadingImage(true);
     try {
+      const compressedFile = await compressImage(selectedFile, { maxWidth: 1280, maxHeight: 1280, quality: 0.75 });
+      const uploadData = new FormData();
+      uploadData.append('file', compressedFile);
+
       const response = await api.post('/files/upload', uploadData);
       return response.data.fileUrl;
     } catch (err) {
@@ -214,6 +218,7 @@ const AddItem = () => {
         longitude: sampleCoords?.lng || null,
       });
 
+      toast.success('🎉 Your item has been listed to the community catalog!');
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || err.response?.data?.message || 'Failed to list item.');

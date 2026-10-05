@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const WhatsAppIcon = ({ className = 'w-4 h-4' }) => (
   <svg
@@ -26,18 +27,19 @@ const WhatsAppButton = ({
 }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const handleClick = (e) => {
     if (!isAuthenticated) {
       e.preventDefault();
-      alert('Please log in to your Share-It account to connect directly on WhatsApp.');
+      toast.warning('Please log in to your Share-It account to connect on WhatsApp.');
       navigate('/login');
       return;
     }
 
     if (!href) {
       e.preventDefault();
-      alert(`WhatsApp contact is not available for ${recipientName}.`);
+      toast.info(`WhatsApp contact is not available for ${recipientName}.`);
       return;
     }
 

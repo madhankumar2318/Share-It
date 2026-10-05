@@ -11,7 +11,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "borrow_requests")
+@Table(
+    name = "borrow_requests",
+    indexes = {
+        @Index(name = "idx_borrow_item_id", columnList = "item_id"),
+        @Index(name = "idx_borrow_borrower_id", columnList = "borrower_id"),
+        @Index(name = "idx_borrow_status", columnList = "status"),
+        @Index(name = "idx_borrow_created_at", columnList = "createdAt")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor

@@ -37,8 +37,11 @@ import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
 import QuickReborrowModal from '../components/QuickReborrowModal';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import TrustBadge from '../components/TrustBadge';
+import { DashboardRowSkeleton } from '../components/SkeletonCard';
+import { compressImage } from '../utils/imageCompressor';
 import { buildTransactionWhatsAppUrl, buildReturnPingWhatsAppUrl, getDueDateStatus } from '../utils/whatsapp';
 
 /** Color-coded due-date countdown badge shown on ACCEPTED requests */
@@ -69,6 +72,7 @@ const DueDateBadge = ({ endDate }) => {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('lender'); // 'lender' | 'borrower' | 'saved'
   const [myItems, setMyItems] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -122,8 +126,9 @@ const Dashboard = () => {
     try {
       await api.post(`/favorites/${itemId}/toggle`);
       setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
+      toast.info('Item removed from saved list.');
     } catch (err) {
-      alert('Failed to remove item from saved list.');
+      toast.error('Failed to remove item from saved list.');
     }
   };
 
@@ -134,18 +139,20 @@ const Dashboard = () => {
   const handleUpdateStatus = async (requestId, status) => {
     try {
       await api.patch(`/requests/${requestId}/status`, { status });
+      toast.success(`Request ${status.toLowerCase()} successfully!`);
       fetchDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update request status');
+      toast.error(err.response?.data?.message || 'Failed to update request status');
     }
   };
 
   const handleRespondExtension = async (requestId, approve) => {
     try {
       await api.post(`/requests/${requestId}/extend/respond`, { approve });
+      toast.success(approve ? 'Extension approved!' : 'Extension declined.');
       fetchDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update extension status');
+      toast.error(err.response?.data?.message || 'Failed to update extension status');
     }
   };
 
@@ -161,20 +168,24 @@ const Dashboard = () => {
 
   const handlePhotoUpload = async (requestId, file, type) => {
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
     const setUploading = type === 'pickup' ? setUploadingPickupPhoto : setUploadingReturnPhoto;
     const setPhotos = type === 'pickup' ? setPickupPhotos : setReturnPhotos;
 
     setUploading((prev) => ({ ...prev, [requestId]: true }));
     try {
+      // Compress image client-side to keep DB small and free
+      const compressedFile = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.75 });
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+
       const res = await api.post('/files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const url = res.data?.fileUrl;
       setPhotos((prev) => ({ ...prev, [requestId]: url }));
+      toast.success('Condition photo uploaded! 📸');
     } catch (err) {
-      alert('Failed to upload condition photo. Please try again.');
+      toast.error('Failed to upload condition photo. Please try again.');
     } finally {
       setUploading((prev) => ({ ...prev, [requestId]: false }));
     }
@@ -183,7 +194,7 @@ const Dashboard = () => {
   const handleVerifyPickup = async (requestId, overridePin = null) => {
     const pin = overridePin || pinInputs[requestId];
     if (!pin || (pin.length !== 6 && pin.length !== 4)) {
-      alert('Please enter a valid 6-digit PIN');
+      toast.warning('Please enter a valid 6-digit PIN');
       return;
     }
     setVerifyingId(requestId);
@@ -194,9 +205,10 @@ const Dashboard = () => {
         conditionNote: pickupNotes[requestId] || '',
       });
       setPinInputs((prev) => ({ ...prev, [requestId]: '' }));
+      toast.success('Pickup verified! Handover complete. 🎉');
       fetchDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Invalid Pickup PIN. Please check with borrower.');
+      toast.error(err.response?.data?.message || 'Invalid Pickup PIN. Please check with borrower.');
     } finally {
       setVerifyingId(null);
     }
@@ -205,7 +217,7 @@ const Dashboard = () => {
   const handleVerifyReturn = async (requestId, overridePin = null) => {
     const pin = overridePin || returnPinInputs[requestId];
     if (!pin || (pin.length !== 6 && pin.length !== 4)) {
-      alert('Please enter a valid 6-digit PIN');
+      toast.warning('Please enter a valid 6-digit PIN');
       return;
     }
     setVerifyingReturnId(requestId);
@@ -216,9 +228,10 @@ const Dashboard = () => {
         conditionNote: returnNotes[requestId] || '',
       });
       setReturnPinInputs((prev) => ({ ...prev, [requestId]: '' }));
+      toast.success('Return verified! Item returned successfully. 🛡️');
       fetchDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Invalid Return PIN. Please check with borrower.');
+      toast.error(err.response?.data?.message || 'Invalid Return PIN. Please check with borrower.');
     } finally {
       setVerifyingReturnId(null);
     }
@@ -241,9 +254,10 @@ const Dashboard = () => {
     if (window.confirm('Are you sure you want to delete this listing?')) {
       try {
         await api.delete(`/items/${itemId}`);
+        toast.success('Listing deleted.');
         fetchDashboardData();
       } catch (err) {
-        alert('Failed to delete item');
+        toast.error('Failed to delete item');
       }
     }
   };
@@ -284,7 +298,24 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-gray-500 dark:text-gray-400">Loading your dashboard...</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        <div className="space-y-2">
+          <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-48 animate-pulse" />
+          <div className="h-4 bg-slate-100 dark:bg-slate-800/60 rounded-lg w-72 animate-pulse" />
+        </div>
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl w-36 animate-pulse" />
+          <div className="h-10 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-36 animate-pulse" />
+          <div className="h-10 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-36 animate-pulse" />
+        </div>
+        <div className="space-y-4">
+          <DashboardRowSkeleton />
+          <DashboardRowSkeleton />
+          <DashboardRowSkeleton />
+        </div>
+      </div>
+    );
   }
 
   return (

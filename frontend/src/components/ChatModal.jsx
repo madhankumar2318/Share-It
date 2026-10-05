@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Send, X, MessageSquare, Clock } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 const ChatModal = ({ isOpen, onClose, request }) => {
   const { user } = useAuth();
+  const toast = useToast();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ const ChatModal = ({ isOpen, onClose, request }) => {
       setMessages((prev) => [...prev, response.data]);
       setNewMessage('');
     } catch (err) {
-      alert('Failed to send message');
+      toast.error('Failed to send message');
     } finally {
       setSending(false);
     }

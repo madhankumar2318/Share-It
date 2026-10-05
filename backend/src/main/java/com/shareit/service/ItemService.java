@@ -48,18 +48,13 @@ public class ItemService {
         return mapToDto(saved);
     }
 
-    @Transactional(readOnly = true)
-    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status) {
-        return getAllItems(category, search, location, status, null);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status, Boolean availableToday) {
+    private org.springframework.data.jpa.domain.Specification<Item> buildSpecification(
+            String category, String search, String location, ItemStatus status) {
         String cleanCategory = (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All")) ? category.trim() : null;
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         String cleanLocation = (location != null && !location.trim().isEmpty() && !location.equalsIgnoreCase("All") && !location.equalsIgnoreCase("All India")) ? location.trim() : null;
 
-        org.springframework.data.jpa.domain.Specification<Item> spec = (root, query, cb) -> {
+        return (root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
 
             if (cleanCategory != null) {
@@ -85,7 +80,16 @@ public class ItemService {
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
+    }
 
+    @Transactional(readOnly = true)
+    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status) {
+        return getAllItems(category, search, location, status, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status, Boolean availableToday) {
+        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status);
         List<Item> items = itemRepository.findAll(spec);
         List<ItemResponseDto> dtoList = items.stream().map(item -> this.mapToDto(item, false)).collect(Collectors.toList());
 
@@ -96,6 +100,36 @@ public class ItemService {
         }
 
         return dtoList;
+    }
+
+    @Transactional(readOnly = true)
+    public com.shareit.dto.PageResponseDto<ItemResponseDto> getPagedItems(
+            String category, String search, String location, ItemStatus status, Boolean availableToday, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(0, page), Math.max(1, size), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
+        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status);
+        org.springframework.data.domain.Page<Item> itemPage = itemRepository.findAll(spec, pageable);
+
+        List<ItemResponseDto> dtoList = itemPage.getContent().stream()
+                .map(item -> this.mapToDto(item, false))
+                .collect(Collectors.toList());
+
+        if (Boolean.TRUE.equals(availableToday)) {
+            dtoList = dtoList.stream()
+                    .filter(dto -> !Boolean.TRUE.equals(dto.getIsBookedToday()) && dto.getStatus() == ItemStatus.AVAILABLE)
+                    .collect(Collectors.toList());
+        }
+
+        return com.shareit.dto.PageResponseDto.<ItemResponseDto>builder()
+                .content(dtoList)
+                .pageNumber(itemPage.getNumber())
+                .pageSize(itemPage.getSize())
+                .totalElements(itemPage.getTotalElements())
+                .totalPages(itemPage.getTotalPages())
+                .first(itemPage.isFirst())
+                .last(itemPage.isLast())
+                .build();
     }
 
     @Transactional(readOnly = true)

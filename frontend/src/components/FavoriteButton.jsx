@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const FavoriteButton = ({
   itemId,
@@ -12,6 +13,7 @@ const FavoriteButton = ({
   showLabel = false,
 }) => {
   const { user } = useAuth();
+  const toast = useToast();
   const [favorited, setFavorited] = useState(isFavorited);
   const [loading, setLoading] = useState(false);
   const [animate, setAnimate] = useState(false);
@@ -25,7 +27,7 @@ const FavoriteButton = ({
     e.stopPropagation();
 
     if (!user) {
-      alert('Please log in to save items to your favorites!');
+      toast.warning('Please log in to save items to your favorites!');
       return;
     }
 
@@ -42,13 +44,18 @@ const FavoriteButton = ({
       const res = await api.post(`/favorites/${itemId}/toggle`);
       const isNowFav = res.data?.favorited;
       setFavorited(isNowFav);
+      if (isNowFav) {
+        toast.success('Saved to your favorites! ❤️');
+      } else {
+        toast.info('Removed from favorites.');
+      }
       if (onToggle) {
         onToggle(itemId, isNowFav);
       }
     } catch (err) {
       // Revert on error
       setFavorited(previousState);
-      alert('Failed to update favorite status. Please try again.');
+      toast.error('Failed to update favorite status. Please try again.');
     } finally {
       setLoading(false);
     }

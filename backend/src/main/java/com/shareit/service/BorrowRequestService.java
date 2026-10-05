@@ -29,6 +29,7 @@ public class BorrowRequestService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final UserTrustService userTrustService;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public BorrowResponseDto createRequest(BorrowRequestDto dto, String borrowerEmail) {
@@ -77,6 +78,14 @@ public class BorrowRequestService {
                 .build();
 
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "REQUEST_CREATED",
+                "BorrowRequest",
+                saved.getId(),
+                borrowerEmail,
+                "Requested item '" + item.getTitle() + "' from " + dto.getStartDate() + " to " + dto.getEndDate()
+        );
 
         // Notify item owner of incoming borrow request
         notificationService.sendNotification(
@@ -205,6 +214,14 @@ public class BorrowRequestService {
 
         BorrowRequest updated = borrowRequestRepository.save(request);
 
+        auditLogService.log(
+                "STATUS_UPDATED_" + newStatus,
+                "BorrowRequest",
+                updated.getId(),
+                userEmail,
+                "Status updated to " + newStatus + " by " + currentUser.getFullName()
+        );
+
         // Send alerts based on status change
         if (newStatus == RequestStatus.ACCEPTED) {
             notificationService.sendNotification(
@@ -277,6 +294,14 @@ public class BorrowRequestService {
                 request.setPickupLockoutUntil(java.time.LocalDateTime.now().plusMinutes(10));
                 borrowRequestRepository.save(request);
 
+                auditLogService.log(
+                        "PIN_LOCKOUT_TRIGGERED",
+                        "BorrowRequest",
+                        request.getId(),
+                        ownerEmail,
+                        "5 failed pickup PIN attempts triggered 10-minute lockout"
+                );
+
                 // Send security alerts
                 notificationService.sendNotification(
                         currentUser,
@@ -313,6 +338,14 @@ public class BorrowRequestService {
         }
 
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "HANDOVER_VERIFIED",
+                "BorrowRequest",
+                saved.getId(),
+                ownerEmail,
+                "Handover verified via 6-digit PIN by lender " + currentUser.getFullName() + (photoUrl != null ? " (with condition photo)" : "")
+        );
 
         notificationService.sendNotification(
                 request.getBorrower(),
@@ -367,6 +400,14 @@ public class BorrowRequestService {
                 request.setReturnLockoutUntil(java.time.LocalDateTime.now().plusMinutes(10));
                 borrowRequestRepository.save(request);
 
+                auditLogService.log(
+                        "PIN_LOCKOUT_TRIGGERED",
+                        "BorrowRequest",
+                        request.getId(),
+                        ownerEmail,
+                        "5 failed return PIN attempts triggered 10-minute lockout"
+                );
+
                 // Send security alerts
                 notificationService.sendNotification(
                         currentUser,
@@ -408,6 +449,14 @@ public class BorrowRequestService {
         itemRepository.save(item);
 
         BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "RETURN_VERIFIED",
+                "BorrowRequest",
+                saved.getId(),
+                ownerEmail,
+                "Return verified via 6-digit PIN by lender " + currentUser.getFullName() + (photoUrl != null ? " (with condition photo)" : "")
+        );
 
         notificationService.sendNotification(
                 request.getBorrower(),

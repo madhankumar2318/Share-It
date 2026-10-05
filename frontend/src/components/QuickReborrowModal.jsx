@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   Sparkles,
 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 const QuickReborrowModal = ({ isOpen, onClose, request, onSuccess }) => {
+  const toast = useToast();
   if (!isOpen || !request) return null;
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -94,7 +96,7 @@ const QuickReborrowModal = ({ isOpen, onClose, request, onSuccess }) => {
         message,
       });
 
-      alert(`🎉 Re-borrow request sent to ${request.ownerName}!`);
+      toast.success(`🎉 Re-borrow request sent to ${request.ownerName}!`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
