@@ -386,8 +386,122 @@ public class BorrowRequestService {
                 .pickupConditionNote(req.getPickupConditionNote())
                 .returnPhotoUrl(req.getReturnPhotoUrl())
                 .returnConditionNote(req.getReturnConditionNote())
+                .extensionProposedEndDate(req.getExtensionProposedEndDate())
+                .extensionStatus(req.getExtensionStatus())
+                .extensionReason(req.getExtensionReason())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();
+    }
+
+    @Transactional
+    public BorrowResponseDto requestExtension(Long requestId, java.time.LocalDate newEndDate, String reason, String borrowerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User borrower = userRepository.findByEmail(borrowerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getBorrower().getId().equals(borrower.getId())) {
+            throw new AccessDeniedException("Only the borrower can request a return date extension");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Can only extend active accepted borrow requests");
+        }
+
+        if (newEndDate == null || !newEndDate.isAfter(request.getEndDate())) {
+            throw new IllegalArgumentException("New return date must be after current return date (" + request.getEndDate() + ")");
+        }
+
+        Item item = request.getItem();
+
+        // Date Conflict Shield: Check if another neighbor booked this item during the extension window
+        java.time.LocalDate checkStart = request.getEndDate().plusDays(1);
+        List<BorrowRequest> conflicts = borrowRequestRepository.findConflictingAcceptedRequests(
+                item.getId(), request.getId(), checkStart, newEndDate
+        );
+
+        if (!conflicts.isEmpty()) {
+            BorrowRequest firstConflict = conflicts.get(0);
+            String otherBorrower = firstConflict.getBorrower() != null ? firstConflict.getBorrower().getFullName() : "another neighbor";
+            throw new IllegalArgumentException(String.format(
+                    "Cannot extend: \"%s\" is already reserved by %s from %s to %s.",
+                    item.getTitle(), otherBorrower, firstConflict.getStartDate(), firstConflict.getEndDate()
+            ));
+        }
+
+        request.setExtensionProposedEndDate(newEndDate);
+        request.setExtensionStatus("PENDING");
+        request.setExtensionReason(reason != null && !reason.trim().isEmpty() ? reason.trim() : "Needs item for longer");
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        // Notify item owner
+        notificationService.sendNotification(
+                item.getOwner(),
+                "🔄 Extension Requested",
+                borrower.getFullName() + " requested to extend return date for \"" + item.getTitle() + "\" to " + newEndDate + ".",
+                "EXTENSION_REQUESTED",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, true);
+    }
+
+    @Transactional
+    public BorrowResponseDto respondToExtension(Long requestId, boolean approve, String ownerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User owner = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Item item = request.getItem();
+        if (!item.getOwner().getId().equals(owner.getId())) {
+            throw new AccessDeniedException("Only the item owner can respond to extension requests");
+        }
+
+        if (!"PENDING".equalsIgnoreCase(request.getExtensionStatus())) {
+            throw new IllegalArgumentException("No pending extension request for this booking");
+        }
+
+        if (approve) {
+            java.time.LocalDate newEndDate = request.getExtensionProposedEndDate();
+            // Re-verify Date Conflict Shield before final confirmation
+            java.time.LocalDate checkStart = request.getEndDate().plusDays(1);
+            List<BorrowRequest> conflicts = borrowRequestRepository.findConflictingAcceptedRequests(
+                    item.getId(), request.getId(), checkStart, newEndDate
+            );
+            if (!conflicts.isEmpty()) {
+                throw new IllegalArgumentException("Cannot approve: Conflicting booking exists during the extension period.");
+            }
+
+            request.setEndDate(newEndDate);
+            request.setExtensionStatus("APPROVED");
+
+            // Notify borrower
+            notificationService.sendNotification(
+                    request.getBorrower(),
+                    "✓ Extension Approved!",
+                    owner.getFullName() + " approved your return extension for \"" + item.getTitle() + "\" until " + newEndDate + ".",
+                    "EXTENSION_APPROVED",
+                    "/dashboard"
+            );
+        } else {
+            request.setExtensionStatus("REJECTED");
+
+            // Notify borrower
+            notificationService.sendNotification(
+                    request.getBorrower(),
+                    "Extension Declined",
+                    owner.getFullName() + " declined the return extension for \"" + item.getTitle() + "\". Please return by " + request.getEndDate() + ".",
+                    "EXTENSION_DECLINED",
+                    "/dashboard"
+            );
+        }
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+        return mapToDto(saved, false);
     }
 }

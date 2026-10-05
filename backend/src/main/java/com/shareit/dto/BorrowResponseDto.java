@@ -50,6 +50,10 @@ public class BorrowResponseDto {
     private String returnPhotoUrl;
     private String returnConditionNote;
 
+    private LocalDate extensionProposedEndDate;
+    private String extensionStatus;
+    private String extensionReason;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

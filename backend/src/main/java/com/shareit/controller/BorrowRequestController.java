@@ -87,4 +87,27 @@ public class BorrowRequestController {
         String conditionNote = payload.get("conditionNote");
         return ResponseEntity.ok(borrowRequestService.verifyReturnOtp(id, otp, photoUrl, conditionNote, userDetails.getUsername()));
     }
+
+    @PostMapping("/{id}/extend")
+    public ResponseEntity<BorrowResponseDto> requestExtension(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String newEndDateStr = payload.get("newEndDate");
+        if (newEndDateStr == null || newEndDateStr.trim().isEmpty()) {
+            throw new IllegalArgumentException("New return date is required");
+        }
+        java.time.LocalDate newEndDate = java.time.LocalDate.parse(newEndDateStr.trim());
+        String reason = payload.get("reason");
+        return ResponseEntity.ok(borrowRequestService.requestExtension(id, newEndDate, reason, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/extend/respond")
+    public ResponseEntity<BorrowResponseDto> respondToExtension(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean approve = Boolean.TRUE.equals(payload.get("approve"));
+        return ResponseEntity.ok(borrowRequestService.respondToExtension(id, approve, userDetails.getUsername()));
+    }
 }

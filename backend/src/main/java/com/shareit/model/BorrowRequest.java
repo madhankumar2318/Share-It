@@ -73,6 +73,14 @@ public class BorrowRequest {
     @Column(length = 500)
     private String returnConditionNote;
 
+    private LocalDate extensionProposedEndDate;
+
+    @Column(length = 50)
+    private String extensionStatus; // "PENDING", "APPROVED", "REJECTED"
+
+    @Column(length = 500)
+    private String extensionReason;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

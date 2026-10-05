@@ -22,10 +22,12 @@ import {
   Send,
   Camera,
   Image as ImageIcon,
+  RefreshCw,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
 import ConditionProofModal from '../components/ConditionProofModal';
+import ExtendReturnModal from '../components/ExtendReturnModal';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import TrustBadge from '../components/TrustBadge';
@@ -81,6 +83,7 @@ const Dashboard = () => {
   const [uploadingPickupPhoto, setUploadingPickupPhoto] = useState({});
   const [uploadingReturnPhoto, setUploadingReturnPhoto] = useState({});
   const [selectedProofRequest, setSelectedProofRequest] = useState(null);
+  const [selectedExtendRequest, setSelectedExtendRequest] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -110,6 +113,15 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update request status');
+    }
+  };
+
+  const handleRespondExtension = async (requestId, approve) => {
+    try {
+      await api.post(`/requests/${requestId}/extend/respond`, { approve });
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update extension status');
     }
   };
 
@@ -363,6 +375,48 @@ const Dashboard = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                           "{req.message}"
                         </p>
+                      )}
+
+                      {/* Lender In-App Extension Request Approval/Decline Box */}
+                      {req.status === 'ACCEPTED' && req.extensionStatus === 'PENDING' && (
+                        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-xl space-y-2.5 shadow-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="p-1.5 bg-amber-500 text-white rounded-lg flex-shrink-0">
+                                <RefreshCw className="w-3.5 h-3.5" />
+                              </span>
+                              <div>
+                                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                                  🔄 Extension Requested by {req.borrowerName}
+                                </span>
+                                <div className="text-[11px] text-amber-800 dark:text-amber-300">
+                                  Current return: <strong>{req.endDate}</strong> &rarr; Proposed: <strong className="underline decoration-amber-500 underline-offset-2">{req.extensionProposedEndDate}</strong>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleRespondExtension(req.id, true)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+                              >
+                                ✓ Approve Extension
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRespondExtension(req.id, false)}
+                                className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold border border-red-200 dark:border-red-900 transition"
+                              >
+                                ✕ Decline
+                              </button>
+                            </div>
+                          </div>
+                          {req.extensionReason && (
+                            <p className="text-xs text-gray-600 dark:text-gray-300 italic bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg border border-amber-200/60 dark:border-amber-800/50">
+                              Note from borrower: "{req.extensionReason}"
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       {/* In-App Uber-style PIN Handover Verification for Lender */}
@@ -713,10 +767,27 @@ const Dashboard = () => {
                       </span>
                     </div>
 
-                    {/* Due Date Countdown Badge — only for active borrows */}
+                    {/* Due Date Countdown Badge & Extension Status */}
                     {req.status === 'ACCEPTED' && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <DueDateBadge endDate={req.endDate} />
+                        {req.extensionStatus === 'PENDING' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                            <Clock className="w-3 h-3" />
+                            Extension to {req.extensionProposedEndDate} Requested
+                          </span>
+                        )}
+                        {req.extensionStatus === 'APPROVED' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Return Extended to {req.endDate}
+                          </span>
+                        )}
+                        {req.extensionStatus === 'REJECTED' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/60">
+                            Extension Declined
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -815,6 +886,18 @@ const Dashboard = () => {
                       />
                     )}
 
+                    {/* 1-Click Request Extension button for active accepted requests */}
+                    {req.status === 'ACCEPTED' && !req.returnedAt && req.extensionStatus !== 'PENDING' && (
+                      <button
+                        onClick={() => setSelectedExtendRequest(req)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800"
+                        title="Request to extend your return date"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Extend Return
+                      </button>
+                    )}
+
                     {req.status === 'PENDING' && (
                       <button
                         onClick={() => handleUpdateStatus(req.id, 'CANCELLED')}
@@ -869,6 +952,14 @@ const Dashboard = () => {
         isOpen={!!selectedProofRequest}
         onClose={() => setSelectedProofRequest(null)}
         request={selectedProofRequest}
+      />
+
+      {/* 1-Click Borrow Return Extension Modal */}
+      <ExtendReturnModal
+        isOpen={!!selectedExtendRequest}
+        onClose={() => setSelectedExtendRequest(null)}
+        request={selectedExtendRequest}
+        onSuccess={fetchDashboardData}
       />
     </div>
   );
