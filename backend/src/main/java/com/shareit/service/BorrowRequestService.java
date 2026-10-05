@@ -92,7 +92,7 @@ public class BorrowRequestService {
 
     private String generateSecureOtp() {
         java.security.SecureRandom random = new java.security.SecureRandom();
-        return String.valueOf(1000 + random.nextInt(9000));
+        return String.valueOf(100000 + random.nextInt(900000));
     }
 
     @Transactional
@@ -210,7 +210,7 @@ public class BorrowRequestService {
             notificationService.sendNotification(
                     request.getBorrower(),
                     "🎉 Request Approved!",
-                    item.getOwner().getFullName() + " accepted your request for \"" + item.getTitle() + "\". Your 4-digit pickup PIN is ready in your dashboard!",
+                    item.getOwner().getFullName() + " accepted your request for \"" + item.getTitle() + "\". Your 6-digit pickup PIN is ready in your dashboard!",
                     "REQUEST_ACCEPTED",
                     "/dashboard"
             );

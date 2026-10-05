@@ -126,12 +126,12 @@ const Dashboard = () => {
   };
 
   const handlePinChange = (requestId, value) => {
-    const clean = value.replace(/\D/g, '').slice(0, 4);
+    const clean = value.replace(/\D/g, '').slice(0, 6);
     setPinInputs((prev) => ({ ...prev, [requestId]: clean }));
   };
 
   const handleReturnPinChange = (requestId, value) => {
-    const clean = value.replace(/\D/g, '').slice(0, 4);
+    const clean = value.replace(/\D/g, '').slice(0, 6);
     setReturnPinInputs((prev) => ({ ...prev, [requestId]: clean }));
   };
 
@@ -158,8 +158,8 @@ const Dashboard = () => {
 
   const handleVerifyPickup = async (requestId) => {
     const pin = pinInputs[requestId];
-    if (!pin || pin.length !== 4) {
-      alert('Please enter a valid 4-digit PIN');
+    if (!pin || (pin.length !== 6 && pin.length !== 4)) {
+      alert('Please enter a valid 6-digit PIN');
       return;
     }
     setVerifyingId(requestId);
@@ -180,8 +180,8 @@ const Dashboard = () => {
 
   const handleVerifyReturn = async (requestId) => {
     const pin = returnPinInputs[requestId];
-    if (!pin || pin.length !== 4) {
-      alert('Please enter a valid 4-digit PIN');
+    if (!pin || (pin.length !== 6 && pin.length !== 4)) {
+      alert('Please enter a valid 6-digit PIN');
       return;
     }
     setVerifyingReturnId(requestId);
@@ -432,23 +432,23 @@ const Dashboard = () => {
                                   🔑 Handover Pickup PIN Verification
                                 </div>
                                 <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                  Ask <strong>{req.borrowerName}</strong> for their 4-digit code at pickup:
+                                  Ask <strong>{req.borrowerName}</strong> for their 6-digit code at pickup:
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                               <input
                                 type="text"
-                                maxLength={4}
+                                maxLength={6}
                                 placeholder="PIN"
                                 value={pinInputs[req.id] || ''}
                                 onChange={(e) => handlePinChange(req.id, e.target.value)}
-                                className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
+                                className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleVerifyPickup(req.id)}
-                                disabled={verifyingId === req.id || (pinInputs[req.id] || '').length < 4}
+                                disabled={verifyingId === req.id || !((pinInputs[req.id] || '').length === 6 || (pinInputs[req.id] || '').length === 4)}
                                 className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                               >
                                 {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
@@ -500,23 +500,23 @@ const Dashboard = () => {
                                   🛡️ Item Handed Over &bull; Return Verification
                                 </div>
                                 <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                                  When {req.borrowerName} returns item, ask for their 4-digit Return PIN:
+                                  When {req.borrowerName} returns item, ask for their 6-digit Return PIN:
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                               <input
                                 type="text"
-                                maxLength={4}
+                                maxLength={6}
                                 placeholder="PIN"
                                 value={returnPinInputs[req.id] || ''}
                                 onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
-                                className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                                className="w-28 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleVerifyReturn(req.id)}
-                                disabled={verifyingReturnId === req.id || (returnPinInputs[req.id] || '').length < 4}
+                                disabled={verifyingReturnId === req.id || !((returnPinInputs[req.id] || '').length === 6 || (returnPinInputs[req.id] || '').length === 4)}
                                 className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                               >
                                 {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
@@ -809,7 +809,7 @@ const Dashboard = () => {
                               Pickup Handover PIN (Uber Style)
                             </span>
                             <div className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
-                              Tell this 4-digit code to {req.ownerName} at pickup
+                              Tell this 6-digit code to {req.ownerName} at pickup
                             </div>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400">
                               The lender will type this on their screen to confirm item handover
@@ -817,7 +817,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner w-full sm:w-auto">
-                          {req.pickupOtp || '----'}
+                          {req.pickupOtp || '------'}
                         </div>
                       </div>
                     )}
@@ -833,7 +833,7 @@ const Dashboard = () => {
                               Item In Your Possession &bull; Return PIN
                             </span>
                             <div className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
-                              Tell this code to {req.ownerName} when returning the item
+                              Tell this 6-digit code to {req.ownerName} when returning the item
                             </div>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400">
                               Confirms the lender received the item back safely
@@ -841,7 +841,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner w-full sm:w-auto">
-                          {req.returnOtp || '----'}
+                          {req.returnOtp || '------'}
                         </div>
                       </div>
                     )}

@@ -67,7 +67,7 @@ public class BorrowRequestController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String otp = payload.get("otp");
         if (otp == null || otp.trim().isEmpty()) {
-            throw new IllegalArgumentException("4-digit Pickup PIN is required");
+            throw new IllegalArgumentException("6-digit Pickup PIN is required");
         }
         String photoUrl = payload.get("photoUrl");
         String conditionNote = payload.get("conditionNote");
@@ -81,7 +81,7 @@ public class BorrowRequestController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String otp = payload.get("otp");
         if (otp == null || otp.trim().isEmpty()) {
-            throw new IllegalArgumentException("4-digit Return PIN is required");
+            throw new IllegalArgumentException("6-digit Return PIN is required");
         }
         String photoUrl = payload.get("photoUrl");
         String conditionNote = payload.get("conditionNote");
