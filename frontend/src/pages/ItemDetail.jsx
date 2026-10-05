@@ -2,16 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
+import { useLocationFilter } from '../context/LocationContext';
+import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
+import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { userCoords } = useLocationFilter();
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -250,11 +253,29 @@ const ItemDetail = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 {item.location || 'Community Hub'}
               </span>
+              {userCoords?.latitude && (() => {
+                const coords = getItemCoordinates(item);
+                if (!coords) return null;
+                const d = calculateDistanceKm(
+                  userCoords.latitude,
+                  userCoords.longitude,
+                  coords.lat,
+                  coords.lng
+                );
+                const distText = formatDistance(d);
+                if (!distText) return null;
+                return (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                    <Navigation className="w-3 h-3 rotate-45" />
+                    {distText} from you
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="border-t border-b border-gray-100 dark:border-slate-800 py-4">

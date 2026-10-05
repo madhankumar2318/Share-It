@@ -33,6 +33,8 @@ public class ItemService {
                 .category(dto.getCategory())
                 .imageUrl(dto.getImageUrl())
                 .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? dto.getLocation() : "Local Community")
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
                 .status(dto.getStatus() != null ? dto.getStatus() : ItemStatus.AVAILABLE)
                 .owner(user)
                 .build();
@@ -114,6 +116,12 @@ public class ItemService {
         if (dto.getLocation() != null) {
             item.setLocation(dto.getLocation());
         }
+        if (dto.getLatitude() != null) {
+            item.setLatitude(dto.getLatitude());
+        }
+        if (dto.getLongitude() != null) {
+            item.setLongitude(dto.getLongitude());
+        }
         if (dto.getStatus() != null) {
             item.setStatus(dto.getStatus());
         }
@@ -146,6 +154,8 @@ public class ItemService {
                 .category(item.getCategory())
                 .imageUrl(item.getImageUrl())
                 .location(item.getLocation())
+                .latitude(item.getLatitude())
+                .longitude(item.getLongitude())
                 .status(item.getStatus())
                 .ownerId(item.getOwner().getId())
                 .ownerName(item.getOwner().getFullName())

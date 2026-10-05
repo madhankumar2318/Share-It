@@ -24,6 +24,8 @@ public class ItemRequestDto {
     private String imageUrl;
 
     private String location;
+    private Double latitude;
+    private Double longitude;
 
     private ItemStatus status;
 }

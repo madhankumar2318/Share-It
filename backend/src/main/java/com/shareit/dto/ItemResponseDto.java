@@ -19,6 +19,8 @@ public class ItemResponseDto {
     private String category;
     private String imageUrl;
     private String location;
+    private Double latitude;
+    private Double longitude;
     private ItemStatus status;
 
     private Long ownerId;

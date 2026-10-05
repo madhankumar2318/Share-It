@@ -1,8 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useLocationFilter } from '../context/LocationContext';
-import { Search, Tag, MapPin, Eye, Sparkles, Navigation, X, SlidersHorizontal } from 'lucide-react';
+import { 
+  Search, 
+  Tag, 
+  MapPin, 
+  Eye, 
+  Sparkles, 
+  Navigation, 
+  X, 
+  SlidersHorizontal,
+  LayoutGrid,
+  Map as MapIcon,
+  Compass,
+  LocateFixed
+} from 'lucide-react';
+import NeighborhoodMap from '../components/NeighborhoodMap';
+import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 
 const CATEGORIES = [
   'All',
@@ -15,12 +30,33 @@ const CATEGORIES = [
   'Party & Games',
 ];
 
+const RADIUS_OPTIONS = [
+  { label: 'All Distances', value: null },
+  { label: '1 km', value: 1 },
+  { label: '3 km', value: 3 },
+  { label: '5 km', value: 5 },
+  { label: '10 km', value: 10 },
+  { label: '25 km', value: 25 },
+];
+
 const Home = () => {
-  const { selectedLocation, setIsModalOpen, clearLocation, detectLocation, detectingLocation } = useLocationFilter();
+  const { 
+    selectedLocation, 
+    userCoords, 
+    setIsModalOpen, 
+    clearLocation, 
+    detectLocation, 
+    detectingLocation 
+  } = useLocationFilter();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  
+  // Interactive Map & Distance Slider States
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map'
+  const [distanceRadius, setDistanceRadius] = useState(null); // null = all, or number in km
 
   const fetchItems = async () => {
     setLoading(true);
@@ -53,23 +89,49 @@ const Home = () => {
     fetchItems();
   };
 
+  // Filter items based on selected distance radius from user coords
+  const displayItems = useMemo(() => {
+    if (!distanceRadius || !userCoords?.latitude || !userCoords?.longitude) {
+      return items;
+    }
+    return items.filter((item) => {
+      const coords = getItemCoordinates(item);
+      if (!coords) return false;
+      const dist = calculateDistanceKm(
+        userCoords.latitude,
+        userCoords.longitude,
+        coords.lat,
+        coords.lng
+      );
+      return dist != null && dist <= distanceRadius;
+    });
+  }, [items, distanceRadius, userCoords]);
+
+  const handleRadiusClick = async (radiusVal) => {
+    setDistanceRadius(radiusVal);
+    // If user clicks a specific radius but hasn't enabled GPS coords, auto-prompt detection
+    if (radiusVal && (!userCoords?.latitude || !userCoords?.longitude)) {
+      await detectLocation();
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'AVAILABLE':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
             Available
           </span>
         );
       case 'BORROWED':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
             Currently Borrowed
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300">
             {status}
           </span>
         );
@@ -178,111 +240,266 @@ const Home = () => {
         )}
       </div>
 
-      {/* Items Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-4 border border-gray-100 dark:border-slate-800">
-              <div className="bg-gray-200 dark:bg-slate-800 h-44 rounded-xl"></div>
-              <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        selectedLocation?.type !== 'ALL' ? (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6">
-            <MapPin className="w-12 h-12 text-emerald-500 dark:text-emerald-400 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-              No items listed in {selectedLocation.label}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
-              Nobody has shared an item in your area yet. Be the first neighbor to list something or browse nationwide items!
-            </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/add-item"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition shadow-sm"
+      {/* Interactive Neighborhood Controls: Distance Slider & Map View Toggle */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs">
+        {/* Distance Radius Filter Buttons */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1 mr-1">
+            <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            Radius:
+          </span>
+          {RADIUS_OPTIONS.map((r) => {
+            const isSelected = distanceRadius === r.value;
+            return (
+              <button
+                key={r.label}
+                type="button"
+                onClick={() => handleRadiusClick(r.value)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
-                List an Item Here
-              </Link>
+                {r.label}
+              </button>
+            );
+          })}
+
+          {!userCoords?.latitude && distanceRadius && (
+            <button
+              type="button"
+              onClick={detectLocation}
+              disabled={detectingLocation}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-1"
+            >
+              <LocateFixed className="w-3 h-3" />
+              {detectingLocation ? 'Detecting GPS...' : 'Turn on GPS'}
+            </button>
+          )}
+
+          {distanceRadius && userCoords?.latitude && (
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+              ✓ Within {distanceRadius} km ({displayItems.length} found)
+            </span>
+          )}
+        </div>
+
+        {/* View Mode Toggle: Grid View vs Map View */}
+        <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl self-end md:self-auto border border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              viewMode === 'grid'
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Grid View
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('map')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              viewMode === 'map'
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            Map View
+          </button>
+        </div>
+      </div>
+
+      {/* Content Area: Map View OR Grid View */}
+      {viewMode === 'map' ? (
+        <div className="space-y-4">
+          <NeighborhoodMap
+            items={displayItems}
+            userCoords={userCoords}
+            distanceRadius={distanceRadius}
+            onSelectRadius={handleRadiusClick}
+          />
+
+          {displayItems.length === 0 && (
+            <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-center space-y-2">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                No items found within {distanceRadius} km of your location.
+              </p>
               <button
                 type="button"
-                onClick={clearLocation}
-                className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+                onClick={() => setDistanceRadius(null)}
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
               >
-                View Nationwide Items
+                Expand to all distances &rarr;
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800">
-            <Tag className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">No items found</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Be the first person to list an item in this category!
-            </p>
-            <Link
-              to="/add-item"
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"
-            >
-              List an Item Now
-            </Link>
-          </div>
-        )
+          )}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden hover:shadow-lg dark:hover:shadow-slate-900/40 transition-all duration-200 flex flex-col"
-            >
-              <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <img
-                  src={
-                    item.imageUrl ||
-                    'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
-                  }
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  onError={(e) => {
-                    e.target.src =
-                      'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60';
-                  }}
-                />
-                <div className="absolute top-3 right-3">{getStatusBadge(item.status)}</div>
-                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
-                  {item.category}
-                </div>
+        /* Items Grid */
+        loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-4 border border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-200 dark:bg-slate-800 h-44 rounded-xl"></div>
+                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/2"></div>
               </div>
-
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-500 transition line-clamp-1">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
-                    {item.description || 'No description provided.'}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                    <span>{item.location || 'Local Community'}</span>
-                  </div>
-                  <Link
-                    to={`/items/${item.id}`}
-                    className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    View
-                  </Link>
-                </div>
+            ))}
+          </div>
+        ) : displayItems.length === 0 ? (
+          distanceRadius ? (
+            <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6 space-y-3">
+              <Compass className="w-12 h-12 text-emerald-500 mx-auto" />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                No items within {distanceRadius} km
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                No neighbor items were found within your selected radius. Try expanding your search distance!
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDistanceRadius(10)}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition"
+                >
+                  Try 10 km Radius
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDistanceRadius(null)}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                >
+                  Show All Items
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+          ) : selectedLocation?.type !== 'ALL' ? (
+            <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6">
+              <MapPin className="w-12 h-12 text-emerald-500 dark:text-emerald-400 mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                No items listed in {selectedLocation.label}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+                Nobody has shared an item in your area yet. Be the first neighbor to list something or browse nationwide items!
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  to="/add-item"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition shadow-sm"
+                >
+                  List an Item Here
+                </Link>
+                <button
+                  type="button"
+                  onClick={clearLocation}
+                  className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+                >
+                  View Nationwide Items
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800">
+              <Tag className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200">No items found</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Be the first person to list an item in this category!
+              </p>
+              <Link
+                to="/add-item"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition"
+              >
+                List an Item Now
+              </Link>
+            </div>
+          )
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {displayItems.map((item) => {
+              // Calculate real-time distance from user if userCoords available
+              let distanceBadge = null;
+              if (userCoords?.latitude && userCoords?.longitude) {
+                const coords = getItemCoordinates(item);
+                if (coords) {
+                  const d = calculateDistanceKm(
+                    userCoords.latitude,
+                    userCoords.longitude,
+                    coords.lat,
+                    coords.lng
+                  );
+                  const formatted = formatDistance(d);
+                  if (formatted) {
+                    distanceBadge = formatted;
+                  }
+                }
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className="group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden hover:shadow-lg dark:hover:shadow-slate-900/40 transition-all duration-200 flex flex-col"
+                >
+                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <img
+                      src={
+                        item.imageUrl ||
+                        'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                      }
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      onError={(e) => {
+                        e.target.src =
+                          'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60';
+                      }}
+                    />
+                    <div className="absolute top-3 right-3">{getStatusBadge(item.status)}</div>
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
+                      {item.category}
+                    </div>
+
+                    {/* Real-time Distance Overlay Tag */}
+                    {distanceBadge && (
+                      <div className="absolute bottom-2.5 left-2.5 bg-emerald-700/90 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                        <Navigation className="w-3 h-3" />
+                        <span>{distanceBadge}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-500 transition line-clamp-1">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                        {item.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-1 truncate max-w-[150px]">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{item.location || 'Local Community'}</span>
+                      </div>
+                      <Link
+                        to={`/items/${item.id}`}
+                        className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex-shrink-0"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
     </div>
   );

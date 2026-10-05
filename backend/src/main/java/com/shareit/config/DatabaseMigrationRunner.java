@@ -32,7 +32,11 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS pickup_condition_note VARCHAR(500);");
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_photo_url VARCHAR(500);");
             jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_condition_note VARCHAR(500);");
-            log.info("borrow_requests schema verified successfully.");
+
+            // Migration for Items: Coordinates for Neighborhood Map & Distance Slider
+            jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;");
+            jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;");
+            log.info("items and borrow_requests schema verified successfully.");
         } catch (Exception e) {
             log.warn("Migration warning: {}", e.getMessage());
         }

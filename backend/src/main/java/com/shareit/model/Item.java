@@ -36,6 +36,8 @@ public class Item {
     private String imageUrl;
 
     private String location;
+    private Double latitude;
+    private Double longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

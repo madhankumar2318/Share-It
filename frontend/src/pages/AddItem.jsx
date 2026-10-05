@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
+import { getItemCoordinates } from '../utils/geo';
 import { 
   PlusCircle, 
   AlertCircle, 
@@ -202,10 +203,15 @@ const AddItem = () => {
         .filter(Boolean)
         .join(', ');
 
+      // Auto-resolve neighborhood coordinates for interactive map
+      const sampleCoords = getItemCoordinates({ location: formattedLocation, id: Date.now() });
+
       await api.post('/items', {
         ...formData,
         imageUrl: finalImageUrl,
         location: formattedLocation,
+        latitude: sampleCoords?.lat || null,
+        longitude: sampleCoords?.lng || null,
       });
 
       navigate('/dashboard');

@@ -112,6 +112,7 @@ export const LocationProvider = ({ children }) => {
                 label: state ? `${cleanedDistrict}, ${state}` : cleanedDistrict,
                 postcode: postcode,
                 state: state,
+                coordinates: { latitude, longitude },
               };
               setSelectedLocation(detected);
               setDetectingLocation(false);
@@ -123,6 +124,7 @@ export const LocationProvider = ({ children }) => {
                 label: `PIN ${postcode}${state ? `, ${state}` : ''}`,
                 postcode: postcode,
                 state: state,
+                coordinates: { latitude, longitude },
               };
               setSelectedLocation(detected);
               setDetectingLocation(false);
@@ -153,6 +155,7 @@ export const LocationProvider = ({ children }) => {
                     : bdcCity,
                   state: bdcData.principalSubdivision || '',
                   postcode: bdcData.postcode || '',
+                  coordinates: { latitude, longitude },
                 };
                 setSelectedLocation(detected);
                 setDetectingLocation(false);
@@ -187,10 +190,13 @@ export const LocationProvider = ({ children }) => {
     });
   };
 
+  const userCoords = selectedLocation?.coordinates || null;
+
   return (
     <LocationContext.Provider
       value={{
         selectedLocation,
+        userCoords,
         setLocation,
         clearLocation,
         detectLocation,
