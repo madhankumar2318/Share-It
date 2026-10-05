@@ -20,6 +20,8 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import NeighborhoodMap from '../components/NeighborhoodMap';
+import FavoriteButton from '../components/FavoriteButton';
+import { useAuth } from '../context/AuthContext';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 
 const CATEGORIES = [
@@ -52,10 +54,12 @@ const Home = () => {
     detectingLocation 
   } = useLocationFilter();
 
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
   
   // Interactive Map & Distance Slider States
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map'
@@ -66,6 +70,35 @@ const Home = () => {
   const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'nearest' | 'rating'
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchContainerRef = useRef(null);
+
+  useEffect(() => {
+    const fetchFavoriteIds = async () => {
+      if (!user) {
+        setFavoriteIds(new Set());
+        return;
+      }
+      try {
+        const res = await api.get('/favorites/ids');
+        setFavoriteIds(new Set(res.data || []));
+      } catch (err) {
+        console.warn('Could not load favorite IDs', err);
+      }
+    };
+
+    fetchFavoriteIds();
+  }, [user]);
+
+  const handleFavoriteToggle = (itemId, isNowFav) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isNowFav) {
+        next.add(itemId);
+      } else {
+        next.delete(itemId);
+      }
+      return next;
+    });
+  };
 
   const fetchItems = async () => {
     setLoading(true);
@@ -680,6 +713,16 @@ const Home = () => {
                         <span>{distanceBadge}</span>
                       </div>
                     )}
+
+                    {/* Favorite / Bookmark Heart Button */}
+                    <div className="absolute bottom-2.5 right-2.5 z-10">
+                      <FavoriteButton
+                        itemId={item.id}
+                        isFavorited={favoriteIds.has(item.id)}
+                        onToggle={handleFavoriteToggle}
+                        size="sm"
+                      />
+                    </div>
                   </div>
 
                   <div className="p-4 flex-1 flex flex-col justify-between">

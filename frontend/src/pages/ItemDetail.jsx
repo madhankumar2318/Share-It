@@ -8,6 +8,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
+import FavoriteButton from '../components/FavoriteButton';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 
 const ItemDetail = () => {
@@ -23,6 +24,7 @@ const ItemDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState({ averageRating: 0, totalReviews: 0 });
   const [ownerTrust, setOwnerTrust] = useState(null);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   // Request form state
   const [startDate, setStartDate] = useState('');
@@ -31,6 +33,20 @@ const ItemDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requestError, setRequestError] = useState('');
+
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!user || !id) return;
+      try {
+        const res = await api.get('/favorites/ids');
+        const ids = res.data || [];
+        setIsFavorited(ids.includes(Number(id)));
+      } catch (err) {
+        console.warn('Could not check favorite', err);
+      }
+    };
+    checkFavorite();
+  }, [user, id]);
 
   useEffect(() => {
     const fetchItemAndDetails = async () => {
@@ -243,14 +259,23 @@ const ItemDetail = () => {
         <div className="flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{item.title}</h1>
-              {stats.totalReviews > 0 && (
-                <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-xl flex-shrink-0">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span className="font-bold text-amber-900 dark:text-amber-300 text-sm">{stats.averageRating}</span>
-                  <span className="text-xs text-amber-700 dark:text-amber-400">({stats.totalReviews})</span>
-                </div>
-              )}
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white flex-1">{item.title}</h1>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {stats.totalReviews > 0 && (
+                  <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-xl">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-amber-900 dark:text-amber-300 text-sm">{stats.averageRating}</span>
+                    <span className="text-xs text-amber-700 dark:text-amber-400">({stats.totalReviews})</span>
+                  </div>
+                )}
+                <FavoriteButton
+                  itemId={item.id}
+                  isFavorited={isFavorited}
+                  onToggle={(_, fav) => setIsFavorited(fav)}
+                  size="md"
+                  showLabel={true}
+                />
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">

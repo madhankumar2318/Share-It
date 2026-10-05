@@ -25,6 +25,7 @@ import {
   RefreshCw,
   QrCode,
   FileText,
+  Heart,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -33,6 +34,8 @@ import ExtendReturnModal from '../components/ExtendReturnModal';
 import HandoverQrModal from '../components/HandoverQrModal';
 import QrScannerModal from '../components/QrScannerModal';
 import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
+import QuickReborrowModal from '../components/QuickReborrowModal';
+import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import TrustBadge from '../components/TrustBadge';
@@ -66,13 +69,15 @@ const DueDateBadge = ({ endDate }) => {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('lender'); // 'lender' | 'borrower'
+  const [activeTab, setActiveTab] = useState('lender'); // 'lender' | 'borrower' | 'saved'
   const [myItems, setMyItems] = useState([]);
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [myBorrowRequests, setMyBorrowRequests] = useState([]);
+  const [savedItems, setSavedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedChatRequest, setSelectedChatRequest] = useState(null);
   const [selectedReviewRequest, setSelectedReviewRequest] = useState(null);
+  const [selectedReborrowRequest, setSelectedReborrowRequest] = useState(null);
 
   // In-App Screen PIN verification states
   const [pinInputs, setPinInputs] = useState({});
@@ -96,18 +101,29 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [itemsRes, receivedRes, borrowedRes] = await Promise.all([
+      const [itemsRes, receivedRes, borrowedRes, savedRes] = await Promise.all([
         api.get('/items/my-items'),
         api.get('/requests/received'),
         api.get('/requests/borrowed'),
+        api.get('/favorites'),
       ]);
       setMyItems(itemsRes.data);
       setReceivedRequests(receivedRes.data);
       setMyBorrowRequests(borrowedRes.data);
+      setSavedItems(savedRes.data || []);
     } catch (err) {
       console.error('Failed to load dashboard data', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (itemId) => {
+    try {
+      await api.post(`/favorites/${itemId}/toggle`);
+      setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
+    } catch (err) {
+      alert('Failed to remove item from saved list.');
     }
   };
 
@@ -319,6 +335,21 @@ const Dashboard = () => {
           Borrower Hub
           <span className="ml-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
             {myBorrowRequests.length} requests
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('saved')}
+          className={`flex items-center gap-2 pb-3.5 text-sm font-bold border-b-2 whitespace-nowrap flex-shrink-0 transition ${
+            activeTab === 'saved'
+              ? 'border-red-500 text-red-500 dark:text-red-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${activeTab === 'saved' ? 'fill-red-500 stroke-red-500' : ''}`} />
+          Saved Items
+          <span className="ml-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
+            {savedItems.length}
           </span>
         </button>
       </div>
@@ -1003,13 +1034,23 @@ const Dashboard = () => {
                       </button>
                     )}
                     {req.status === 'RETURNED' && (
-                      <button
-                        onClick={() => setSelectedReviewRequest(req)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-semibold transition border border-amber-200 dark:border-amber-900"
-                      >
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        Leave Review
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setSelectedReborrowRequest(req)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
+                          title="Borrow this item again from the same lender"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Borrow Again
+                        </button>
+                        <button
+                          onClick={() => setSelectedReviewRequest(req)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-semibold transition border border-amber-200 dark:border-amber-900"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          Leave Review
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1018,6 +1059,119 @@ const Dashboard = () => {
           )}
         </div>
       )}
+
+      {/* Saved Items View */}
+      {activeTab === 'saved' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                Your Saved Community Items ({savedItems.length})
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Quickly access and re-borrow tools, appliances, and gear you have bookmarked
+              </p>
+            </div>
+          </div>
+
+          {savedItems.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-200 dark:border-slate-800 p-8">
+              <div className="w-16 h-16 rounded-3xl bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-200 dark:border-red-800/60 shadow-xs">
+                <Heart className="w-8 h-8 fill-red-500/20" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">No saved items yet</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+                Bookmark items with the ❤️ icon to quickly access and re-borrow them anytime.
+              </p>
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                Browse Neighborhood Items
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {savedItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                >
+                  <div className="relative h-44 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <img
+                      src={
+                        item.imageUrl ||
+                        'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                      }
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
+                      {item.category}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFavorite(item.id)}
+                      className="absolute top-3 right-3 p-2 rounded-full bg-white/90 dark:bg-slate-900/90 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/60 border border-red-200 dark:border-red-800/60 transition shadow-xs"
+                      title="Remove from saved"
+                    >
+                      <Heart className="w-4 h-4 fill-red-500 stroke-red-500" />
+                    </button>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-1">
+                          {item.title}
+                        </h3>
+                        {item.averageRating > 0 && (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{item.averageRating}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                        {item.description || 'No description provided.'}
+                      </p>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
+                        <User className="w-3 h-3 text-gray-400" />
+                        <span>Owner: <strong>{item.ownerName}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                      <Link
+                        to={`/items/${item.id}`}
+                        className="flex-1 text-center py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-2xs"
+                      >
+                        Borrow Now
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFavorite(item.id)}
+                        className="py-2 px-3 bg-gray-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-600 dark:text-gray-300 hover:text-red-600 rounded-xl text-xs font-semibold transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 1-Click Quick Re-Borrow Modal */}
+      <QuickReborrowModal
+        isOpen={!!selectedReborrowRequest}
+        onClose={() => setSelectedReborrowRequest(null)}
+        request={selectedReborrowRequest}
+        onSuccess={fetchDashboardData}
+      />
 
       {/* Direct Messaging Chat Modal */}
       <ChatModal
