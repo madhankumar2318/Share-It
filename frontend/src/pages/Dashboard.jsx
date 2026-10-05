@@ -23,11 +23,16 @@ import {
   Camera,
   Image as ImageIcon,
   RefreshCw,
+  QrCode,
+  FileText,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
 import ConditionProofModal from '../components/ConditionProofModal';
 import ExtendReturnModal from '../components/ExtendReturnModal';
+import HandoverQrModal from '../components/HandoverQrModal';
+import QrScannerModal from '../components/QrScannerModal';
+import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import TrustBadge from '../components/TrustBadge';
@@ -84,6 +89,9 @@ const Dashboard = () => {
   const [uploadingReturnPhoto, setUploadingReturnPhoto] = useState({});
   const [selectedProofRequest, setSelectedProofRequest] = useState(null);
   const [selectedExtendRequest, setSelectedExtendRequest] = useState(null);
+  const [qrModalData, setQrModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
+  const [scannerModalData, setScannerModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
+  const [slipModalData, setSlipModalData] = useState({ isOpen: false, request: null });
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -156,8 +164,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleVerifyPickup = async (requestId) => {
-    const pin = pinInputs[requestId];
+  const handleVerifyPickup = async (requestId, overridePin = null) => {
+    const pin = overridePin || pinInputs[requestId];
     if (!pin || (pin.length !== 6 && pin.length !== 4)) {
       alert('Please enter a valid 6-digit PIN');
       return;
@@ -178,8 +186,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleVerifyReturn = async (requestId) => {
-    const pin = returnPinInputs[requestId];
+  const handleVerifyReturn = async (requestId, overridePin = null) => {
+    const pin = overridePin || returnPinInputs[requestId];
     if (!pin || (pin.length !== 6 && pin.length !== 4)) {
       alert('Please enter a valid 6-digit PIN');
       return;
@@ -197,6 +205,19 @@ const Dashboard = () => {
       alert(err.response?.data?.message || 'Invalid Return PIN. Please check with borrower.');
     } finally {
       setVerifyingReturnId(null);
+    }
+  };
+
+  const handleScannerSuccess = (scannedPin) => {
+    const { request, type } = scannerModalData;
+    if (!request) return;
+    setScannerModalData({ isOpen: false, request: null, type: 'pickup' });
+    if (type === 'pickup') {
+      setPinInputs((prev) => ({ ...prev, [request.id]: scannedPin }));
+      handleVerifyPickup(request.id, scannedPin);
+    } else {
+      setReturnPinInputs((prev) => ({ ...prev, [request.id]: scannedPin }));
+      handleVerifyReturn(request.id, scannedPin);
     }
   };
 
@@ -436,7 +457,7 @@ const Dashboard = () => {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                               <input
                                 type="text"
                                 maxLength={6}
@@ -451,7 +472,16 @@ const Dashboard = () => {
                                 disabled={verifyingId === req.id || !((pinInputs[req.id] || '').length === 6 || (pinInputs[req.id] || '').length === 4)}
                                 className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                               >
-                                {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
+                                {verifyingId === req.id ? 'Verifying...' : 'Verify'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'pickup' })}
+                                className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap"
+                                title="Scan borrower QR code with camera"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>Scan QR</span>
                               </button>
                             </div>
                           </div>
@@ -504,7 +534,7 @@ const Dashboard = () => {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                               <input
                                 type="text"
                                 maxLength={6}
@@ -519,7 +549,16 @@ const Dashboard = () => {
                                 disabled={verifyingReturnId === req.id || !((returnPinInputs[req.id] || '').length === 6 || (returnPinInputs[req.id] || '').length === 4)}
                                 className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                               >
-                                {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
+                                {verifyingReturnId === req.id ? 'Verifying...' : 'Verify'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'return' })}
+                                className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-blue-300 dark:border-blue-700 shadow-2xs whitespace-nowrap"
+                                title="Scan borrower return QR code with camera"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>Scan QR</span>
                               </button>
                             </div>
                           </div>
@@ -568,6 +607,17 @@ const Dashboard = () => {
                         >
                           <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           Condition Proof
+                        </button>
+                      )}
+
+                      {req.handoverAt && (
+                        <button
+                          onClick={() => setSlipModalData({ isOpen: true, request: req })}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
+                          title="View & Print Digital Handover Slip"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Handover Slip
                         </button>
                       )}
 
@@ -816,8 +866,21 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner w-full sm:w-auto">
-                          {req.pickupOtp || '------'}
+                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                          <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner w-full sm:w-auto">
+                            {req.pickupOtp || '------'}
+                          </div>
+                          {req.pickupOtp && (
+                            <button
+                              type="button"
+                              onClick={() => setQrModalData({ isOpen: true, request: req, type: 'pickup' })}
+                              className="w-full sm:w-auto px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap"
+                              title="Show large QR code for lender to scan"
+                            >
+                              <QrCode className="w-4 h-4" />
+                              <span>Show QR</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -840,8 +903,21 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner w-full sm:w-auto">
-                          {req.returnOtp || '------'}
+                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                          <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner w-full sm:w-auto">
+                            {req.returnOtp || '------'}
+                          </div>
+                          {req.returnOtp && (
+                            <button
+                              type="button"
+                              onClick={() => setQrModalData({ isOpen: true, request: req, type: 'return' })}
+                              className="w-full sm:w-auto px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap"
+                              title="Show return QR code for lender to scan"
+                            >
+                              <QrCode className="w-4 h-4" />
+                              <span>Show QR</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -858,6 +934,17 @@ const Dashboard = () => {
                       >
                         <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         Condition Proof
+                      </button>
+                    )}
+
+                    {req.handoverAt && (
+                      <button
+                        onClick={() => setSlipModalData({ isOpen: true, request: req })}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
+                        title="View & Print Digital Handover Slip"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        Handover Slip
                       </button>
                     )}
 
@@ -960,6 +1047,30 @@ const Dashboard = () => {
         onClose={() => setSelectedExtendRequest(null)}
         request={selectedExtendRequest}
         onSuccess={fetchDashboardData}
+      />
+
+      {/* Dynamic QR Code Modal for Borrower Handover & Return */}
+      <HandoverQrModal
+        isOpen={qrModalData.isOpen}
+        onClose={() => setQrModalData((prev) => ({ ...prev, isOpen: false }))}
+        request={qrModalData.request}
+        type={qrModalData.type}
+      />
+
+      {/* Camera QR Scanner Modal for Lender */}
+      <QrScannerModal
+        isOpen={scannerModalData.isOpen}
+        onClose={() => setScannerModalData((prev) => ({ ...prev, isOpen: false }))}
+        request={scannerModalData.request}
+        type={scannerModalData.type}
+        onScanSuccess={handleScannerSuccess}
+      />
+
+      {/* Digital Handover & Return Slip Modal (Print / PDF) */}
+      <DigitalHandoverSlipModal
+        isOpen={slipModalData.isOpen}
+        onClose={() => setSlipModalData({ isOpen: false, request: null })}
+        request={slipModalData.request}
       />
     </div>
   );
