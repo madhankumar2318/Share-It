@@ -293,6 +293,27 @@ const Dashboard = () => {
                         </div>
                       )}
 
+                      {/* Conflict Shield Warning for Pending Requests if overlapping with an accepted booking */}
+                      {req.status === 'PENDING' && (() => {
+                        const conflictingBooking = receivedRequests.find(
+                          (other) =>
+                            other.id !== req.id &&
+                            other.itemId === req.itemId &&
+                            other.status === 'ACCEPTED' &&
+                            other.startDate <= req.endDate &&
+                            other.endDate >= req.startDate
+                        );
+                        if (!conflictingBooking) return null;
+                        return (
+                          <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                            <span>
+                              ⚠️ Overlaps with approved booking for {conflictingBooking.borrowerName} ({conflictingBooking.startDate} to {conflictingBooking.endDate})
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {req.message && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                           "{req.message}"

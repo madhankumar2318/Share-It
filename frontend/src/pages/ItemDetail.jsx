@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock } from 'lucide-react';
+import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
+import SmartCalendar from '../components/SmartCalendar';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -47,12 +48,29 @@ const ItemDetail = () => {
     };
     fetchItemAndDetails();
   }, [id]);
+ 
+  // Real-time Date Conflict Shield detection
+  const conflictRange = useMemo(() => {
+    if (!startDate || !endDate) return null;
+    for (const r of bookedRanges) {
+      if (r.startDate <= endDate && r.endDate >= startDate) {
+        return r;
+      }
+    }
+    return null;
+  }, [startDate, endDate, bookedRanges]);
 
   const handleBorrowSubmit = async (e) => {
     e.preventDefault();
     setRequestError('');
     if (!isAuthenticated) {
       navigate('/login');
+      return;
+    }
+    if (conflictRange) {
+      setRequestError(
+        `Cannot submit request: Chosen dates overlap with a confirmed booking (${conflictRange.startDate} to ${conflictRange.endDate}).`
+      );
       return;
     }
     setSubmitting(true);
@@ -246,36 +264,65 @@ const ItemDetail = () => {
                   View My Requests
                 </Link>
               </div>
-            ) : !isAvailable ? (
+            ) : item.status === 'UNAVAILABLE' ? (
               <div className="text-center py-4 space-y-2">
-                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
-                <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">Item is currently borrowed</h4>
+                <AlertCircle className="w-8 h-8 text-red-500 mx-auto" />
+                <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">Listing Unavailable</h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  This item is not available right now. Please check back later or explore other listings.
+                  This item is currently marked as unavailable by the owner.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleBorrowSubmit} className="space-y-4">
-                <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  Request to Borrow
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Request to Borrow
+                  </h3>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+                    <ShieldCheck className="w-3 h-3" />
+                    Conflict Shield Active
+                  </span>
+                </div>
 
-                {bookedRanges.length > 0 && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1">
-                    <p className="font-bold flex items-center gap-1">
-                      <span>⚠️ Reserved Dates:</span>
-                    </p>
-                    <ul className="list-disc list-inside space-y-0.5 text-amber-800 dark:text-amber-300">
-                      {bookedRanges.map((r, i) => (
-                        <li key={i}>
-                          Booked from <span className="font-semibold">{r.startDate}</span> to <span className="font-semibold">{r.endDate}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-[11px] text-amber-700 dark:text-amber-400 italic pt-1">
-                      Please select dates outside these reserved ranges.
-                    </p>
+                {item.status === 'BORROWED' && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-300 flex items-start gap-2">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <span className="font-bold">Currently in use by a neighbor.</span> You can still select upcoming open dates on the calendar below to reserve in advance!
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Smart Calendar with Booked Slots */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      📅 Availability Calendar
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Tap dates to pick your borrow slot
+                    </span>
+                  </div>
+                  <SmartCalendar
+                    bookedRanges={bookedRanges}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onSelectRange={({ startDate: s, endDate: e }) => {
+                      setStartDate(s);
+                      setEndDate(e);
+                      setRequestError('');
+                    }}
+                  />
+                </div>
+
+                {/* Date Conflict Shield Alert */}
+                {conflictRange && (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-50 dark:bg-red-950/50 rounded-xl border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 animate-fadeIn">
+                    <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                    <div>
+                      <span className="font-bold">🛡️ Date Conflict Shield:</span> The selected range ({startDate} to {endDate}) overlaps with an existing booking ({conflictRange.startDate} to {conflictRange.endDate}). Please choose available dates on the calendar.
+                    </div>
                   </div>
                 )}
 
@@ -293,7 +340,10 @@ const ItemDetail = () => {
                       required
                       min={new Date().toISOString().split('T')[0]}
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setRequestError('');
+                      }}
                       className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                     />
                   </div>
@@ -304,7 +354,10 @@ const ItemDetail = () => {
                       required
                       min={startDate || new Date().toISOString().split('T')[0]}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setRequestError('');
+                      }}
                       className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                     />
                   </div>
@@ -316,17 +369,29 @@ const ItemDetail = () => {
                     rows={2}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Hi! I need this for a weekend project. I will return it in pristine condition."
+                    placeholder="Hi! I need this for a project. I will return it safely on time."
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-xl border border-gray-300 dark:border-slate-700 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition shadow-sm disabled:opacity-50"
+                  disabled={submitting || !startDate || !endDate || !!conflictRange}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2"
                 >
-                  {submitting ? 'Sending Request...' : 'Send Borrow Request'}
+                  {conflictRange ? (
+                    <>
+                      <ShieldAlert className="w-4 h-4" />
+                      Dates Conflict With Reserved Booking
+                    </>
+                  ) : submitting ? (
+                    'Sending Request...'
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      Send Borrow Request
+                    </>
+                  )}
                 </button>
               </form>
             )}

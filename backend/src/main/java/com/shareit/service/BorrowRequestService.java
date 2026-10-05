@@ -29,6 +29,10 @@ public class BorrowRequestService {
 
     @Transactional
     public BorrowResponseDto createRequest(BorrowRequestDto dto, String borrowerEmail) {
+        if (dto.getStartDate().isBefore(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException("Start date cannot be in the past");
+        }
+
         if (dto.getEndDate().isBefore(dto.getStartDate())) {
             throw new IllegalArgumentException("End date cannot be before start date");
         }
@@ -50,7 +54,7 @@ public class BorrowRequestService {
 
         // Check if item is already accepted/booked for any overlapping dates
         List<BorrowRequest> conflicts = borrowRequestRepository.findConflictingAcceptedRequests(
-                item.getId(), dto.getStartDate(), dto.getEndDate()
+                item.getId(), null, dto.getStartDate(), dto.getEndDate()
         );
         if (!conflicts.isEmpty()) {
             BorrowRequest firstConflict = conflicts.get(0);
@@ -139,10 +143,15 @@ public class BorrowRequestService {
                 }
                 // Verify no other request for this item was accepted for conflicting dates
                 List<BorrowRequest> conflicts = borrowRequestRepository.findConflictingAcceptedRequests(
-                        item.getId(), request.getStartDate(), request.getEndDate()
+                        item.getId(), request.getId(), request.getStartDate(), request.getEndDate()
                 );
                 if (!conflicts.isEmpty()) {
-                    throw new IllegalArgumentException("Cannot accept: Item has already been booked for overlapping dates!");
+                    BorrowRequest firstConflict = conflicts.get(0);
+                    String borrowerName = firstConflict.getBorrower() != null ? firstConflict.getBorrower().getFullName() : "another borrower";
+                    throw new IllegalArgumentException(String.format(
+                            "Cannot accept: Item has already been booked from %s to %s by %s!",
+                            firstConflict.getStartDate(), firstConflict.getEndDate(), borrowerName
+                    ));
                 }
                 item.setStatus(ItemStatus.BORROWED);
                 itemRepository.save(item);
@@ -249,6 +258,8 @@ public class BorrowRequestService {
     public List<Map<String, String>> getBookedDateRanges(Long itemId) {
         return borrowRequestRepository.findByItemIdAndStatus(itemId, RequestStatus.ACCEPTED)
                 .stream()
+                .filter(req -> !req.getEndDate().isBefore(java.time.LocalDate.now()))
+                .sorted(java.util.Comparator.comparing(BorrowRequest::getStartDate))
                 .map(req -> Map.of(
                         "startDate", req.getStartDate().toString(),
                         "endDate", req.getEndDate().toString()

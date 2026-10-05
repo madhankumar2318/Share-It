@@ -25,12 +25,18 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     // Requests by item and specific status
     List<BorrowRequest> findByItemIdAndStatus(Long itemId, RequestStatus status);
 
-    // Find conflicting approved/active bookings for date overlap check
+    // Find conflicting approved/active bookings for date overlap check (with optional excludeId)
     @Query("SELECT r FROM BorrowRequest r WHERE r.item.id = :itemId " +
+           "AND (:excludeId IS NULL OR r.id != :excludeId) " +
            "AND r.status = 'ACCEPTED' " +
            "AND (:startDate <= r.endDate AND :endDate >= r.startDate)")
     List<BorrowRequest> findConflictingAcceptedRequests(
             @Param("itemId") Long itemId,
+            @Param("excludeId") Long excludeId,
             @Param("startDate") java.time.LocalDate startDate,
             @Param("endDate") java.time.LocalDate endDate);
+
+    default List<BorrowRequest> findConflictingAcceptedRequests(Long itemId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return findConflictingAcceptedRequests(itemId, null, startDate, endDate);
+    }
 }
