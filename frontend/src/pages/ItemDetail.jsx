@@ -6,6 +6,7 @@ import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCirc
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
+import TrustBadge from '../components/TrustBadge';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -18,6 +19,7 @@ const ItemDetail = () => {
   const [bookedRanges, setBookedRanges] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState({ averageRating: 0, totalReviews: 0 });
+  const [ownerTrust, setOwnerTrust] = useState(null);
 
   // Request form state
   const [startDate, setStartDate] = useState('');
@@ -40,6 +42,15 @@ const ItemDetail = () => {
         setBookedRanges(rangesRes.data || []);
         setReviews(reviewsRes.data || []);
         setStats(statsRes.data || { averageRating: 0, totalReviews: 0 });
+
+        if (itemRes.data?.ownerId) {
+          try {
+            const trustRes = await api.get(`/users/${itemRes.data.ownerId}/trust-score`);
+            setOwnerTrust(trustRes.data);
+          } catch (e) {
+            // Ignore trust fetch error
+          }
+        }
       } catch (err) {
         setError('Item not found or unavailable');
       } finally {
@@ -163,7 +174,12 @@ const ItemDetail = () => {
 
           {/* Owner Info Card & Direct WhatsApp Connect */}
           <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Listed By Owner</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Listed By Owner</h4>
+              {ownerTrust && (
+                <TrustBadge trust={ownerTrust} />
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
                 {item.ownerName ? item.ownerName.charAt(0).toUpperCase() : 'U'}
@@ -173,6 +189,20 @@ const ItemDetail = () => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.ownerEmail}</p>
               </div>
             </div>
+
+            {/* Quick Trust Highlights */}
+            {ownerTrust && (
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div className="bg-white dark:bg-slate-900/60 p-2 rounded-xl border border-gray-100 dark:border-slate-800 text-gray-600 dark:text-gray-400">
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 block">{ownerTrust.completedReturns} returns</span>
+                  <span>{ownerTrust.onTimeRate}% on-time</span>
+                </div>
+                <div className="bg-white dark:bg-slate-900/60 p-2 rounded-xl border border-gray-100 dark:border-slate-800 text-gray-600 dark:text-gray-400">
+                  <span className="font-bold text-gray-900 dark:text-white block">{ownerTrust.itemsLentCount} lends</span>
+                  <span>{ownerTrust.memberSince}</span>
+                </div>
+              </div>
+            )}
 
             {/* Direct WhatsApp Contact Button (Only for Authenticated Non-Owners) */}
             {!isOwner && (

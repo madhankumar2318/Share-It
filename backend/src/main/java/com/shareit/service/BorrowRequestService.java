@@ -2,6 +2,7 @@ package com.shareit.service;
 
 import com.shareit.dto.BorrowRequestDto;
 import com.shareit.dto.BorrowResponseDto;
+import com.shareit.dto.UserTrustDto;
 import com.shareit.model.BorrowRequest;
 import com.shareit.model.Item;
 import com.shareit.model.ItemStatus;
@@ -27,6 +28,7 @@ public class BorrowRequestService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final UserTrustService userTrustService;
 
     @Transactional
     public BorrowResponseDto createRequest(BorrowRequestDto dto, String borrowerEmail) {
@@ -330,6 +332,10 @@ public class BorrowRequestService {
     }
 
     public BorrowResponseDto mapToDto(BorrowRequest req, boolean isBorrower) {
+        UserTrustDto borrowerTrust = (!isBorrower && req.getBorrower() != null)
+                ? userTrustService.getTrustScore(req.getBorrower().getId())
+                : null;
+
         return BorrowResponseDto.builder()
                 .id(req.getId())
                 .itemId(req.getItem().getId())
@@ -344,6 +350,7 @@ public class BorrowRequestService {
                 .borrowerName(req.getBorrower().getFullName())
                 .borrowerEmail(req.getBorrower().getEmail())
                 .borrowerPhone(req.getBorrower().getPhone())
+                .borrowerTrust(borrowerTrust)
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .message(req.getMessage())

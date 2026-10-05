@@ -25,6 +25,7 @@ import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from '../components/WhatsAppButton';
+import TrustBadge from '../components/TrustBadge';
 import { buildTransactionWhatsAppUrl, buildReturnPingWhatsAppUrl, getDueDateStatus } from '../utils/whatsapp';
 
 /** Color-coded due-date countdown badge shown on ACCEPTED requests */
@@ -280,6 +281,9 @@ const Dashboard = () => {
                           <User className="w-3.5 h-3.5 text-gray-400" />
                           Borrower: {req.borrowerName} ({req.borrowerEmail})
                         </span>
+                        {req.borrowerTrust && (
+                          <TrustBadge trust={req.borrowerTrust} />
+                        )}
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-gray-400" />
                           Period: {req.startDate} to {req.endDate}

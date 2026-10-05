@@ -25,6 +25,14 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     // Requests by item and specific status
     List<BorrowRequest> findByItemIdAndStatus(Long itemId, RequestStatus status);
 
+    // All returned requests where user was the borrower (completed returns history)
+    @Query("SELECT r FROM BorrowRequest r WHERE r.borrower.id = :borrowerId AND r.status = 'RETURNED'")
+    List<BorrowRequest> findCompletedReturnsByBorrowerId(@Param("borrowerId") Long borrowerId);
+
+    // All returned requests where user was the item owner (completed lends history)
+    @Query("SELECT r FROM BorrowRequest r WHERE r.item.owner.id = :ownerId AND r.status = 'RETURNED'")
+    List<BorrowRequest> findCompletedLendsByOwnerId(@Param("ownerId") Long ownerId);
+
     // Find conflicting approved/active bookings for date overlap check (with optional excludeId)
     @Query("SELECT r FROM BorrowRequest r WHERE r.item.id = :itemId " +
            "AND (:excludeId IS NULL OR r.id != :excludeId) " +

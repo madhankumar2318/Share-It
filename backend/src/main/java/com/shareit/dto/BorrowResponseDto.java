@@ -33,6 +33,7 @@ public class BorrowResponseDto {
     private String borrowerName;
     private String borrowerEmail;
     private String borrowerPhone;
+    private UserTrustDto borrowerTrust;
 
     private LocalDate startDate;
     private LocalDate endDate;
