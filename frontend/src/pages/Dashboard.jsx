@@ -169,18 +169,18 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Community Hub</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">Community Hub</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Manage your items as a Lender and your requests as a Borrower
           </p>
         </div>
         <Link
           to="/add-item"
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-sm transition self-start sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs text-sm transition w-full sm:w-auto"
         >
           <PlusCircle className="w-4 h-4" />
           List New Item
@@ -188,10 +188,10 @@ const Dashboard = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-slate-800 gap-8">
+      <div className="flex border-b border-gray-200 dark:border-slate-800 gap-4 sm:gap-8 overflow-x-auto scrollbar-none pb-0.5">
         <button
           onClick={() => setActiveTab('lender')}
-          className={`flex items-center gap-2 pb-4 text-sm font-bold border-b-2 transition ${
+          className={`flex items-center gap-2 pb-3.5 text-sm font-bold border-b-2 whitespace-nowrap flex-shrink-0 transition ${
             activeTab === 'lender'
               ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
               : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
@@ -206,7 +206,7 @@ const Dashboard = () => {
 
         <button
           onClick={() => setActiveTab('borrower')}
-          className={`flex items-center gap-2 pb-4 text-sm font-bold border-b-2 transition ${
+          className={`flex items-center gap-2 pb-3.5 text-sm font-bold border-b-2 whitespace-nowrap flex-shrink-0 transition ${
             activeTab === 'borrower'
               ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
               : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
@@ -222,10 +222,10 @@ const Dashboard = () => {
 
       {/* Lender View */}
       {activeTab === 'lender' && (
-        <div className="space-y-10">
+        <div className="space-y-8 sm:space-y-10">
           {/* Incoming Borrow Requests */}
           <div className="space-y-4">
-            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               Incoming Requests For Your Items
             </h2>
@@ -239,15 +239,15 @@ const Dashboard = () => {
                 {receivedRequests.map((req) => (
                   <div
                     key={req.id}
-                    className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
                   >
                     <div className="space-y-3 flex-1">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <span className="font-bold text-gray-900 dark:text-white text-base">{req.itemTitle}</span>
                         {getStatusBadge(req.status, req.handoverAt)}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-gray-600 dark:text-gray-400">
                         <span className="flex items-center gap-1 font-medium">
                           <User className="w-3.5 h-3.5 text-gray-400" />
                           Borrower: {req.borrowerName} ({req.borrowerEmail})
@@ -268,7 +268,7 @@ const Dashboard = () => {
                       {req.status === 'ACCEPTED' && !req.handoverAt && (
                         <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs">
+                            <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs flex-shrink-0">
                               <KeyRound className="w-4 h-4" />
                             </div>
                             <div>
@@ -280,7 +280,7 @@ const Dashboard = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             <input
                               type="text"
                               maxLength={4}
@@ -293,7 +293,7 @@ const Dashboard = () => {
                               type="button"
                               onClick={() => handleVerifyPickup(req.id)}
                               disabled={verifyingId === req.id || (pinInputs[req.id] || '').length < 4}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap"
+                              className="flex-1 sm:flex-none px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                             >
                               {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
                             </button>
@@ -304,7 +304,7 @@ const Dashboard = () => {
                       {req.status === 'ACCEPTED' && req.handoverAt && (
                         <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs">
+                            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs flex-shrink-0">
                               <ShieldCheck className="w-4 h-4" />
                             </div>
                             <div>
@@ -316,7 +316,7 @@ const Dashboard = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             <input
                               type="text"
                               maxLength={4}
@@ -329,7 +329,7 @@ const Dashboard = () => {
                               type="button"
                               onClick={() => handleVerifyReturn(req.id)}
                               disabled={verifyingReturnId === req.id || (returnPinInputs[req.id] || '').length < 4}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap"
+                              className="flex-1 sm:flex-none px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap text-center"
                             >
                               {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
                             </button>
@@ -339,7 +339,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* Lender Action Buttons */}
-                    <div className="flex items-center gap-2 self-end md:self-center">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
                       <button
                         onClick={() => setSelectedChatRequest(req)}
                         className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
@@ -523,7 +523,7 @@ const Dashboard = () => {
                     {req.status === 'ACCEPTED' && !req.handoverAt && (
                       <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-400 dark:border-emerald-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                         <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
+                          <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs flex-shrink-0">
                             <KeyRound className="w-5 h-5" />
                           </div>
                           <div>
@@ -538,7 +538,7 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner">
+                        <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner w-full sm:w-auto">
                           {req.pickupOtp || '----'}
                         </div>
                       </div>
@@ -547,7 +547,7 @@ const Dashboard = () => {
                     {req.status === 'ACCEPTED' && req.handoverAt && (
                       <div className="p-4 bg-blue-50 dark:bg-blue-950/40 border-2 border-dashed border-blue-400 dark:border-blue-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                         <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+                          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs flex-shrink-0">
                             <ShieldCheck className="w-5 h-5" />
                           </div>
                           <div>
@@ -562,7 +562,7 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner">
+                        <div className="flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner w-full sm:w-auto">
                           {req.returnOtp || '----'}
                         </div>
                       </div>
@@ -570,7 +570,7 @@ const Dashboard = () => {
                   </div>
 
                   {/* Borrower Action Button */}
-                  <div className="flex items-center gap-2 self-end md:self-center">
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
                     <button
                       onClick={() => setSelectedChatRequest(req)}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"

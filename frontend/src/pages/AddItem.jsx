@@ -220,7 +220,7 @@ const AddItem = () => {
   const hasPhoto = !!selectedFile || !!formData.imageUrl.trim();
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
@@ -229,7 +229,7 @@ const AddItem = () => {
         Back
       </button>
 
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-6">
+      <div className="bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs space-y-5 sm:space-y-6">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Post an Item for Lending</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

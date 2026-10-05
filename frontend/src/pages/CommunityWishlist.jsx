@@ -155,15 +155,15 @@ const CommunityWishlist = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-teal-800 text-white p-8 sm:p-12 shadow-lg">
-        <div className="relative z-10 max-w-2xl space-y-4">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-700 via-emerald-600 to-teal-800 text-white p-6 sm:p-12 shadow-lg">
+        <div className="relative z-10 max-w-2xl space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 bg-white/20 px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Community Wishlist &bull; Reverse Lending</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-5xl font-black tracking-tight leading-tight">
             Need an item that isn't listed? <br />
             Ask your neighbors!
           </h1>
@@ -173,7 +173,7 @@ const CommunityWishlist = () => {
           <div className="pt-2">
             <button
               onClick={handleCreateClick}
-              className="px-6 py-3 bg-white text-emerald-800 font-bold rounded-2xl shadow-md hover:bg-emerald-50 transition text-sm flex items-center gap-2"
+              className="px-6 py-3 bg-white text-emerald-800 font-bold rounded-2xl shadow-md hover:bg-emerald-50 transition text-sm flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <PlusCircle className="w-4 h-4 text-emerald-600" />
               <span>Post What You Need</span>
@@ -183,8 +183,8 @@ const CommunityWishlist = () => {
       </div>
 
       {/* Search, Categories & Location Bar */}
-      <div className="space-y-4">
-        <form onSubmit={handleSearchSubmit} className="flex gap-2">
+      <div className="space-y-3 sm:space-y-4">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5 sm:gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
             <input
@@ -192,14 +192,15 @@ const CommunityWishlist = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search requested items (projector, tent, drill, monitor...)..."
-              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
           <button
             type="submit"
-            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl shadow-sm transition text-sm flex items-center gap-2"
+            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl shadow-xs transition text-sm flex items-center justify-center gap-2"
           >
-            Search
+            <Search className="w-4 h-4 sm:hidden" />
+            <span>Search</span>
           </button>
         </form>
 
@@ -211,7 +212,7 @@ const CommunityWishlist = () => {
               onClick={() => setSelectedCategory(cat)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
                 selectedCategory === cat
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-800'
               }`}
             >
@@ -222,14 +223,14 @@ const CommunityWishlist = () => {
 
         {/* Location Status Bar */}
         {selectedLocation?.type !== 'ALL' ? (
-          <div className="flex items-center justify-between p-3 px-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 px-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-xs">
             <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
               <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span>
+              <span className="leading-snug">
                 Showing neighbor requests near <strong className="font-bold underline decoration-emerald-500">{selectedLocation.label}</strong>
               </span>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-auto">
               <button
                 type="button"
                 onClick={() => openLocationModal(true)}
@@ -248,7 +249,7 @@ const CommunityWishlist = () => {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-3 px-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl text-xs text-gray-600 dark:text-gray-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 px-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>Showing community requests across all of India.</span>
@@ -256,7 +257,7 @@ const CommunityWishlist = () => {
             <button
               type="button"
               onClick={() => openLocationModal(true)}
-              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 self-end sm:self-auto"
             >
               📍 Filter by my neighborhood
             </button>
@@ -284,17 +285,17 @@ const CommunityWishlist = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
             Need a tool, camera, game, or gear for an event? Post your request and neighbors who have it will respond!
           </p>
-          <div className="pt-2 flex items-center justify-center gap-3">
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={handleCreateClick}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm w-full sm:w-auto"
             >
               Post a Request Now
             </button>
             {selectedLocation?.type !== 'ALL' && (
               <button
                 onClick={clearLocation}
-                className="px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 transition"
+                className="px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition w-full sm:w-auto"
               >
                 View Nationwide Requests
               </button>

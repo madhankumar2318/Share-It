@@ -115,7 +115,7 @@ const ItemDetail = () => {
         Back to Items
       </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs">
         {/* Left: Image & Tags */}
         <div className="space-y-4">
           <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-square border border-gray-100 dark:border-slate-800">
@@ -285,7 +285,7 @@ const ItemDetail = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
                     <input
@@ -335,8 +335,8 @@ const ItemDetail = () => {
       </div>
 
       {/* Community Reviews Section */}
-      <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-4">
+      <div className="bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs space-y-5 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-2">
             <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
             <h3 className="font-extrabold text-gray-900 dark:text-white text-lg">Community Reviews</h3>

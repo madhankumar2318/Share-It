@@ -72,8 +72,8 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors">
-      <div className="max-w-md w-full space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors">
+      <div className="max-w-md w-full space-y-5 sm:space-y-6 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl shadow-xs border border-gray-100 dark:border-slate-800">
         <div className="text-center space-y-1">
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Join Share-It 🇮🇳</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
