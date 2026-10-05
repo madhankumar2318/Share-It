@@ -21,8 +21,14 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
             jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS district;");
             jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS city;");
             jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS pincode;");
-            jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS address;");
             log.info("Unused columns successfully dropped from users table in database.");
+
+            log.info("Ensuring borrow_requests OTP verification columns exist...");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS pickup_otp VARCHAR(10);");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS return_otp VARCHAR(10);");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS handover_at TIMESTAMP;");
+            jdbcTemplate.execute("ALTER TABLE borrow_requests ADD COLUMN IF NOT EXISTS returned_at TIMESTAMP;");
+            log.info("borrow_requests schema verified successfully.");
         } catch (Exception e) {
             log.warn("Migration warning: {}", e.getMessage());
         }

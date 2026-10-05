@@ -39,6 +39,11 @@ public class BorrowResponseDto {
     private String message;
     private RequestStatus status;
 
+    private String pickupOtp;
+    private String returnOtp;
+    private LocalDateTime handoverAt;
+    private LocalDateTime returnedAt;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

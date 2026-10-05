@@ -51,6 +51,16 @@ public class BorrowRequest {
     @Builder.Default
     private RequestStatus status = RequestStatus.PENDING;
 
+    @Column(length = 10)
+    private String pickupOtp;
+
+    @Column(length = 10)
+    private String returnOtp;
+
+    private LocalDateTime handoverAt;
+
+    private LocalDateTime returnedAt;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

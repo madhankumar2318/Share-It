@@ -70,17 +70,41 @@ public class BorrowRequestService {
                 .build();
 
         BorrowRequest saved = borrowRequestRepository.save(request);
-        return mapToDto(saved);
+        return mapToDto(saved, true);
     }
 
-    @Transactional(readOnly = true)
+    private String generateSecureOtp() {
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        return String.valueOf(1000 + random.nextInt(9000));
+    }
+
+    @Transactional
     public List<BorrowResponseDto> getMyBorrowRequests(String borrowerEmail) {
         User borrower = userRepository.findByEmail(borrowerEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        return borrowRequestRepository.findByBorrowerIdOrderByCreatedAtDesc(borrower.getId())
-                .stream()
-                .map(this::mapToDto)
+        List<BorrowRequest> requests = borrowRequestRepository.findByBorrowerIdOrderByCreatedAtDesc(borrower.getId());
+        
+        // Ensure accepted requests have OTPs generated
+        boolean needSave = false;
+        for (BorrowRequest req : requests) {
+            if (req.getStatus() == RequestStatus.ACCEPTED) {
+                if (req.getPickupOtp() == null) {
+                    req.setPickupOtp(generateSecureOtp());
+                    needSave = true;
+                }
+                if (req.getReturnOtp() == null) {
+                    req.setReturnOtp(generateSecureOtp());
+                    needSave = true;
+                }
+            }
+        }
+        if (needSave) {
+            borrowRequestRepository.saveAll(requests);
+        }
+
+        return requests.stream()
+                .map(req -> mapToDto(req, true))
                 .collect(Collectors.toList());
     }
 
@@ -91,7 +115,7 @@ public class BorrowRequestService {
 
         return borrowRequestRepository.findByOwnerId(owner.getId())
                 .stream()
-                .map(this::mapToDto)
+                .map(req -> mapToDto(req, false))
                 .collect(Collectors.toList());
     }
 
@@ -123,6 +147,12 @@ public class BorrowRequestService {
                 item.setStatus(ItemStatus.BORROWED);
                 itemRepository.save(item);
                 request.setStatus(RequestStatus.ACCEPTED);
+                if (request.getPickupOtp() == null) {
+                    request.setPickupOtp(generateSecureOtp());
+                }
+                if (request.getReturnOtp() == null) {
+                    request.setReturnOtp(generateSecureOtp());
+                }
             }
             case REJECTED -> {
                 if (!isOwner) {
@@ -141,6 +171,9 @@ public class BorrowRequestService {
                 if (!isOwner && !isBorrower) {
                     throw new AccessDeniedException("Only the owner or borrower can mark as returned");
                 }
+                if (request.getReturnedAt() == null) {
+                    request.setReturnedAt(java.time.LocalDateTime.now());
+                }
                 item.setStatus(ItemStatus.AVAILABLE);
                 itemRepository.save(item);
                 request.setStatus(RequestStatus.RETURNED);
@@ -149,7 +182,67 @@ public class BorrowRequestService {
         }
 
         BorrowRequest updated = borrowRequestRepository.save(request);
-        return mapToDto(updated);
+        return mapToDto(updated, isBorrower);
+    }
+
+    @Transactional
+    public BorrowResponseDto verifyPickupOtp(Long requestId, String otp, String ownerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getItem().getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can verify the handover pickup PIN");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Item request must be Accepted before pickup verification");
+        }
+
+        if (request.getHandoverAt() != null) {
+            throw new IllegalArgumentException("Handover PIN has already been verified!");
+        }
+
+        if (otp == null || !otp.trim().equals(request.getPickupOtp())) {
+            throw new IllegalArgumentException("Invalid Pickup PIN! Please check with the borrower.");
+        }
+
+        request.setHandoverAt(java.time.LocalDateTime.now());
+        BorrowRequest saved = borrowRequestRepository.save(request);
+        return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto verifyReturnOtp(Long requestId, String otp, String ownerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getItem().getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can verify the return PIN");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Item is not in active accepted status");
+        }
+
+        if (otp == null || !otp.trim().equals(request.getReturnOtp())) {
+            throw new IllegalArgumentException("Invalid Return PIN! Please check with the borrower.");
+        }
+
+        request.setReturnedAt(java.time.LocalDateTime.now());
+        request.setStatus(RequestStatus.RETURNED);
+
+        Item item = request.getItem();
+        item.setStatus(ItemStatus.AVAILABLE);
+        itemRepository.save(item);
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+        return mapToDto(saved, false);
     }
 
     @Transactional(readOnly = true)
@@ -164,6 +257,10 @@ public class BorrowRequestService {
     }
 
     public BorrowResponseDto mapToDto(BorrowRequest req) {
+        return mapToDto(req, false);
+    }
+
+    public BorrowResponseDto mapToDto(BorrowRequest req, boolean isBorrower) {
         return BorrowResponseDto.builder()
                 .id(req.getId())
                 .itemId(req.getItem().getId())
@@ -182,6 +279,10 @@ public class BorrowRequestService {
                 .endDate(req.getEndDate())
                 .message(req.getMessage())
                 .status(req.getStatus())
+                .pickupOtp(isBorrower ? req.getPickupOtp() : null)
+                .returnOtp(isBorrower ? req.getReturnOtp() : null)
+                .handoverAt(req.getHandoverAt())
+                .returnedAt(req.getReturnedAt())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();

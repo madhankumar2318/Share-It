@@ -6,6 +6,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   RotateCcw,
   PlusCircle,
@@ -15,6 +16,8 @@ import {
   Trash2,
   MessageSquare,
   Star,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -27,6 +30,12 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedChatRequest, setSelectedChatRequest] = useState(null);
   const [selectedReviewRequest, setSelectedReviewRequest] = useState(null);
+
+  // In-App Screen PIN verification states
+  const [pinInputs, setPinInputs] = useState({});
+  const [returnPinInputs, setReturnPinInputs] = useState({});
+  const [verifyingId, setVerifyingId] = useState(null);
+  const [verifyingReturnId, setVerifyingReturnId] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -59,6 +68,52 @@ const Dashboard = () => {
     }
   };
 
+  const handlePinChange = (requestId, value) => {
+    const clean = value.replace(/\D/g, '').slice(0, 4);
+    setPinInputs((prev) => ({ ...prev, [requestId]: clean }));
+  };
+
+  const handleReturnPinChange = (requestId, value) => {
+    const clean = value.replace(/\D/g, '').slice(0, 4);
+    setReturnPinInputs((prev) => ({ ...prev, [requestId]: clean }));
+  };
+
+  const handleVerifyPickup = async (requestId) => {
+    const pin = pinInputs[requestId];
+    if (!pin || pin.length !== 4) {
+      alert('Please enter a valid 4-digit PIN');
+      return;
+    }
+    setVerifyingId(requestId);
+    try {
+      await api.post(`/requests/${requestId}/verify-pickup`, { otp: pin });
+      setPinInputs((prev) => ({ ...prev, [requestId]: '' }));
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Invalid Pickup PIN. Please check with borrower.');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const handleVerifyReturn = async (requestId) => {
+    const pin = returnPinInputs[requestId];
+    if (!pin || pin.length !== 4) {
+      alert('Please enter a valid 4-digit PIN');
+      return;
+    }
+    setVerifyingReturnId(requestId);
+    try {
+      await api.post(`/requests/${requestId}/verify-return`, { otp: pin });
+      setReturnPinInputs((prev) => ({ ...prev, [requestId]: '' }));
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Invalid Return PIN. Please check with borrower.');
+    } finally {
+      setVerifyingReturnId(null);
+    }
+  };
+
   const handleDeleteItem = async (itemId) => {
     if (window.confirm('Are you sure you want to delete this listing?')) {
       try {
@@ -70,20 +125,38 @@ const Dashboard = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, handoverAt) => {
     switch (status) {
       case 'PENDING':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">Pending Approval</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300">Pending Approval</span>;
       case 'ACCEPTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">Accepted / Active</span>;
+        if (handoverAt) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              In Use (Handed Over)
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300">
+            <KeyRound className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            Approved (Awaiting Pickup)
+          </span>
+        );
       case 'REJECTED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-950/70 text-red-800 dark:text-red-300">Rejected</span>;
       case 'RETURNED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Returned</span>;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300">
+            <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            Returned & Verified
+          </span>
+        );
       case 'CANCELLED':
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Cancelled</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300">Cancelled</span>;
       default:
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300">{status}</span>;
     }
   };
 
@@ -164,10 +237,10 @@ const Dashboard = () => {
                     key={req.id}
                     className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-gray-900 dark:text-white text-base">{req.itemTitle}</span>
-                        {getStatusBadge(req.status)}
+                        {getStatusBadge(req.status, req.handoverAt)}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
@@ -185,6 +258,79 @@ const Dashboard = () => {
                         <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                           "{req.message}"
                         </p>
+                      )}
+
+                      {/* In-App Uber-style PIN Handover Verification for Lender */}
+                      {req.status === 'ACCEPTED' && !req.handoverAt && (
+                        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-xs">
+                              <KeyRound className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                🔑 Handover Pickup PIN Verification
+                              </div>
+                              <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                Ask <strong>{req.borrowerName}</strong> for their 4-digit code at pickup:
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              maxLength={4}
+                              placeholder="PIN"
+                              value={pinInputs[req.id] || ''}
+                              onChange={(e) => handlePinChange(req.id, e.target.value)}
+                              className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyPickup(req.id)}
+                              disabled={verifyingId === req.id || (pinInputs[req.id] || '').length < 4}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap"
+                            >
+                              {verifyingId === req.id ? 'Verifying...' : 'Verify & Hand Over'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {req.status === 'ACCEPTED' && req.handoverAt && (
+                        <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs">
+                              <ShieldCheck className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                                🛡️ Item Handed Over &bull; Return Verification
+                              </div>
+                              <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                                When {req.borrowerName} returns item, ask for their 4-digit Return PIN:
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              maxLength={4}
+                              placeholder="PIN"
+                              value={returnPinInputs[req.id] || ''}
+                              onChange={(e) => handleReturnPinChange(req.id, e.target.value)}
+                              className="w-20 text-center font-mono font-bold tracking-widest px-2.5 py-1.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyReturn(req.id)}
+                              disabled={verifyingReturnId === req.id || (returnPinInputs[req.id] || '').length < 4}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition whitespace-nowrap"
+                            >
+                              {verifyingReturnId === req.id ? 'Verifying...' : 'Verify Return'}
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -324,7 +470,7 @@ const Dashboard = () => {
                   key={req.id}
                   className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-3">
                       <Link
                         to={`/items/${req.itemId}`}
@@ -332,7 +478,7 @@ const Dashboard = () => {
                       >
                         {req.itemTitle}
                       </Link>
-                      {getStatusBadge(req.status)}
+                      {getStatusBadge(req.status, req.handoverAt)}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
@@ -351,6 +497,55 @@ const Dashboard = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
                         Your message: "{req.message}"
                       </p>
+                    )}
+
+                    {/* In-App Uber-style Screen PIN Cards for Borrower */}
+                    {req.status === 'ACCEPTED' && !req.handoverAt && (
+                      <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-400 dark:border-emerald-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs">
+                            <KeyRound className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="inline-block px-2 py-0.5 bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded-md text-[10px] font-black uppercase tracking-wider">
+                              Pickup Handover PIN (Uber Style)
+                            </span>
+                            <div className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                              Tell this 4-digit code to {req.ownerName} at pickup
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              The lender will type this on their screen to confirm item handover
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 font-mono text-2xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 shadow-inner">
+                          {req.pickupOtp || '----'}
+                        </div>
+                      </div>
+                    )}
+
+                    {req.status === 'ACCEPTED' && req.handoverAt && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/40 border-2 border-dashed border-blue-400 dark:border-blue-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+                            <ShieldCheck className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="inline-block px-2 py-0.5 bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md text-[10px] font-black uppercase tracking-wider">
+                              Item In Your Possession &bull; Return PIN
+                            </span>
+                            <div className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                              Tell this code to {req.ownerName} when returning the item
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Confirms the lender received the item back safely
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-700 font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400 shadow-inner">
+                          {req.returnOtp || '----'}
+                        </div>
+                      </div>
                     )}
                   </div>
 
