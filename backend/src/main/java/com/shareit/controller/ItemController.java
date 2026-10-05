@@ -27,8 +27,9 @@ public class ItemController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) ItemStatus status) {
-        return ResponseEntity.ok(itemService.getAllItems(category, search, location, status));
+            @RequestParam(required = false) ItemStatus status,
+            @RequestParam(required = false) Boolean availableToday) {
+        return ResponseEntity.ok(itemService.getAllItems(category, search, location, status, availableToday));
     }
 
     @GetMapping("/{id}")

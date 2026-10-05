@@ -5,13 +5,16 @@ import com.shareit.dto.ItemResponseDto;
 import com.shareit.model.Item;
 import com.shareit.model.ItemStatus;
 import com.shareit.model.User;
+import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
+import com.shareit.repository.ReviewRepository;
 import com.shareit.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,8 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final BorrowRequestRepository borrowRequestRepository;
+    private final ReviewRepository reviewRepository;
 
     @Transactional
     public ItemResponseDto createItem(ItemRequestDto dto, String userEmail) {
@@ -45,6 +50,11 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status) {
+        return getAllItems(category, search, location, status, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status, Boolean availableToday) {
         String cleanCategory = (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All")) ? category.trim() : null;
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         String cleanLocation = (location != null && !location.trim().isEmpty() && !location.equalsIgnoreCase("All") && !location.equalsIgnoreCase("All India")) ? location.trim() : null;
@@ -77,7 +87,15 @@ public class ItemService {
         };
 
         List<Item> items = itemRepository.findAll(spec);
-        return items.stream().map(item -> this.mapToDto(item, false)).collect(Collectors.toList());
+        List<ItemResponseDto> dtoList = items.stream().map(item -> this.mapToDto(item, false)).collect(Collectors.toList());
+
+        if (Boolean.TRUE.equals(availableToday)) {
+            dtoList = dtoList.stream()
+                    .filter(dto -> !Boolean.TRUE.equals(dto.getIsBookedToday()) && dto.getStatus() == ItemStatus.AVAILABLE)
+                    .collect(Collectors.toList());
+        }
+
+        return dtoList;
     }
 
     @Transactional(readOnly = true)
@@ -147,6 +165,11 @@ public class ItemService {
     }
 
     public ItemResponseDto mapToDto(Item item, boolean includePhone) {
+        Double avgRating = reviewRepository.getAverageRatingByItemId(item.getId());
+        Long reviewCnt = reviewRepository.countReviewsByItemId(item.getId());
+        boolean bookedToday = item.getStatus() == ItemStatus.BORROWED ||
+                !borrowRequestRepository.findConflictingAcceptedRequests(item.getId(), LocalDate.now(), LocalDate.now()).isEmpty();
+
         return ItemResponseDto.builder()
                 .id(item.getId())
                 .title(item.getTitle())
@@ -157,6 +180,9 @@ public class ItemService {
                 .latitude(item.getLatitude())
                 .longitude(item.getLongitude())
                 .status(item.getStatus())
+                .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
+                .reviewCount(reviewCnt != null ? reviewCnt : 0L)
+                .isBookedToday(bookedToday)
                 .ownerId(item.getOwner().getId())
                 .ownerName(item.getOwner().getFullName())
                 .ownerEmail(item.getOwner().getEmail())

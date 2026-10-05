@@ -23,6 +23,10 @@ public class ItemResponseDto {
     private Double longitude;
     private ItemStatus status;
 
+    private Double averageRating;
+    private Long reviewCount;
+    private Boolean isBookedToday;
+
     private Long ownerId;
     private String ownerName;
     private String ownerEmail;
