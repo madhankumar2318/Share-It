@@ -103,24 +103,26 @@ const Navbar = () => {
             <div className="hidden md:flex items-center gap-2 lg:gap-3">
               <Link
                 to="/"
-                className={`font-medium px-3 py-2 rounded-lg transition text-sm ${
+                className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
                   isBrowse
                     ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
                     : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
-                {t('browse')}
+                <Compass className={`w-4 h-4 ${isBrowse ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                <span>{t('browse')}</span>
               </Link>
 
               <Link
                 to="/wishlist"
-                className={`font-medium px-3 py-2 rounded-lg transition text-sm ${
+                className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
                   isWishlist
                     ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
                     : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
-                {t('wishlist')}
+                <Sparkles className={`w-4 h-4 ${isWishlist ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                <span>{t('wishlist')}</span>
               </Link>
 
               {isAuthenticated ? (
