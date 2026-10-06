@@ -117,4 +117,47 @@ public class BorrowRequestController {
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(borrowRequestService.sendReturnReminder(id, userDetails.getUsername()));
     }
+
+    @PostMapping("/{id}/dropoff")
+    public ResponseEntity<BorrowResponseDto> recordDropoff(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String location = payload.get("location");
+        String photoUrl = payload.get("photoUrl");
+        String note = payload.get("note");
+        String passcode = payload.get("passcode");
+        return ResponseEntity.ok(borrowRequestService.recordContactlessDropoff(id, location, photoUrl, note, passcode, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/confirm-dropoff-pickup")
+    public ResponseEntity<BorrowResponseDto> confirmDropoffPickup(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String photoUrl = payload != null ? payload.get("photoUrl") : null;
+        String conditionNote = payload != null ? payload.get("conditionNote") : null;
+        return ResponseEntity.ok(borrowRequestService.confirmContactlessPickup(id, photoUrl, conditionNote, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/return-dropoff")
+    public ResponseEntity<BorrowResponseDto> recordReturnDropoff(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String location = payload.get("location");
+        String photoUrl = payload.get("photoUrl");
+        String note = payload.get("note");
+        return ResponseEntity.ok(borrowRequestService.recordContactlessReturn(id, location, photoUrl, note, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/confirm-return-dropoff")
+    public ResponseEntity<BorrowResponseDto> confirmReturnDropoff(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String photoUrl = payload != null ? payload.get("photoUrl") : null;
+        String conditionNote = payload != null ? payload.get("conditionNote") : null;
+        return ResponseEntity.ok(borrowRequestService.confirmContactlessReturn(id, photoUrl, conditionNote, userDetails.getUsername()));
+    }
 }

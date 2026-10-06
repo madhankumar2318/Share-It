@@ -101,6 +101,42 @@ public class BorrowRequest {
 
     private LocalDateTime lastReminderSentAt;
 
+    // Contactless Handover / Drop-off Fields
+    @Builder.Default
+    private Boolean isContactless = false;
+
+    @Column(length = 200)
+    private String dropoffLocation;
+
+    @Column(length = 500)
+    private String dropoffPhotoUrl;
+
+    @Column(length = 500)
+    private String dropoffNote;
+
+    private LocalDateTime dropoffAt;
+
+    @Column(length = 10)
+    private String dropoffPasscode;
+
+    @Column(length = 30)
+    private String dropoffStatus; // "DROPPED_OFF", "COLLECTED"
+
+    // Contactless Return Fields
+    @Column(length = 200)
+    private String returnDropoffLocation;
+
+    @Column(length = 500)
+    private String returnDropoffPhotoUrl;
+
+    @Column(length = 500)
+    private String returnDropoffNote;
+
+    private LocalDateTime returnDropoffAt;
+
+    @Column(length = 30)
+    private String returnDropoffStatus; // "DROPPED_OFF", "COLLECTED"
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

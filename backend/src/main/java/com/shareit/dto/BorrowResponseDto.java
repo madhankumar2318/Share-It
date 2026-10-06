@@ -52,6 +52,22 @@ public class BorrowResponseDto {
     private String returnPhotoUrl;
     private String returnConditionNote;
 
+    // Contactless Handover / Drop-off Fields
+    private Boolean isContactless;
+    private String dropoffLocation;
+    private String dropoffPhotoUrl;
+    private String dropoffNote;
+    private LocalDateTime dropoffAt;
+    private String dropoffPasscode;
+    private String dropoffStatus;
+
+    // Contactless Return Fields
+    private String returnDropoffLocation;
+    private String returnDropoffPhotoUrl;
+    private String returnDropoffNote;
+    private LocalDateTime returnDropoffAt;
+    private String returnDropoffStatus;
+
     private LocalDate extensionProposedEndDate;
     private String extensionStatus;
     private String extensionReason;

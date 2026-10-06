@@ -26,6 +26,8 @@ import {
   FileText,
   Heart,
   Bell,
+  Building2,
+  PackageCheck,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -35,6 +37,8 @@ import HandoverQrModal from '../components/HandoverQrModal';
 import QrScannerModal from '../components/QrScannerModal';
 import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
 import QuickReborrowModal from '../components/QuickReborrowModal';
+import ContactlessDropoffModal from '../components/ContactlessDropoffModal';
+import ContactlessCollectModal from '../components/ContactlessCollectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -101,6 +105,8 @@ const Dashboard = () => {
   const [qrModalData, setQrModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
   const [scannerModalData, setScannerModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
   const [slipModalData, setSlipModalData] = useState({ isOpen: false, request: null });
+  const [dropoffModalData, setDropoffModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
+  const [collectModalData, setCollectModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -576,7 +582,7 @@ const Dashboard = () => {
                                 >
                                   {verifyingId === req.id ? 'Verifying...' : 'Verify'}
                                 </button>
-                                <button
+                                 <button
                                   type="button"
                                   disabled={isPickupLocked}
                                   onClick={() => setScannerModalData({ isOpen: true, request: req, type: 'pickup' })}
@@ -586,8 +592,41 @@ const Dashboard = () => {
                                   <QrCode className="w-3.5 h-3.5" />
                                   <span>Scan QR</span>
                                 </button>
+                                <button
+                                  type="button"
+                                  disabled={isPickupLocked}
+                                  onClick={() => setDropoffModalData({ isOpen: true, request: req, mode: 'pickup' })}
+                                  className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/70 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-amber-300 dark:border-amber-700 shadow-2xs whitespace-nowrap disabled:opacity-50"
+                                  title="Drop item with security guard or leave at porch"
+                                >
+                                  <Building2 className="w-3.5 h-3.5" />
+                                  <span>{req.dropoffStatus === 'DROPPED_OFF' ? 'Update Drop-off' : 'Drop at Guard/Porch'}</span>
+                                </button>
                               </div>
                             </div>
+
+                          {/* Contactless Drop-off Active Indicator */}
+                          {req.dropoffStatus === 'DROPPED_OFF' && (
+                            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+                                  <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                  <span>🚪 Left at: <strong>{req.dropoffLocation}</strong></span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                                  Awaiting Collection
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between text-[11px] text-amber-800 dark:text-amber-300 gap-2">
+                                <div>Guard Passcode: <span className="font-mono font-bold tracking-wider">{req.dropoffPasscode || 'None'}</span></div>
+                                {req.dropoffPhotoUrl && (
+                                  <a href={req.dropoffPhotoUrl} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">
+                                    📸 View Spot Photo
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Pickup Condition Proof Snapshot (Optional but Recommended) */}
                           <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -676,6 +715,36 @@ const Dashboard = () => {
                                 </button>
                               </div>
                             </div>
+
+                          {/* Contactless Return Drop-off Indicator for Lender */}
+                          {req.returnDropoffStatus === 'DROPPED_OFF' && (
+                            <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-300 dark:border-purple-800 rounded-xl space-y-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
+                                  <Building2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                  <span>🚪 Borrower Returned Item to: <strong>{req.returnDropoffLocation}</strong></span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setCollectModalData({ isOpen: true, request: req, mode: 'return' })}
+                                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition flex items-center justify-center gap-1.5 whitespace-nowrap"
+                                >
+                                  <PackageCheck className="w-3.5 h-3.5" />
+                                  <span>Confirm Return Received</span>
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between text-[11px] text-purple-800 dark:text-purple-300 gap-2">
+                                {req.returnDropoffPhotoUrl && (
+                                  <a href={req.returnDropoffPhotoUrl} target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-purple-900">
+                                    📸 View Return Drop-off Photo
+                                  </a>
+                                )}
+                                {req.returnDropoffNote && (
+                                  <span className="italic">Note: "{req.returnDropoffNote}"</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Return Condition Proof Snapshot */}
                           <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -1078,6 +1147,46 @@ const Dashboard = () => {
                       </p>
                     )}
 
+                    {/* Contactless Drop-off Notice Card for Borrower */}
+                    {req.status === 'ACCEPTED' && !req.handoverAt && req.dropoffStatus === 'DROPPED_OFF' && (
+                      <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700/80 rounded-2xl space-y-3 shadow-md">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
+                              <Building2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="inline-block px-2 py-0.5 bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 rounded-md text-[10px] font-black uppercase tracking-wider">
+                                🚪 Contactless Drop-off &bull; Ready for Pickup!
+                              </span>
+                              <div className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                                Waiting at: {req.dropoffLocation}
+                              </div>
+                              <p className="text-[11px] text-gray-600 dark:text-gray-300">
+                                {req.dropoffNote ? `"${req.dropoffNote}"` : `Left safely by ${req.ownerName}.`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            {req.dropoffPasscode && (
+                              <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 font-mono text-base font-black tracking-widest text-amber-700 dark:text-amber-300">
+                                PIN: {req.dropoffPasscode}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setCollectModalData({ isOpen: true, request: req, mode: 'pickup' })}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center gap-1.5 whitespace-nowrap"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Collect from Spot</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* In-App Uber-style Screen PIN Cards for Borrower */}
                     {req.status === 'ACCEPTED' && !req.handoverAt && (
                       <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-400 dark:border-emerald-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -1147,6 +1256,21 @@ const Dashboard = () => {
                             >
                               <QrCode className="w-4 h-4" />
                               <span>Show QR</span>
+                            </button>
+                          )}
+                          {req.returnDropoffStatus === 'DROPPED_OFF' ? (
+                            <span className="text-xs font-bold text-purple-700 dark:text-purple-300 px-3 py-1.5 bg-purple-100 dark:bg-purple-950 rounded-xl border border-purple-200">
+                              🚪 Left at {req.returnDropoffLocation}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setDropoffModalData({ isOpen: true, request: req, mode: 'return' })}
+                              className="w-full sm:w-auto px-3.5 py-2 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-purple-300 dark:border-purple-700 shadow-2xs whitespace-nowrap"
+                              title="Leave item with gate security or at doorstep for return"
+                            >
+                              <Building2 className="w-4 h-4" />
+                              <span>Return via Drop-off</span>
                             </button>
                           )}
                         </div>
@@ -1425,6 +1549,24 @@ const Dashboard = () => {
         isOpen={slipModalData.isOpen}
         onClose={() => setSlipModalData({ isOpen: false, request: null })}
         request={slipModalData.request}
+      />
+
+      {/* Contactless Drop-off Modal (Porch / Gate Security) */}
+      <ContactlessDropoffModal
+        isOpen={dropoffModalData.isOpen}
+        onClose={() => setDropoffModalData((prev) => ({ ...prev, isOpen: false }))}
+        request={dropoffModalData.request}
+        mode={dropoffModalData.mode}
+        onSuccess={fetchDashboardData}
+      />
+
+      {/* Contactless Collection Confirmation Modal */}
+      <ContactlessCollectModal
+        isOpen={collectModalData.isOpen}
+        onClose={() => setCollectModalData((prev) => ({ ...prev, isOpen: false }))}
+        request={collectModalData.request}
+        mode={collectModalData.mode}
+        onSuccess={fetchDashboardData}
       />
     </div>
   );

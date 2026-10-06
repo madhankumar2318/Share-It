@@ -567,6 +567,18 @@ public class BorrowRequestService {
                 .extensionStatus(req.getExtensionStatus())
                 .extensionReason(req.getExtensionReason())
                 .lastReminderSentAt(req.getLastReminderSentAt())
+                .isContactless(req.getIsContactless())
+                .dropoffLocation(req.getDropoffLocation())
+                .dropoffPhotoUrl(req.getDropoffPhotoUrl())
+                .dropoffNote(req.getDropoffNote())
+                .dropoffAt(req.getDropoffAt())
+                .dropoffPasscode(req.getDropoffPasscode())
+                .dropoffStatus(req.getDropoffStatus())
+                .returnDropoffLocation(req.getReturnDropoffLocation())
+                .returnDropoffPhotoUrl(req.getReturnDropoffPhotoUrl())
+                .returnDropoffNote(req.getReturnDropoffNote())
+                .returnDropoffAt(req.getReturnDropoffAt())
+                .returnDropoffStatus(req.getReturnDropoffStatus())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();
@@ -818,5 +830,242 @@ public class BorrowRequestService {
                     "Automated reminder dispatched: " + title
             );
         }
+    }
+
+    @Transactional
+    public BorrowResponseDto recordContactlessDropoff(Long requestId, String location, String photoUrl, String note, String passcode, String ownerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getItem().getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can record contactless drop-off");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Item request must be Accepted before recording drop-off");
+        }
+
+        if (location == null || location.trim().isEmpty()) {
+            throw new IllegalArgumentException("Drop-off spot or location is required (e.g. Main Gate Security, Doorstep)");
+        }
+
+        String securePasscode = (passcode != null && !passcode.trim().isEmpty())
+                ? passcode.trim()
+                : String.format("%04d", new java.security.SecureRandom().nextInt(10000));
+
+        request.setIsContactless(true);
+        request.setDropoffLocation(location.trim());
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setDropoffPhotoUrl(photoUrl.trim());
+        }
+        if (note != null && !note.trim().isEmpty()) {
+            request.setDropoffNote(note.trim());
+        }
+        request.setDropoffPasscode(securePasscode);
+        request.setDropoffAt(java.time.LocalDateTime.now());
+        request.setDropoffStatus("DROPPED_OFF");
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "CONTACTLESS_DROPOFF",
+                "BorrowRequest",
+                saved.getId(),
+                ownerEmail,
+                "Item dropped off at " + location.trim() + " with passcode: " + securePasscode
+        );
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "🚪 Item Dropped Off at " + location.trim(),
+                currentUser.getFullName() + " left \"" + request.getItem().getTitle() + "\" at: " + location.trim()
+                        + ". Collection Passcode: " + securePasscode + ". Check your dashboard for drop-off details & photo!",
+                "ITEM_DROPPED_OFF",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto confirmContactlessPickup(Long requestId, String photoUrl, String conditionNote, String userEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        boolean isBorrower = request.getBorrower().getId().equals(currentUser.getId());
+        boolean isOwner = request.getItem().getOwner().getId().equals(currentUser.getId());
+
+        if (!isBorrower && !isOwner) {
+            throw new AccessDeniedException("Only the borrower or owner can confirm contactless pickup");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Request must be in Accepted status");
+        }
+
+        if (!"DROPPED_OFF".equals(request.getDropoffStatus())) {
+            throw new IllegalArgumentException("Item has not been recorded as dropped off yet");
+        }
+
+        request.setDropoffStatus("COLLECTED");
+        request.setHandoverAt(java.time.LocalDateTime.now());
+
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setPickupPhotoUrl(photoUrl.trim());
+        }
+        if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+            request.setPickupConditionNote(conditionNote.trim());
+        }
+
+        if (request.getReturnOtp() == null) {
+            request.setReturnOtp(generateSecureOtp());
+        }
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "CONTACTLESS_COLLECTED",
+                "BorrowRequest",
+                saved.getId(),
+                userEmail,
+                "Item collected from drop-off spot (" + request.getDropoffLocation() + ") by " + currentUser.getFullName()
+        );
+
+        if (isBorrower) {
+            notificationService.sendNotification(
+                    request.getItem().getOwner(),
+                    "✅ Item Collected from Drop-off Spot!",
+                    currentUser.getFullName() + " collected \"" + request.getItem().getTitle() + "\" from "
+                            + (request.getDropoffLocation() != null ? request.getDropoffLocation() : "the drop-off spot")
+                            + ". Handover is complete and active!",
+                    "HANDOVER_CONFIRMED",
+                    "/dashboard"
+            );
+        } else {
+            notificationService.sendNotification(
+                    request.getBorrower(),
+                    "✅ Handover Active!",
+                    "Pickup confirmed for \"" + request.getItem().getTitle() + "\". Enjoy using it!",
+                    "HANDOVER_CONFIRMED",
+                    "/dashboard"
+            );
+        }
+
+        return mapToDto(saved, isBorrower);
+    }
+
+    @Transactional
+    public BorrowResponseDto recordContactlessReturn(Long requestId, String location, String photoUrl, String note, String borrowerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(borrowerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getBorrower().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the borrower can record contactless return drop-off");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED || request.getHandoverAt() == null || request.getReturnedAt() != null) {
+            throw new IllegalArgumentException("Item must be currently active to record return drop-off");
+        }
+
+        if (location == null || location.trim().isEmpty()) {
+            throw new IllegalArgumentException("Return drop-off spot or location is required");
+        }
+
+        request.setReturnDropoffLocation(location.trim());
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setReturnDropoffPhotoUrl(photoUrl.trim());
+            request.setReturnPhotoUrl(photoUrl.trim());
+        }
+        if (note != null && !note.trim().isEmpty()) {
+            request.setReturnDropoffNote(note.trim());
+            request.setReturnConditionNote(note.trim());
+        }
+        request.setReturnDropoffAt(java.time.LocalDateTime.now());
+        request.setReturnDropoffStatus("DROPPED_OFF");
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "CONTACTLESS_RETURN_DROPOFF",
+                "BorrowRequest",
+                saved.getId(),
+                borrowerEmail,
+                "Item returned to drop-off spot: " + location.trim()
+        );
+
+        notificationService.sendNotification(
+                request.getItem().getOwner(),
+                "🚪 Item Returned to Drop-Off Spot!",
+                currentUser.getFullName() + " returned \"" + request.getItem().getTitle() + "\" at: " + location.trim()
+                        + ". Check the condition photo in your dashboard and confirm safe return.",
+                "RETURN_DROPPED_OFF",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, true);
+    }
+
+    @Transactional
+    public BorrowResponseDto confirmContactlessReturn(Long requestId, String photoUrl, String conditionNote, String ownerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getItem().getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can confirm return");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED || request.getHandoverAt() == null) {
+            throw new IllegalArgumentException("Item request must be in active status");
+        }
+
+        if (!"DROPPED_OFF".equals(request.getReturnDropoffStatus())) {
+            throw new IllegalArgumentException("Return drop-off has not been recorded yet");
+        }
+
+        request.setReturnDropoffStatus("COLLECTED");
+        request.setStatus(RequestStatus.RETURNED);
+        request.setReturnedAt(java.time.LocalDateTime.now());
+
+        if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+            request.setReturnPhotoUrl(photoUrl.trim());
+        }
+        if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+            request.setReturnConditionNote(conditionNote.trim());
+        }
+
+        // Release item back to available
+        request.getItem().setStatus(com.shareit.model.ItemStatus.AVAILABLE);
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "CONTACTLESS_RETURN_CONFIRMED",
+                "BorrowRequest",
+                saved.getId(),
+                ownerEmail,
+                "Return confirmed by owner " + currentUser.getFullName() + " from drop-off spot"
+        );
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "🎉 Return Confirmed!",
+                currentUser.getFullName() + " retrieved \"" + request.getItem().getTitle() + "\" and confirmed safe return. Thank you for sharing!",
+                "RETURN_CONFIRMED",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, false);
     }
 }
