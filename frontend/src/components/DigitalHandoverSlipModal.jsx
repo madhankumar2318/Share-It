@@ -132,11 +132,6 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
                 <Calendar className="w-3.5 h-3.5" />
                 {request.startDate} to {request.endDate}
               </p>
-              {request.voiceNoteUrl && (
-                <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold border border-purple-200 dark:border-purple-800">
-                  <span>🎙️</span> Audio care guide attached
-                </div>
-              )}
             </div>
           </div>
 

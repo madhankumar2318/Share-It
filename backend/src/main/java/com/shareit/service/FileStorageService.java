@@ -27,9 +27,7 @@ public class FileStorageService {
 
     private final Path fileStorageLocation;
     private final StoredFileRepository storedFileRepository;
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
-            "jpg", "jpeg", "png", "webp", "webm", "wav", "mp3", "ogg", "m4a", "aac"
-    );
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "webp");
 
     public FileStorageService(@Value("${file.upload-dir:uploads}") String uploadDir,
                               StoredFileRepository storedFileRepository) {
@@ -57,7 +55,7 @@ public class FileStorageService {
         }
 
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Only images (jpg, jpeg, png, webp) and audio notes (webm, wav, mp3, ogg, m4a) are permitted. Received: " + extension);
+            throw new IllegalArgumentException("Only images (jpg, jpeg, png, webp) are permitted. Received: " + extension);
         }
 
         // Generate collision-proof file name

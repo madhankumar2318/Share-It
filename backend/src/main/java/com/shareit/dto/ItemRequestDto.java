@@ -30,17 +30,5 @@ public class ItemRequestDto {
     private Double dailyRate;
     private Double securityDeposit;
 
-    // Toy & Book Rotate Club
-    private String ageGroup;
-    private Boolean isCleanedSanitized;
-
-    // Seasonal Festival & Event Vault
-    private String seasonalTag;
-    private Boolean seasonalActive;
-
-    // Voice Note Care Instructions (Audio Guide)
-    private String voiceNoteUrl;
-    private Integer voiceNoteDuration;
-
     private ItemStatus status;
 }

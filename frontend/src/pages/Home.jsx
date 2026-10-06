@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   Clock,
   Mic,
-  Baby,
 } from 'lucide-react';
 import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
@@ -37,7 +36,6 @@ const CATEGORIES = [
   'Books & Study',
   'Sports & Fitness',
   'Party & Games',
-  'Kids & Play Rotation',
 ];
 
 const RADIUS_OPTIONS = [
@@ -72,7 +70,6 @@ const Home = () => {
       case 'Books & Study': return t('booksStudy');
       case 'Sports & Fitness': return t('sportsFitness');
       case 'Party & Games': return t('partyGames');
-      case 'Kids & Play Rotation': return '🧸 Kids & Play Rotation';
       default: return cat;
     }
   };
@@ -81,7 +78,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedSpotlight, setSelectedSpotlight] = useState('ALL'); // 'ALL' | 'DIWALI_FESTIVE' | 'KIDS_ROTATION' | 'TRAVEL_CAMPING' | 'PARTY_CELEBRATION'
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   
   // Interactive Map & Distance Slider States
@@ -203,18 +199,7 @@ const Home = () => {
       );
     }
 
-    // 2. Seasonal Festival Vault & Kids Rotate Spotlight filter
-    if (selectedSpotlight === 'DIWALI_FESTIVE') {
-      result = result.filter((item) => item.seasonalTag === 'DIWALI_FESTIVE');
-    } else if (selectedSpotlight === 'KIDS_ROTATION') {
-      result = result.filter((item) => item.category === 'Kids & Play Rotation' || Boolean(item.ageGroup));
-    } else if (selectedSpotlight === 'TRAVEL_CAMPING') {
-      result = result.filter((item) => item.seasonalTag === 'TRAVEL_CAMPING');
-    } else if (selectedSpotlight === 'PARTY_CELEBRATION') {
-      result = result.filter((item) => item.seasonalTag === 'PARTY_CELEBRATION');
-    }
-
-    // 3. Distance radius filter from user coords
+    // 2. Distance radius filter from user coords
     if (distanceRadius && userCoords?.latitude && userCoords?.longitude) {
       result = result.filter((item) => {
         const coords = getItemCoordinates(item);
@@ -246,7 +231,7 @@ const Home = () => {
     }
 
     return result;
-  }, [items, availableTodayOnly, selectedSpotlight, distanceRadius, userCoords, sortBy]);
+  }, [items, availableTodayOnly, distanceRadius, userCoords, sortBy]);
 
   const handleRadiusClick = async (radiusVal) => {
     setDistanceRadius(radiusVal);
@@ -451,67 +436,6 @@ const Home = () => {
               )}
             </div>
           )}
-        </div>
-
-        {/* 🪔 Seasonal Festival Vault & 🧸 Kids Rotate Spotlight Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setSelectedSpotlight('ALL')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap flex-shrink-0 ${
-              selectedSpotlight === 'ALL'
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-800'
-            }`}
-          >
-            <span>✨ All Catalog</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedSpotlight(selectedSpotlight === 'DIWALI_FESTIVE' ? 'ALL' : 'DIWALI_FESTIVE')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap flex-shrink-0 border ${
-              selectedSpotlight === 'DIWALI_FESTIVE'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-sm'
-                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>🪔 Diwali & Festive Vault</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedSpotlight(selectedSpotlight === 'KIDS_ROTATION' ? 'ALL' : 'KIDS_ROTATION')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap flex-shrink-0 border ${
-              selectedSpotlight === 'KIDS_ROTATION'
-                ? 'bg-pink-600 text-white border-pink-600 shadow-sm'
-                : 'bg-pink-50 dark:bg-pink-950/40 text-pink-900 dark:text-pink-200 border border-pink-200 dark:border-pink-800/60 hover:bg-pink-100'
-            }`}
-          >
-            <Baby className="w-3.5 h-3.5 text-pink-500" />
-            <span>🧸 Toy & Book Rotate Club</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedSpotlight(selectedSpotlight === 'TRAVEL_CAMPING' ? 'ALL' : 'TRAVEL_CAMPING')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap flex-shrink-0 border ${
-              selectedSpotlight === 'TRAVEL_CAMPING'
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100'
-            }`}
-          >
-            <span>⛺ Travel & Camping</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedSpotlight(selectedSpotlight === 'PARTY_CELEBRATION' ? 'ALL' : 'PARTY_CELEBRATION')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap flex-shrink-0 border ${
-              selectedSpotlight === 'PARTY_CELEBRATION'
-                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                : 'bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-100'
-            }`}
-          >
-            <span>🎈 Party & Events</span>
-          </button>
         </div>
 
         {/* Category Pills & "Available Today" Filter Chip */}
@@ -855,25 +779,8 @@ const Home = () => {
                       }}
                     />
                     <div className="absolute top-3 right-3">{getStatusBadge(item)}</div>
-                    <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
-                      <span className="bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
-                        {item.category}
-                      </span>
-                      {item.seasonalTag && item.seasonalTag !== 'NONE' && (
-                        <span className="bg-amber-600/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs">
-                          {item.seasonalTag === 'DIWALI_FESTIVE' ? '🪔 Festive Vault' : item.seasonalTag === 'TRAVEL_CAMPING' ? '⛺ Travel' : '🎈 Party'}
-                        </span>
-                      )}
-                      {(item.category === 'Kids & Play Rotation' || item.ageGroup) && (
-                        <span className="bg-pink-600/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs">
-                          🧸 Rotate {item.ageGroup ? `(${item.ageGroup})` : ''}
-                        </span>
-                      )}
-                      {item.voiceNoteUrl && (
-                        <span className="bg-emerald-600/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs flex items-center gap-1">
-                          🎙️ Audio Guide
-                        </span>
-                      )}
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
+                      {item.category}
                     </div>
 
                     {/* Real-time Distance Overlay Tag */}
@@ -908,19 +815,6 @@ const Home = () => {
                           </div>
                         )}
                       </div>
-
-                      {/* Pricing Tag */}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
-                          {item.dailyRate > 0 ? `₹${item.dailyRate}/day` : 'Free to Borrow 🎁'}
-                        </span>
-                        {item.securityDeposit > 0 && (
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                            &bull; ₹{item.securityDeposit} deposit
-                          </span>
-                        )}
-                      </div>
-
                       <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
                         {item.description || 'No description provided.'}
                       </p>

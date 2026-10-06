@@ -13,13 +13,10 @@ import {
   MapPin, 
   Loader2, 
   Search,
-  Coins,
-  Baby,
-  Sparkles,
+  Coins 
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
-import VoiceNoteRecorder from '../components/VoiceNoteRecorder';
 
 const CATEGORIES = [
   'Electronics',
@@ -29,7 +26,6 @@ const CATEGORIES = [
   'Books & Study',
   'Sports & Fitness',
   'Party & Games',
-  'Kids & Play Rotation',
 ];
 
 const AddItem = () => {
@@ -43,12 +39,6 @@ const AddItem = () => {
     imageUrl: '',
     dailyRate: '',
     securityDeposit: '',
-    ageGroup: '',
-    isCleanedSanitized: false,
-    seasonalTag: 'NONE',
-    seasonalActive: true,
-    voiceNoteUrl: '',
-    voiceNoteDuration: 0,
   });
 
   // Structured Indian location states for lending pickup point
@@ -574,123 +564,6 @@ const AddItem = () => {
               </div>
             )}
           </div>
-
-          {/* 🧸 Toy & Book Rotate Club (Kids & Family Gear) */}
-          {(formData.category === 'Kids & Play Rotation' || formData.category === 'Books & Study' || formData.category === 'Party & Games') && (
-            <div className="p-4 sm:p-5 bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/60 rounded-2xl space-y-3.5">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-pink-600 text-white rounded-xl shadow-xs">
-                  <Baby className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                    🧸 Kids & Play Rotation Details
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    Help neighborhood parents find toys & books suited for their child's age group
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Recommended Age Group
-                  </label>
-                  <select
-                    name="ageGroup"
-                    value={formData.ageGroup}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-pink-200 dark:border-pink-900/60 text-xs focus:ring-2 focus:ring-pink-500 outline-none"
-                  >
-                    <option value="">-- Choose Age Range --</option>
-                    <option value="0-2 yrs">👶 0 - 2 years (Babies & Toddlers)</option>
-                    <option value="3-5 yrs">🧒 3 - 5 years (Preschool & Kindergarten)</option>
-                    <option value="6-8 yrs">👦 6 - 8 years (Early Elementary)</option>
-                    <option value="9-12 yrs">🧑 9 - 12 years (Pre-Teens)</option>
-                    <option value="All Ages">👨‍👩‍👧 All Ages / Family Fun</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center pt-2 sm:pt-5">
-                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-700 dark:text-gray-300 font-medium select-none">
-                    <input
-                      type="checkbox"
-                      name="isCleanedSanitized"
-                      checked={formData.isCleanedSanitized}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, isCleanedSanitized: e.target.checked }))}
-                      className="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-gray-300 dark:border-slate-700"
-                    />
-                    <span>🧼 Sanitized & Cleaned for Child Safety</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 🪔 Seasonal Festival & Event Vault */}
-          <div className="p-4 sm:p-5 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 rounded-2xl space-y-3.5">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                  🪔 Seasonal Festival & Event Vault
-                </h4>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Tag items used during festivals, holidays, or special occasions for spotlight discovery
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Seasonal Occasion Tag
-                </label>
-                <select
-                  name="seasonalTag"
-                  value={formData.seasonalTag}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-xl border border-amber-200 dark:border-amber-900/60 text-xs focus:ring-2 focus:ring-amber-500 outline-none"
-                >
-                  <option value="NONE">None (Regular Year-Round Item)</option>
-                  <option value="DIWALI_FESTIVE">🪔 Diwali & Festive Spotlight (Lights, Pooja, Decor)</option>
-                  <option value="TRAVEL_CAMPING">⛺ Travel, Trekking & Vacation (Luggage, Tents)</option>
-                  <option value="PARTY_CELEBRATION">🎈 Party, Birthday & Events (Grill, Mic, Projector)</option>
-                  <option value="SUMMER_MONSOON">🌧️ Monsoon & Seasonal Comfort</option>
-                </select>
-              </div>
-
-              {formData.seasonalTag !== 'NONE' && (
-                <div className="flex items-center pt-2 sm:pt-5">
-                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-amber-900 dark:text-amber-200 font-medium select-none">
-                    <input
-                      type="checkbox"
-                      name="seasonalActive"
-                      checked={formData.seasonalActive}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, seasonalActive: e.target.checked }))}
-                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-slate-700"
-                    />
-                    <span>🔥 Feature this item in Current Seasonal Vault</span>
-                  </label>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 🎙️ Voice Note Care Instructions (Audio Guide) */}
-          <VoiceNoteRecorder
-            existingUrl={formData.voiceNoteUrl}
-            existingDuration={formData.voiceNoteDuration}
-            onAudioUploaded={({ voiceNoteUrl, voiceNoteDuration }) => {
-              setFormData((prev) => ({ ...prev, voiceNoteUrl, voiceNoteDuration }));
-            }}
-            onAudioRemoved={() => {
-              setFormData((prev) => ({ ...prev, voiceNoteUrl: '', voiceNoteDuration: 0 }));
-            }}
-          />
 
           {/* Submit Button */}
           <button

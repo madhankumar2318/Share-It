@@ -42,12 +42,6 @@ public class ItemService {
                 .longitude(dto.getLongitude())
                 .dailyRate(dto.getDailyRate() != null && dto.getDailyRate() >= 0 ? dto.getDailyRate() : 0.0)
                 .securityDeposit(dto.getSecurityDeposit() != null && dto.getSecurityDeposit() >= 0 ? dto.getSecurityDeposit() : 0.0)
-                .ageGroup(dto.getAgeGroup())
-                .isCleanedSanitized(dto.getIsCleanedSanitized() != null ? dto.getIsCleanedSanitized() : false)
-                .seasonalTag(dto.getSeasonalTag() != null ? dto.getSeasonalTag() : "NONE")
-                .seasonalActive(dto.getSeasonalActive() != null ? dto.getSeasonalActive() : true)
-                .voiceNoteUrl(dto.getVoiceNoteUrl())
-                .voiceNoteDuration(dto.getVoiceNoteDuration())
                 .status(dto.getStatus() != null ? dto.getStatus() : ItemStatus.AVAILABLE)
                 .owner(user)
                 .build();
@@ -58,30 +52,15 @@ public class ItemService {
 
     private org.springframework.data.jpa.domain.Specification<Item> buildSpecification(
             String category, String search, String location, ItemStatus status) {
-        return buildSpecification(category, search, location, status, null, null);
-    }
-
-    private org.springframework.data.jpa.domain.Specification<Item> buildSpecification(
-            String category, String search, String location, ItemStatus status, String seasonalTag, String ageGroup) {
         String cleanCategory = (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All")) ? category.trim() : null;
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         String cleanLocation = (location != null && !location.trim().isEmpty() && !location.equalsIgnoreCase("All") && !location.equalsIgnoreCase("All India")) ? location.trim() : null;
-        String cleanSeasonal = (seasonalTag != null && !seasonalTag.trim().isEmpty() && !seasonalTag.equalsIgnoreCase("ALL") && !seasonalTag.equalsIgnoreCase("NONE")) ? seasonalTag.trim() : null;
-        String cleanAge = (ageGroup != null && !ageGroup.trim().isEmpty() && !ageGroup.equalsIgnoreCase("ALL")) ? ageGroup.trim() : null;
 
         return (root, query, cb) -> {
             java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
 
             if (cleanCategory != null) {
                 predicates.add(cb.equal(cb.lower(root.get("category")), cleanCategory.toLowerCase()));
-            }
-
-            if (cleanSeasonal != null) {
-                predicates.add(cb.equal(cb.upper(root.get("seasonalTag")), cleanSeasonal.toUpperCase()));
-            }
-
-            if (cleanAge != null) {
-                predicates.add(cb.equal(cb.lower(root.get("ageGroup")), cleanAge.toLowerCase()));
             }
 
             if (cleanSearch != null) {
@@ -116,17 +95,12 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status) {
-        return getAllItems(category, search, location, status, null, null, null);
+        return getAllItems(category, search, location, status, null);
     }
 
     @Transactional(readOnly = true)
     public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status, Boolean availableToday) {
-        return getAllItems(category, search, location, status, availableToday, null, null);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ItemResponseDto> getAllItems(String category, String search, String location, ItemStatus status, Boolean availableToday, String seasonalTag, String ageGroup) {
-        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status, seasonalTag, ageGroup);
+        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status);
         List<Item> items = itemRepository.findAll(spec);
         List<ItemResponseDto> dtoList = items.stream().map(item -> this.mapToDto(item, false)).collect(Collectors.toList());
 
@@ -142,16 +116,10 @@ public class ItemService {
     @Transactional(readOnly = true)
     public com.shareit.dto.PageResponseDto<ItemResponseDto> getPagedItems(
             String category, String search, String location, ItemStatus status, Boolean availableToday, int page, int size) {
-        return getPagedItems(category, search, location, status, availableToday, null, null, page, size);
-    }
-
-    @Transactional(readOnly = true)
-    public com.shareit.dto.PageResponseDto<ItemResponseDto> getPagedItems(
-            String category, String search, String location, ItemStatus status, Boolean availableToday, String seasonalTag, String ageGroup, int page, int size) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
                 Math.max(0, page), Math.max(1, size), org.springframework.data.domain.Sort.by("createdAt").descending()
         );
-        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status, seasonalTag, ageGroup);
+        org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status);
         org.springframework.data.domain.Page<Item> itemPage = itemRepository.findAll(spec, pageable);
 
         List<ItemResponseDto> dtoList = itemPage.getContent().stream()
@@ -223,24 +191,6 @@ public class ItemService {
         if (dto.getSecurityDeposit() != null && dto.getSecurityDeposit() >= 0) {
             item.setSecurityDeposit(dto.getSecurityDeposit());
         }
-        if (dto.getAgeGroup() != null) {
-            item.setAgeGroup(dto.getAgeGroup());
-        }
-        if (dto.getIsCleanedSanitized() != null) {
-            item.setIsCleanedSanitized(dto.getIsCleanedSanitized());
-        }
-        if (dto.getSeasonalTag() != null) {
-            item.setSeasonalTag(dto.getSeasonalTag());
-        }
-        if (dto.getSeasonalActive() != null) {
-            item.setSeasonalActive(dto.getSeasonalActive());
-        }
-        if (dto.getVoiceNoteUrl() != null) {
-            item.setVoiceNoteUrl(dto.getVoiceNoteUrl());
-        }
-        if (dto.getVoiceNoteDuration() != null) {
-            item.setVoiceNoteDuration(dto.getVoiceNoteDuration());
-        }
         if (dto.getStatus() != null) {
             item.setStatus(dto.getStatus());
         }
@@ -282,12 +232,6 @@ public class ItemService {
                 .longitude(item.getLongitude())
                 .dailyRate(item.getDailyRate() != null ? item.getDailyRate() : 0.0)
                 .securityDeposit(item.getSecurityDeposit() != null ? item.getSecurityDeposit() : 0.0)
-                .ageGroup(item.getAgeGroup())
-                .isCleanedSanitized(Boolean.TRUE.equals(item.getIsCleanedSanitized()))
-                .seasonalTag(item.getSeasonalTag() != null ? item.getSeasonalTag() : "NONE")
-                .seasonalActive(item.getSeasonalActive() != null ? item.getSeasonalActive() : true)
-                .voiceNoteUrl(item.getVoiceNoteUrl())
-                .voiceNoteDuration(item.getVoiceNoteDuration())
                 .status(item.getStatus())
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount(reviewCnt != null ? reviewCnt : 0L)

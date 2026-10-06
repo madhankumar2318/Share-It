@@ -53,27 +53,6 @@ public class Item {
     @Builder.Default
     private Double securityDeposit = 0.0; // ₹ upfront advance caution deposit (0.0 = None)
 
-    // Toy & Book Rotate Club fields
-    @Column(length = 30)
-    private String ageGroup; // e.g. "0-2 yrs", "3-5 yrs", "6-8 yrs", "9-12 yrs", "All Ages"
-
-    @Builder.Default
-    private Boolean isCleanedSanitized = false; // Verified sanitization badge for toys/baby equipment
-
-    // Seasonal Festival & Event Vault fields
-    @Column(length = 50)
-    @Builder.Default
-    private String seasonalTag = "NONE"; // "NONE", "DIWALI_FESTIVE", "TRAVEL_CAMPING", "PARTY_CELEBRATION", "SUMMER_MONSOON"
-
-    @Builder.Default
-    private Boolean seasonalActive = true;
-
-    // Voice Note Care Instructions (Audio Guide)
-    @Column(length = 500)
-    private String voiceNoteUrl;
-
-    private Integer voiceNoteDuration; // Duration in seconds
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
