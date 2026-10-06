@@ -1,5 +1,7 @@
 package com.shareit.controller;
 
+import com.shareit.dto.ChangePasswordRequest;
+import com.shareit.dto.DeleteAccountRequest;
 import com.shareit.dto.UpdateProfileRequest;
 import com.shareit.dto.UserProfileDto;
 import com.shareit.dto.UserTrustDto;
@@ -10,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,6 +35,24 @@ public class UserController {
             @Valid @RequestBody UpdateProfileRequest request
     ) {
         return ResponseEntity.ok(userService.updateProfile(authentication.getName(), request));
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        userService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully! 🔒"));
+    }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<?> deactivateAccount(
+            Authentication authentication,
+            @Valid @RequestBody DeleteAccountRequest request
+    ) {
+        userService.deactivateAccount(authentication.getName(), request);
+        return ResponseEntity.ok(Map.of("message", "Account has been deactivated successfully."));
     }
 
     @GetMapping("/{userId}/public-profile")

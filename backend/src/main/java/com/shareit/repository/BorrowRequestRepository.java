@@ -51,4 +51,8 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     // Active accepted requests due on or before target date that have not been returned yet
     @Query("SELECT r FROM BorrowRequest r WHERE r.status = 'ACCEPTED' AND r.returnedAt IS NULL AND r.endDate <= :maxDate")
     List<BorrowRequest> findActiveRequestsDueSoon(@Param("maxDate") java.time.LocalDate maxDate);
+
+    // Check if user has any active ongoing borrows or lends
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM BorrowRequest r WHERE (r.borrower.id = :userId OR r.item.owner.id = :userId) AND r.status = 'ACCEPTED' AND r.returnedAt IS NULL")
+    boolean hasActiveBorrowedItems(@Param("userId") Long userId);
 }

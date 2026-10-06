@@ -23,7 +23,8 @@ import {
   Sparkles,
   Settings,
   User,
-  Globe2
+  Globe2,
+  ShieldCheck
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -220,7 +221,7 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                        {/* Navigation Links - Your Profile & Locality, App Language */}
+                        {/* Navigation Links - Your Profile & Locality, App Language, Security */}
                         <div className="p-1.5 space-y-0.5">
                           <Link
                             to="/settings?tab=profile"
@@ -237,6 +238,14 @@ const Navbar = () => {
                           >
                             <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             <span>{t('appLanguageOption')}</span>
+                          </Link>
+                          <Link
+                            to="/settings?tab=security"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
+                          >
+                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>{t('securityOption')}</span>
                           </Link>
                         </div>
 
@@ -424,6 +433,19 @@ const Navbar = () => {
                   >
                     <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{t('appLanguageOption')}</span>
+                  </Link>
+
+                  <Link
+                    to="/settings?tab=security"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                      isSettings && location.search === '?tab=security'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>{t('securityOption')}</span>
                   </Link>
                 </>
               )}
