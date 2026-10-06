@@ -55,6 +55,7 @@ public class BorrowResponseDto {
     private LocalDate extensionProposedEndDate;
     private String extensionStatus;
     private String extensionReason;
+    private LocalDateTime lastReminderSentAt;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

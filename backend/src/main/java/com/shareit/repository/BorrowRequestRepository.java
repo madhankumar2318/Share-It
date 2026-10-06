@@ -47,4 +47,8 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     default List<BorrowRequest> findConflictingAcceptedRequests(Long itemId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         return findConflictingAcceptedRequests(itemId, null, startDate, endDate);
     }
+
+    // Active accepted requests due on or before target date that have not been returned yet
+    @Query("SELECT r FROM BorrowRequest r WHERE r.status = 'ACCEPTED' AND r.returnedAt IS NULL AND r.endDate <= :maxDate")
+    List<BorrowRequest> findActiveRequestsDueSoon(@Param("maxDate") java.time.LocalDate maxDate);
 }

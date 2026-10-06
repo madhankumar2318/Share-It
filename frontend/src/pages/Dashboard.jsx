@@ -26,6 +26,7 @@ import {
   QrCode,
   FileText,
   Heart,
+  Bell,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -98,6 +99,7 @@ const Dashboard = () => {
   const [uploadingReturnPhoto, setUploadingReturnPhoto] = useState({});
   const [selectedProofRequest, setSelectedProofRequest] = useState(null);
   const [selectedExtendRequest, setSelectedExtendRequest] = useState(null);
+  const [sendingReminderId, setSendingReminderId] = useState(null);
   const [qrModalData, setQrModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
   const [scannerModalData, setScannerModalData] = useState({ isOpen: false, request: null, type: 'pickup' });
   const [slipModalData, setSlipModalData] = useState({ isOpen: false, request: null });
@@ -153,6 +155,37 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update extension status');
+    }
+  };
+
+  const isReminderRecentlySent = (lastReminderSentAt) => {
+    if (!lastReminderSentAt) return false;
+    const diffHours = (new Date() - new Date(lastReminderSentAt)) / (1000 * 60 * 60);
+    return diffHours < 12;
+  };
+
+  const formatReminderTime = (lastReminderSentAt) => {
+    if (!lastReminderSentAt) return '';
+    try {
+      const date = new Date(lastReminderSentAt);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  const handleSendReturnReminder = async (requestId, borrowerName) => {
+    setSendingReminderId(requestId);
+    try {
+      const res = await api.post(`/requests/${requestId}/send-reminder`);
+      toast.success(`⏰ Gentle return reminder sent to ${borrowerName || 'borrower'}!`);
+      setReceivedRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, lastReminderSentAt: res.data.lastReminderSentAt } : r))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send return reminder.');
+    } finally {
+      setSendingReminderId(null);
     }
   };
 
@@ -730,6 +763,34 @@ const Dashboard = () => {
                         />
                       )}
 
+                      {/* 1-Tap In-App Polite Return Reminder — only shown once item is handed over and not yet returned */}
+                      {req.status === 'ACCEPTED' && req.handoverAt && !req.returnedAt && (
+                        <button
+                          type="button"
+                          onClick={() => handleSendReturnReminder(req.id, req.borrowerName)}
+                          disabled={sendingReminderId === req.id || isReminderRecentlySent(req.lastReminderSentAt)}
+                          title={
+                            isReminderRecentlySent(req.lastReminderSentAt)
+                              ? `Gentle reminder already sent at ${formatReminderTime(req.lastReminderSentAt)} (throttled to 1 per 12h)`
+                              : `Send a gentle in-app return reminder to ${req.borrowerName}`
+                          }
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${
+                            isReminderRecentlySent(req.lastReminderSentAt)
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                              : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 shadow-2xs'
+                          }`}
+                        >
+                          <Bell className={`w-3.5 h-3.5 ${sendingReminderId === req.id ? 'animate-bounce' : ''}`} />
+                          {sendingReminderId === req.id ? (
+                            'Sending...'
+                          ) : isReminderRecentlySent(req.lastReminderSentAt) ? (
+                            `Reminded (${formatReminderTime(req.lastReminderSentAt)})`
+                          ) : (
+                            'Gentle Reminder'
+                          )}
+                        </button>
+                      )}
+
                       {/* 1-Click Friendly Return Ping — only shown once item is handed over */}
                       {req.status === 'ACCEPTED' && req.handoverAt && req.borrowerPhone && (() => {
                         const pingUrl = buildReturnPingWhatsAppUrl({
@@ -924,6 +985,64 @@ const Dashboard = () => {
                         )}
                       </div>
                     )}
+
+                    {/* Friendly Polite Return Reminder Banner for Borrower */}
+                    {req.status === 'ACCEPTED' && req.handoverAt && !req.returnedAt && (() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const due = new Date(req.endDate);
+                      due.setHours(0, 0, 0, 0);
+                      const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+                      const isUpcomingOrOverdue = diffDays <= 1;
+                      const hasReminder = Boolean(req.lastReminderSentAt);
+
+                      if (!isUpcomingOrOverdue && !hasReminder) return null;
+
+                      return (
+                        <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+                          <div className="flex items-start gap-2.5">
+                            <div className="p-1.5 bg-amber-500 text-white rounded-lg mt-0.5 shadow-2xs flex-shrink-0">
+                              <Bell className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                                <span>
+                                  {diffDays < 0
+                                    ? 'Item Return Overdue'
+                                    : diffDays === 0
+                                    ? 'Item Due for Return Today'
+                                    : 'Polite Return Reminder'}
+                                </span>
+                                {hasReminder && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 font-semibold">
+                                    Nudged by Lender
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                                {req.ownerName} is expecting <strong>{req.itemTitle}</strong> back{' '}
+                                {diffDays < 0
+                                  ? 'as soon as possible'
+                                  : diffDays === 0
+                                  ? 'today'
+                                  : 'tomorrow'}
+                                . Need more time with it?
+                              </p>
+                            </div>
+                          </div>
+                          {req.extensionStatus !== 'PENDING' && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedExtendRequest(req)}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs transition shadow-2xs whitespace-nowrap self-end sm:self-auto flex items-center gap-1.5"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              Request Extension
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {req.message && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">

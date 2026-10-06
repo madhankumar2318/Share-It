@@ -110,4 +110,11 @@ public class BorrowRequestController {
         boolean approve = Boolean.TRUE.equals(payload.get("approve"));
         return ResponseEntity.ok(borrowRequestService.respondToExtension(id, approve, userDetails.getUsername()));
     }
+
+    @PostMapping("/{id}/send-reminder")
+    public ResponseEntity<BorrowResponseDto> sendReturnReminder(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(borrowRequestService.sendReturnReminder(id, userDetails.getUsername()));
+    }
 }

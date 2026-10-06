@@ -528,6 +528,7 @@ public class BorrowRequestService {
                 .extensionProposedEndDate(req.getExtensionProposedEndDate())
                 .extensionStatus(req.getExtensionStatus())
                 .extensionReason(req.getExtensionReason())
+                .lastReminderSentAt(req.getLastReminderSentAt())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();
@@ -642,5 +643,131 @@ public class BorrowRequestService {
 
         BorrowRequest saved = borrowRequestRepository.save(request);
         return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto sendReturnReminder(Long requestId, String lenderEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(lenderEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Item item = request.getItem();
+        if (!item.getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can send return reminders");
+        }
+
+        if (request.getStatus() != RequestStatus.ACCEPTED || request.getReturnedAt() != null) {
+            throw new IllegalArgumentException("Cannot send reminder for an inactive or already returned booking");
+        }
+
+        // Rate limit: Allow max 1 manual reminder every 12 hours
+        if (request.getLastReminderSentAt() != null) {
+            long hoursSinceLast = java.time.Duration.between(request.getLastReminderSentAt(), java.time.LocalDateTime.now()).toHours();
+            if (hoursSinceLast < 12) {
+                long hoursLeft = 12 - hoursSinceLast;
+                throw new IllegalArgumentException("A return reminder was already sent recently. You can nudge again in " + hoursLeft + " hour(s).");
+            }
+        }
+
+        // Polite, warm in-app notification to borrower
+        String friendlyMessage = String.format(
+                "Hi %s! Gentle reminder that \"%s\" is scheduled for return on %s. Need more time? Feel free to request an extension on your dashboard! 😊",
+                request.getBorrower().getFullName(),
+                item.getTitle(),
+                request.getEndDate()
+        );
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "⏰ Gentle Return Reminder",
+                friendlyMessage,
+                "RETURN_REMINDER",
+                "/dashboard"
+        );
+
+        request.setLastReminderSentAt(java.time.LocalDateTime.now());
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "LENDER_SENT_RETURN_REMINDER",
+                "BorrowRequest",
+                saved.getId(),
+                lenderEmail,
+                "Lender sent gentle return reminder to borrower " + request.getBorrower().getFullName()
+        );
+
+        return mapToDto(saved, false);
+    }
+
+    /**
+     * Automated background scheduler: Runs daily at 9:00 AM and 6:00 PM to gently remind
+     * borrowers whose rental return is due tomorrow, today, or overdue.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 9,18 * * *")
+    @Transactional
+    public void runAutomatedDueReminders() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate tomorrow = today.plusDays(1);
+
+        List<BorrowRequest> dueRequests = borrowRequestRepository.findActiveRequestsDueSoon(tomorrow);
+
+        for (BorrowRequest req : dueRequests) {
+            // Check if already reminded in the last 20 hours to prevent duplicate pings
+            if (req.getLastReminderSentAt() != null) {
+                long hoursSinceLast = java.time.Duration.between(req.getLastReminderSentAt(), java.time.LocalDateTime.now()).toHours();
+                if (hoursSinceLast < 20) {
+                    continue;
+                }
+            }
+
+            String title;
+            String message;
+
+            if (req.getEndDate().isEqual(tomorrow)) {
+                title = "⏰ Return Due Tomorrow!";
+                message = String.format(
+                        "Friendly reminder: \"%s\" from %s is due for return tomorrow (%s). Need extra time? Request a 1-day extension on your dashboard!",
+                        req.getItem().getTitle(),
+                        req.getItem().getOwner().getFullName(),
+                        req.getEndDate()
+                );
+            } else if (req.getEndDate().isEqual(today)) {
+                title = "⏰ Return Due Today!";
+                message = String.format(
+                        "Friendly reminder: \"%s\" from %s is due today. Please coordinate drop-off and have your 6-digit Return PIN or QR ready!",
+                        req.getItem().getTitle(),
+                        req.getItem().getOwner().getFullName()
+                );
+            } else {
+                title = "⚠️ Item Return Due";
+                message = String.format(
+                        "Gentle notice: \"%s\" from %s was scheduled for return on %s. Please arrange return or submit an extension request.",
+                        req.getItem().getTitle(),
+                        req.getItem().getOwner().getFullName(),
+                        req.getEndDate()
+                );
+            }
+
+            notificationService.sendNotification(
+                    req.getBorrower(),
+                    title,
+                    message,
+                    "RETURN_REMINDER",
+                    "/dashboard"
+            );
+
+            req.setLastReminderSentAt(java.time.LocalDateTime.now());
+            borrowRequestRepository.save(req);
+
+            auditLogService.log(
+                    "AUTOMATED_RETURN_REMINDER",
+                    "BorrowRequest",
+                    req.getId(),
+                    "system@shareit.local",
+                    "Automated reminder dispatched: " + title
+            );
+        }
     }
 }

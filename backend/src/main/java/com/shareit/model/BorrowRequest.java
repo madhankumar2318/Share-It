@@ -99,6 +99,8 @@ public class BorrowRequest {
     @Column(length = 500)
     private String extensionReason;
 
+    private LocalDateTime lastReminderSentAt;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
