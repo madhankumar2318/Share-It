@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LocationProvider } from './context/LocationContext';
 import { ToastProvider } from './context/ToastContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 
 // Route Lazy Loading for minimal initial JavaScript bundle size
@@ -35,8 +36,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <LocationProvider>
-          <ToastProvider>
+        <LanguageProvider>
+          <LocationProvider>
+            <ToastProvider>
             <Router>
               <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
                 <Navbar />
@@ -83,8 +85,9 @@ function App() {
             </Router>
           </ToastProvider>
         </LocationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </LanguageProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 }
 

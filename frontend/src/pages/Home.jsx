@@ -23,6 +23,7 @@ import {
 import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 import { ItemCardSkeleton } from '../components/SkeletonCard';
 import VoiceSearchModal from '../components/VoiceSearchModal';
@@ -58,6 +59,22 @@ const Home = () => {
   } = useLocationFilter();
 
   const { user } = useAuth();
+  const { t } = useLanguage();
+
+  const getCategoryLabel = (cat) => {
+    switch (cat) {
+      case 'All': return t('all');
+      case 'Electronics': return t('electronics');
+      case 'Tools & DIY': return t('toolsDIY');
+      case 'Outdoors & Camping': return t('outdoorsCamping');
+      case 'Home & Kitchen': return t('homeKitchen');
+      case 'Books & Study': return t('booksStudy');
+      case 'Sports & Fitness': return t('sportsFitness');
+      case 'Party & Games': return t('partyGames');
+      default: return cat;
+    }
+  };
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -256,14 +273,14 @@ const Home = () => {
         <div className="relative z-10 max-w-2xl space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 bg-emerald-500/30 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Community-Powered Sharing</span>
+            <span>{t('heroTag')}</span>
           </div>
           <h1 className="text-2xl sm:text-5xl font-black tracking-tight leading-tight">
-            Borrow what you need. <br />
-            Lend what you don't.
+            {t('heroTitle1')} <br />
+            {t('heroTitle2')}
           </h1>
           <p className="text-emerald-100 text-sm sm:text-lg">
-            Stop buying items you'll only use once. Explore cameras, power tools, camping gear, and more right in your neighborhood.
+            {t('heroSubtitle')}
           </p>
         </div>
       </div>
@@ -282,7 +299,7 @@ const Home = () => {
                   setSearch(e.target.value);
                   setIsSearchFocused(true);
                 }}
-                placeholder="Search cameras, tents, drill, monitor, textbooks..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full pl-11 pr-24 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
               <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
@@ -311,7 +328,7 @@ const Home = () => {
                   aria-label="Search by Voice in Regional Languages"
                 >
                   <Mic className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-                  <span className="hidden sm:inline">Voice</span>
+                  <span className="hidden sm:inline">{t('voice')}</span>
                 </button>
               </div>
             </div>
@@ -320,7 +337,7 @@ const Home = () => {
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl shadow-xs transition text-sm flex items-center justify-center gap-2"
             >
               <Search className="w-4 h-4 sm:hidden" />
-              <span>Search</span>
+              <span>{t('search')}</span>
             </button>
           </form>
 
@@ -435,7 +452,7 @@ const Home = () => {
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${availableTodayOnly ? 'bg-white' : 'bg-emerald-500 animate-pulse'}`}></span>
-            Available Today
+            {t('availableToday')}
             {availableTodayOnly && <CheckCircle2 className="w-3.5 h-3.5 ml-0.5" />}
           </button>
 
@@ -451,7 +468,7 @@ const Home = () => {
                   : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-800'
               }`}
             >
-              {cat}
+              {getCategoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -494,7 +511,7 @@ const Home = () => {
               onClick={() => setIsModalOpen(true)}
               className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 self-end sm:self-auto"
             >
-              📍 Filter by my neighborhood
+              📍 {t('filterNeighborhood')}
             </button>
           </div>
         )}
@@ -521,7 +538,7 @@ const Home = () => {
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {r.label}
+                {r.value === null ? t('allDistances') : r.label}
               </button>
             );
           })}
@@ -555,7 +572,7 @@ const Home = () => {
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-slate-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
             >
-              <option value="newest">🕒 Newest Listings</option>
+              <option value="newest">🕒 {t('newestListings')}</option>
               <option value="nearest">📍 Nearest First</option>
               <option value="rating">⭐ Highest Rated</option>
             </select>
@@ -573,7 +590,7 @@ const Home = () => {
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              Grid
+              {t('grid')}
             </button>
             <button
               type="button"
@@ -585,7 +602,7 @@ const Home = () => {
               }`}
             >
               <MapIcon className="w-3.5 h-3.5" />
-              Map
+              {t('map')}
             </button>
           </div>
         </div>

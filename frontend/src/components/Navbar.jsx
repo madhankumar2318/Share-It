@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLocationFilter } from '../context/LocationContext';
+import { useLanguage } from '../context/LanguageContext';
 import LocationModal from './LocationModal';
 import NotificationBell from './NotificationBell';
 import { 
@@ -28,6 +29,7 @@ const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { toggleTheme, isDark } = useTheme();
   const { selectedLocation, setIsModalOpen } = useLocationFilter();
+  const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -89,7 +91,7 @@ const Navbar = () => {
               >
                 <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition flex-shrink-0" />
                 <span className="truncate font-semibold text-[11px] sm:text-xs">
-                  {selectedLocation?.type !== 'ALL' ? selectedLocation.label : 'All India'}
+                  {selectedLocation?.type !== 'ALL' ? selectedLocation.label : t('allIndia')}
                 </span>
                 <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex-shrink-0" />
               </button>
@@ -105,7 +107,7 @@ const Navbar = () => {
                     : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
-                Browse
+                {t('browse')}
               </Link>
 
               <Link
@@ -116,7 +118,7 @@ const Navbar = () => {
                     : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
-                Wishlist 🙋
+                {t('wishlist')}
               </Link>
 
               {isAuthenticated ? (
@@ -130,7 +132,7 @@ const Navbar = () => {
                     }`}
                   >
                     <PlusCircle className={`w-4 h-4 ${isAddItem ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
-                    List an Item
+                    {t('listAnItem')}
                   </Link>
 
                   <Link
@@ -142,7 +144,7 @@ const Navbar = () => {
                     }`}
                   >
                     <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
-                    Dashboard
+                    {t('dashboard')}
                   </Link>
 
                   {/* In-App Live Notification Bell */}
@@ -225,7 +227,7 @@ const Navbar = () => {
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
                           >
                             <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Your Profile & Locality</span>
+                            <span>{t('yourProfile')}</span>
                           </Link>
                         </div>
 
@@ -237,7 +239,7 @@ const Navbar = () => {
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
                           >
                             <LogOut className="w-4 h-4" />
-                            <span>Log out</span>
+                            <span>{t('logOut')}</span>
                           </button>
                         </div>
                       </div>
@@ -265,14 +267,14 @@ const Navbar = () => {
                     className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium px-3.5 py-2 rounded-lg transition text-sm"
                   >
                     <LogIn className="w-4 h-4" />
-                    Log In
+                    {t('logIn')}
                   </Link>
                   <Link
                     to="/register"
                     className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg shadow-xs transition text-sm"
                   >
                     <UserPlus className="w-4 h-4" />
-                    Sign Up
+                    {t('signUp')}
                   </Link>
                 </div>
               )}
@@ -345,7 +347,7 @@ const Navbar = () => {
                 }`}
               >
                 <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Browse All Items</span>
+                <span>{t('browse')}</span>
               </Link>
 
               <Link
@@ -358,7 +360,7 @@ const Navbar = () => {
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Community Wishlist 🙋</span>
+                <span>{t('wishlist')}</span>
               </Link>
 
               {isAuthenticated && (
@@ -373,7 +375,7 @@ const Navbar = () => {
                     }`}
                   >
                     <PlusCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>List an Item for Lending</span>
+                    <span>{t('listAnItem')}</span>
                   </Link>
 
                   <Link
@@ -386,7 +388,7 @@ const Navbar = () => {
                     }`}
                   >
                     <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>My Dashboard (PIN & Requests)</span>
+                    <span>{t('dashboard')}</span>
                   </Link>
 
                   <Link
@@ -399,7 +401,7 @@ const Navbar = () => {
                     }`}
                   >
                     <Settings className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Account & Settings</span>
+                    <span>{t('yourProfile')}</span>
                   </Link>
                 </>
               )}
@@ -414,7 +416,7 @@ const Navbar = () => {
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900/60 transition"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{t('logOut')}</span>
                 </button>
               ) : (
                 <div className="grid grid-cols-2 gap-2.5">
@@ -424,7 +426,7 @@ const Navbar = () => {
                     className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>Log In</span>
+                    <span>{t('logIn')}</span>
                   </Link>
                   <Link
                     to="/register"
@@ -432,7 +434,7 @@ const Navbar = () => {
                     className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span>Sign Up</span>
+                    <span>{t('signUp')}</span>
                   </Link>
                 </div>
               )}
