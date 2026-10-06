@@ -591,10 +591,7 @@ const Settings = () => {
                   <button
                     key={lang.code}
                     type="button"
-                    onClick={() => {
-                      changeLanguage(lang.code);
-                      toast.success(`${lang.flag} ${t('langChangedToast')}`);
-                    }}
+                    onClick={() => changeLanguage(lang.code)}
                     className={`p-4 rounded-2xl text-xs font-semibold transition flex items-center justify-between border text-left ${
                       isSelected
                         ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20'
