@@ -18,15 +18,18 @@ import {
   Settings as SettingsIcon,
   Shield,
   Bell,
-  Sliders
+  Sliders,
+  LogOut
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
 
 const Settings = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const fileInputRef = useRef(null);
 
@@ -547,6 +550,34 @@ const Settings = () => {
                     "{formData.bio}"
                   </p>
                 )}
+              </div>
+
+              {/* 🚪 Session & Sign Out Card inside Settings */}
+              <div className="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl border border-rose-200/60 dark:border-rose-900/40 flex-shrink-0">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                      Sign Out of Share-It
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Logged in as <strong className="text-gray-800 dark:text-gray-200 font-semibold">{user?.email}</strong>. Safely end your active session on this device.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-bold transition flex items-center gap-2 shadow-2xs whitespace-nowrap self-end sm:self-auto"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             </div>
           )}

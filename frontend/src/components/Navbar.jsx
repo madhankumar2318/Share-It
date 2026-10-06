@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -20,7 +20,8 @@ import {
   X,
   Compass,
   Sparkles,
-  Settings
+  Settings,
+  User
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -28,17 +29,32 @@ const Navbar = () => {
   const { toggleTheme, isDark } = useTheme();
   const { selectedLocation, setIsModalOpen } = useLocationFilter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Close mobile menu on page navigation
+  // Close menus on page navigation
   useEffect(() => {
     setMobileMenuOpen(false);
+    setProfileDropdownOpen(false);
   }, [location.pathname]);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
     setMobileMenuOpen(false);
+    setProfileDropdownOpen(false);
     navigate('/login');
   };
 
@@ -129,19 +145,6 @@ const Navbar = () => {
                     Dashboard
                   </Link>
 
-                  <Link
-                    to="/settings"
-                    className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
-                      isSettings
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                    }`}
-                    title="Profile & Neighborhood Settings"
-                  >
-                    <Settings className={`w-4 h-4 ${isSettings ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
-                    Settings
-                  </Link>
-
                   {/* In-App Live Notification Bell */}
                   <NotificationBell />
 
@@ -160,11 +163,14 @@ const Navbar = () => {
                     )}
                   </button>
 
-                  <div className="flex items-center gap-3 pl-2 border-l border-gray-200 dark:border-slate-800">
-                    <Link
-                      to="/settings"
-                      title="View & Edit Profile"
-                      className="flex items-center gap-2.5 hover:opacity-90 transition group"
+                  {/* 🌟 GitHub-Style Profile Dropdown Menu */}
+                  <div className="relative pl-1 border-l border-gray-200 dark:border-slate-800" ref={profileDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                      className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition border border-gray-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 group"
+                      aria-expanded={profileDropdownOpen}
+                      aria-label="Open user profile menu"
                     >
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-emerald-500/30 flex-shrink-0">
                         {user?.avatarUrl ? (
@@ -173,22 +179,117 @@ const Navbar = () => {
                           <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
                         )}
                       </div>
-                      <div className="flex flex-col text-left">
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 max-w-[120px] truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
-                          {user?.fullName}
-                        </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 max-w-[120px] truncate">
-                          {user?.neighborhood || user?.email}
-                        </span>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      title="Sign Out"
-                      className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
-                    >
-                      <LogOut className="w-5 h-5" />
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200 max-w-[110px] truncate hidden xl:inline">
+                        {user?.fullName?.split(' ')[0] || 'Account'}
+                      </span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-transform duration-200 ${
+                          profileDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
                     </button>
+
+                    {/* Dropdown Menu Container */}
+                    {profileDropdownOpen && (
+                      <div className="absolute right-0 mt-2.5 w-72 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                        {/* Header: User Info */}
+                        <div className="p-3.5 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-xs border border-emerald-500/30 flex-shrink-0">
+                            {user?.avatarUrl ? (
+                              <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                              {user?.fullName}
+                            </div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                              {user?.email}
+                            </div>
+                            {user?.neighborhood && (
+                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate">
+                                <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
+                                <span className="truncate">{user.neighborhood}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Navigation Links */}
+                        <div className="p-1.5 space-y-0.5">
+                          <Link
+                            to="/settings"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
+                          >
+                            <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Your Profile & Locality</span>
+                          </Link>
+
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
+                          >
+                            <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Dashboard & Handover PINs</span>
+                          </Link>
+
+                          <Link
+                            to="/add-item"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
+                          >
+                            <PlusCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>List an Item for Lending</span>
+                          </Link>
+
+                          <Link
+                            to="/settings"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
+                          >
+                            <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                            <span>Account Settings</span>
+                          </Link>
+                        </div>
+
+                        {/* Appearance / Theme Toggle Inside Dropdown (Like GitHub!) */}
+                        <div className="p-1.5">
+                          <button
+                            type="button"
+                            onClick={toggleTheme}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              {isDark ? (
+                                <Sun className="w-4 h-4 text-amber-400" />
+                              ) : (
+                                <Moon className="w-4 h-4 text-slate-600" />
+                              )}
+                              <span>Appearance</span>
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">
+                              {isDark ? 'Dark' : 'Light'}
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Sign Out Action at Bottom (GitHub style) */}
+                        <div className="p-1.5">
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign out</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
