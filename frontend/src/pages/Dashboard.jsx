@@ -40,6 +40,7 @@ import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
 import QuickReborrowModal from '../components/QuickReborrowModal';
 import ContactlessDropoffModal from '../components/ContactlessDropoffModal';
 import ContactlessCollectModal from '../components/ContactlessCollectModal';
+import VoiceNotePlayer from '../components/VoiceNotePlayer';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -1265,6 +1266,21 @@ const Dashboard = () => {
                       req={req}
                       isLender={false}
                     />
+
+                    {/* Voice Note Care Instructions from Lender */}
+                    {req.voiceNoteUrl && (
+                      <div className="p-4 bg-gradient-to-r from-violet-50/90 to-purple-50/90 dark:from-violet-950/40 dark:to-purple-950/30 border border-violet-200 dark:border-violet-800/70 rounded-2xl space-y-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-violet-900 dark:text-violet-200 flex items-center gap-1.5">
+                            <span className="text-base">🎙️</span> Care & Usage Voice Guide from {req.ownerName}
+                          </span>
+                          <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400">
+                            Listen before pickup
+                          </span>
+                        </div>
+                        <VoiceNotePlayer voiceNoteUrl={req.voiceNoteUrl} durationSeconds={req.voiceNoteDuration} />
+                      </div>
+                    )}
 
                     {/* Contactless Drop-off Notice Card for Borrower */}
                     {req.status === 'ACCEPTED' && !req.handoverAt && req.dropoffStatus === 'DROPPED_OFF' && (

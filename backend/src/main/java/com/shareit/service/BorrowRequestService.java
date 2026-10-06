@@ -575,6 +575,8 @@ public class BorrowRequestService {
                 .itemTitle(req.getItem().getTitle())
                 .itemCategory(req.getItem().getCategory())
                 .itemImageUrl(req.getItem().getImageUrl())
+                .voiceNoteUrl(req.getItem() != null ? req.getItem().getVoiceNoteUrl() : null)
+                .voiceNoteDuration(req.getItem() != null ? req.getItem().getVoiceNoteDuration() : null)
                 .ownerId(req.getItem().getOwner().getId())
                 .ownerName(req.getItem().getOwner().getFullName())
                 .ownerEmail(req.getItem().getOwner().getEmail())

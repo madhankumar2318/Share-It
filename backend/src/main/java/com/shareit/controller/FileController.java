@@ -46,8 +46,14 @@ public class FileController {
         com.shareit.model.StoredFile storedFile = fileStorageService.getStoredFile(fileName);
         if (storedFile != null) {
             String contentType = storedFile.getContentType();
-            if (contentType == null || contentType.isBlank()) {
-                contentType = "image/jpeg";
+            if (contentType == null || contentType.isBlank() || contentType.equals("application/octet-stream")) {
+                String lower = fileName.toLowerCase();
+                if (lower.endsWith(".webm")) contentType = "audio/webm";
+                else if (lower.endsWith(".wav")) contentType = "audio/wav";
+                else if (lower.endsWith(".mp3")) contentType = "audio/mpeg";
+                else if (lower.endsWith(".ogg")) contentType = "audio/ogg";
+                else if (lower.endsWith(".m4a")) contentType = "audio/mp4";
+                else contentType = "image/jpeg";
             }
             org.springframework.core.io.ByteArrayResource resource =
                     new org.springframework.core.io.ByteArrayResource(storedFile.getData()) {

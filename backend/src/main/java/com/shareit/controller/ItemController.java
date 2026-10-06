@@ -29,12 +29,14 @@ public class ItemController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) ItemStatus status,
             @RequestParam(required = false) Boolean availableToday,
+            @RequestParam(required = false) String seasonalTag,
+            @RequestParam(required = false) String ageGroup,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false, defaultValue = "12") Integer size) {
         if (page != null) {
-            return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, page, size));
+            return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, seasonalTag, ageGroup, page, size));
         }
-        return ResponseEntity.ok(itemService.getAllItems(category, search, location, status, availableToday));
+        return ResponseEntity.ok(itemService.getAllItems(category, search, location, status, availableToday, seasonalTag, ageGroup));
     }
 
     @GetMapping("/paged")
@@ -44,9 +46,11 @@ public class ItemController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) ItemStatus status,
             @RequestParam(required = false) Boolean availableToday,
+            @RequestParam(required = false) String seasonalTag,
+            @RequestParam(required = false) String ageGroup,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
-        return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, page, size));
+        return ResponseEntity.ok(itemService.getPagedItems(category, search, location, status, availableToday, seasonalTag, ageGroup, page, size));
     }
 
     @GetMapping("/{id}")

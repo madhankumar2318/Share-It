@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
-import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation, Coins } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation, Coins, Baby, Sparkles } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
@@ -11,6 +11,7 @@ import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 import { ItemDetailSkeleton } from '../components/SkeletonCard';
+import VoiceNotePlayer from '../components/VoiceNotePlayer';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -290,6 +291,34 @@ const ItemDetail = () => {
                   Zero Security Deposit
                 </span>
               )}
+
+              {/* 🪔 Seasonal Festival Vault Badge */}
+              {item.seasonalTag && item.seasonalTag !== 'NONE' && (
+                <span className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 flex items-center gap-1.5 shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  {item.seasonalTag === 'DIWALI_FESTIVE'
+                    ? '🪔 Diwali & Festive Spotlight'
+                    : item.seasonalTag === 'TRAVEL_CAMPING'
+                    ? '⛺ Travel & Camping Spotlight'
+                    : item.seasonalTag === 'PARTY_CELEBRATION'
+                    ? '🎈 Party & Event Spotlight'
+                    : '🌧️ Monsoon Spotlight'}
+                </span>
+              )}
+
+              {/* 🧸 Kids & Play Rotation Badge */}
+              {(item.category === 'Kids & Play Rotation' || item.ageGroup) && (
+                <span className="px-3 py-1 rounded-xl text-xs font-bold bg-pink-100 dark:bg-pink-950 text-pink-900 dark:text-pink-200 border border-pink-300 dark:border-pink-800 flex items-center gap-1.5 shadow-2xs">
+                  <Baby className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
+                  Toy Rotate {item.ageGroup ? `(${item.ageGroup})` : ''}
+                </span>
+              )}
+
+              {item.isCleanedSanitized && (
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                  🧼 Sanitized Clean
+                </span>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
@@ -316,6 +345,17 @@ const ItemDetail = () => {
                 );
               })()}
             </div>
+
+            {/* 🎙️ Voice Note Audio Care Guide if recorded by owner */}
+            {item.voiceNoteUrl && (
+              <div className="pt-1">
+                <VoiceNotePlayer
+                  audioUrl={item.voiceNoteUrl}
+                  duration={item.voiceNoteDuration}
+                  title="🎙️ Owner's Voice Care & Safety Guide"
+                />
+              </div>
+            )}
 
             <div className="border-t border-b border-gray-100 dark:border-slate-800 py-4">
               <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Item Description</h3>

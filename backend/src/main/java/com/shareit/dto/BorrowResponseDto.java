@@ -21,6 +21,8 @@ public class BorrowResponseDto {
     private String itemTitle;
     private String itemCategory;
     private String itemImageUrl;
+    private String voiceNoteUrl;
+    private Integer voiceNoteDuration;
 
     // Owner details
     private Long ownerId;

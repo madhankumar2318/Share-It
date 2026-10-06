@@ -46,10 +46,17 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;");
                 jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;");
                 jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS daily_rate DOUBLE PRECISION DEFAULT 0.0;");
-                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS security_deposit DOUBLE PRECISION DEFAULT 0.0;");
                 jdbcTemplate.execute("UPDATE items SET daily_rate = 0.0 WHERE daily_rate IS NULL;");
                 jdbcTemplate.execute("UPDATE items SET security_deposit = 0.0 WHERE security_deposit IS NULL;");
-                log.info("Items table schema verified successfully (daily_rate, security_deposit, coordinates).");
+
+                // Toy & Book Rotate, Seasonal Vault, and Voice Note Care Guide migrations
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS age_group VARCHAR(30);");
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS is_cleaned_sanitized BOOLEAN DEFAULT FALSE;");
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS seasonal_tag VARCHAR(50) DEFAULT 'NONE';");
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS seasonal_active BOOLEAN DEFAULT TRUE;");
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS voice_note_url VARCHAR(500);");
+                jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS voice_note_duration INTEGER;");
+                log.info("Items table schema verified successfully (daily_rate, security_deposit, coordinates, age_group, seasonal_tag, voice_note_url).");
             } catch (Exception e) {
                 log.warn("Notice during items migration: {}", e.getMessage());
             }
