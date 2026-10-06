@@ -15,7 +15,7 @@ import {
   Globe2,
   Check
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -26,6 +26,13 @@ const Settings = () => {
   const { user, updateUser, logout } = useAuth();
   const { language, changeLanguage, t, currentLang, languages } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') === 'language' ? 'language' : 'profile';
+
+  const handleTabChange = (tabKey) => {
+    setSearchParams({ tab: tabKey });
+  };
+
   const toast = useToast();
   const fileInputRef = useRef(null);
 
@@ -186,71 +193,54 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-slate-800 pb-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2.5">
-          <User className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
-          {t('settingsTitle')}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t('settingsSubtitle')}
-        </p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
+      {/* 🧭 Settings Segmented Tabs Navigation */}
+      <div className="flex items-center gap-2 p-1.5 bg-gray-100 dark:bg-slate-800/80 rounded-2xl w-fit border border-gray-200 dark:border-slate-700/60 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => handleTabChange('profile')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+            currentTab === 'profile'
+              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>{t('yourProfile')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('language')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+            currentTab === 'language'
+              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>{t('appLanguageOption')}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-extrabold uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+            {currentLang.nativeName}
+          </span>
+        </button>
       </div>
 
-      {/* 🌐 App Language Switcher Card */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl flex-shrink-0">
-            <Globe2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              {t('languageSectionTitle')}
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-full">
-                {currentLang.nativeName}
-              </span>
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {t('languageSectionDesc')}
+      {currentTab === 'profile' ? (
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="border-b border-gray-200 dark:border-slate-800 pb-5">
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2.5">
+              <User className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+              {t('settingsTitle')}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {t('settingsSubtitle')}
             </p>
           </div>
-        </div>
 
-        {/* Language Selection Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-2.5 pt-1">
-          {languages.map((lang) => {
-            const isSelected = language === lang.code;
-            return (
-              <button
-                key={lang.code}
-                type="button"
-                onClick={() => {
-                  changeLanguage(lang.code);
-                  toast.success(`${lang.flag} ${t('langChangedToast')}`);
-                }}
-                className={`p-3 rounded-2xl text-xs font-semibold transition flex items-center justify-between border ${
-                  isSelected
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20'
-                    : 'bg-slate-50 dark:bg-slate-800/40 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-800 hover:bg-emerald-50/50 dark:hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">{lang.flag}</span>
-                  <div className="text-left">
-                    <span className="block font-bold">{lang.nativeName}</span>
-                    <span className="block text-[10px] text-gray-400 font-normal">{lang.name}</span>
-                  </div>
-                </div>
-                {isSelected && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[3]" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Profile Form Card */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
+          {/* Main Profile Form Card */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Avatar Upload Header */}
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-gray-100 dark:border-slate-800">
@@ -558,6 +548,85 @@ const Settings = () => {
           <span>{t('signOutButton')}</span>
         </button>
       </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Language Header */}
+          <div className="border-b border-gray-200 dark:border-slate-800 pb-5">
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2.5">
+              <Globe2 className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+              {t('languageSectionTitle')}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {t('languageSectionDesc')}
+            </p>
+          </div>
+
+          {/* 🌐 App Language Switcher Card */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-gray-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl flex-shrink-0">
+                  <Globe2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                    Choose Interface Language
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Currently Active: <strong className="text-emerald-600 dark:text-emerald-400">{currentLang.flag} {currentLang.name} ({currentLang.nativeName})</strong>
+                  </p>
+                </div>
+              </div>
+              <span className="self-start sm:self-auto text-xs uppercase font-extrabold tracking-wider px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-full">
+                {currentLang.nativeName}
+              </span>
+            </div>
+
+            {/* Language Selection Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {languages.map((lang) => {
+                const isSelected = language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => {
+                      changeLanguage(lang.code);
+                      toast.success(`${lang.flag} ${t('langChangedToast')}`);
+                    }}
+                    className={`p-4 rounded-2xl text-xs font-semibold transition flex items-center justify-between border text-left ${
+                      isSelected
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20'
+                        : 'bg-slate-50 dark:bg-slate-800/40 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-800 hover:bg-emerald-50/50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{lang.flag}</span>
+                      <div>
+                        <span className="block font-bold text-sm text-gray-900 dark:text-white">{lang.nativeName}</span>
+                        <span className="block text-xs text-gray-400 font-normal">{lang.name}</span>
+                      </div>
+                    </div>
+                    {isSelected && <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 🎙️ Voice Sync Information Banner */}
+            <div className="p-4 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl flex items-start gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-bold">🎙️ Voice Search & Dialect Auto-Sync: </span>
+                <p className="text-emerald-800 dark:text-emerald-300">
+                  When you select your preferred regional language, Share-It's Web Speech microphone on the home page automatically configures to understand and recognize voice queries in this dialect!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
