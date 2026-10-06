@@ -217,7 +217,7 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                        {/* Navigation Links - Only Your Profile & Locality */}
+                        {/* Navigation Links - Your Profile & Locality */}
                         <div className="p-1.5">
                           <Link
                             to="/settings"
@@ -227,6 +227,18 @@ const Navbar = () => {
                             <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             <span>Your Profile & Locality</span>
                           </Link>
+                        </div>
+
+                        {/* Sign Out / Log Out Button */}
+                        <div className="p-1.5 border-t border-gray-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Log out</span>
+                          </button>
                         </div>
                       </div>
                     )}
