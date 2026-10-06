@@ -19,7 +19,7 @@ export const TRANSLATIONS = {
   'en-IN': {
     // Navigation
     browse: 'Browse',
-    wishlist: 'Wishlist 🙋',
+    wishlist: 'Wishlist',
     listAnItem: 'List an Item',
     dashboard: 'Dashboard',
     settings: 'Settings',
@@ -89,7 +89,7 @@ export const TRANSLATIONS = {
   'ta-IN': {
     // Navigation
     browse: 'உலாவுக',
-    wishlist: 'விருப்பப்பட்டியல் 🙋',
+    wishlist: 'விருப்பப்பட்டியல்',
     listAnItem: 'பொருளைப் பட்டியலிடுக',
     dashboard: 'டாஷ்போர்டு',
     settings: 'அமைப்புகள்',
@@ -159,7 +159,7 @@ export const TRANSLATIONS = {
   'hi-IN': {
     // Navigation
     browse: 'ब्राउज़ करें',
-    wishlist: 'विशलिस्ट 🙋',
+    wishlist: 'विशलिस्ट',
     listAnItem: 'आइटम लिस्ट करें',
     dashboard: 'डैशबोर्ड',
     settings: 'सेटिंग्स',
@@ -229,7 +229,7 @@ export const TRANSLATIONS = {
   'te-IN': {
     // Navigation
     browse: 'బ్రౌజ్ చేయండి',
-    wishlist: 'కోరికల జాబితా 🙋',
+    wishlist: 'కోరికల జాబితా',
     listAnItem: 'వస్తువును జాబితా చేయండి',
     dashboard: 'డాష్‌బోర్డ్',
     settings: 'సెట్టింగ్‌లు',
@@ -298,7 +298,7 @@ export const TRANSLATIONS = {
   'kn-IN': {
     // Navigation
     browse: 'ಬ್ರೌಸ್ ಮಾಡಿ',
-    wishlist: 'ವಿಶ್‌ಲಿಸ್ಟ್ 🙋',
+    wishlist: 'ವಿಶ್‌ಲಿಸ್ಟ್',
     listAnItem: 'ವಸ್ತು ಪಟ್ಟಿ ಮಾಡಿ',
     dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
     settings: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
@@ -367,7 +367,7 @@ export const TRANSLATIONS = {
   'ml-IN': {
     // Navigation
     browse: 'ബ്രൗസ് ചെയ്യുക',
-    wishlist: 'ആഗ്രഹപ്പട്ടിക 🙋',
+    wishlist: 'ആഗ്രഹപ്പട്ടിക',
     listAnItem: 'സാധനം ലിസ്റ്റ് ചെയ്യുക',
     dashboard: 'ഡാഷ്‌ബോർഡ്',
     settings: 'ക്രമീകരണങ്ങൾ',
@@ -436,7 +436,7 @@ export const TRANSLATIONS = {
   'bn-IN': {
     // Navigation
     browse: 'ব্রাউজ করুন',
-    wishlist: 'উইশলিস্ট 🙋',
+    wishlist: 'উইশলিস্ট',
     listAnItem: 'একটি আইটেম তালিকাভুক্ত করুন',
     dashboard: 'ড্যাশবোর্ড',
     settings: 'সেটিংস',
@@ -505,7 +505,7 @@ export const TRANSLATIONS = {
   'mr-IN': {
     // Navigation
     browse: 'ब्राउझ करा',
-    wishlist: 'विशलिस्ट 🙋',
+    wishlist: 'विशलिस्ट',
     listAnItem: 'वस्तू लिस्ट करा',
     dashboard: 'डॅशबोर्ड',
     settings: 'सेटिंग्ज',
@@ -574,7 +574,7 @@ export const TRANSLATIONS = {
   'gu-IN': {
     // Navigation
     browse: 'બ્રાઉઝ કરો',
-    wishlist: 'વિશલિસ્ટ 🙋',
+    wishlist: 'વિશલિસ્ટ',
     listAnItem: 'વસ્તુ લિસ્ટ કરો',
     dashboard: 'ડેશબોર્ડ',
     settings: 'સેટિંગ્સ',
