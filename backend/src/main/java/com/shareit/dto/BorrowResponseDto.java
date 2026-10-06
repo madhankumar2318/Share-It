@@ -40,6 +40,16 @@ public class BorrowResponseDto {
     private String message;
     private RequestStatus status;
 
+    // Financial / Rental & Advance Deposit Settlement Fields
+    private Double dailyRate;
+    private Double securityDeposit;
+    private Integer totalDays;
+    private Double totalRentalFee;
+    private Double refundAmount;
+    private String paymentStatus;
+    private LocalDateTime advancePaidAt;
+    private LocalDateTime refundSettledAt;
+
     private String pickupOtp;
     private String returnOtp;
     private LocalDateTime handoverAt;

@@ -54,6 +54,30 @@ public class BorrowRequest {
     @Column(length = 1000)
     private String message; // Optional note from borrower to lender
 
+    // Financial / Rental & Advance Deposit Settlement Fields
+    @Builder.Default
+    private Double dailyRate = 0.0;
+
+    @Builder.Default
+    private Double securityDeposit = 0.0;
+
+    @Builder.Default
+    private Integer totalDays = 1;
+
+    @Builder.Default
+    private Double totalRentalFee = 0.0;
+
+    @Builder.Default
+    private Double refundAmount = 0.0;
+
+    @Column(length = 30)
+    @Builder.Default
+    private String paymentStatus = "FREE"; // "FREE", "PENDING_HANDOVER", "ADVANCE_PAID", "REFUND_SETTLED"
+
+    private LocalDateTime advancePaidAt;
+
+    private LocalDateTime refundSettledAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

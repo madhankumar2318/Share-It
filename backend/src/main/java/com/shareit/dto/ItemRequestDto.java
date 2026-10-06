@@ -27,5 +27,8 @@ public class ItemRequestDto {
     private Double latitude;
     private Double longitude;
 
+    private Double dailyRate;
+    private Double securityDeposit;
+
     private ItemStatus status;
 }

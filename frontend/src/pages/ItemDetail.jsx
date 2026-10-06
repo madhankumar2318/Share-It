@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
-import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation, Coins } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
@@ -275,6 +275,23 @@ const ItemDetail = () => {
               </div>
             </div>
 
+            {/* Pricing & Advance Deposit Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <span className="px-3 py-1 rounded-xl font-black text-xs sm:text-sm bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/80 shadow-2xs">
+                {item.dailyRate > 0 ? `₹${item.dailyRate} / day` : 'Free to Borrow 🎁'}
+              </span>
+              {item.securityDeposit > 0 ? (
+                <span className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80 flex items-center gap-1.5 shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  ₹{item.securityDeposit} Refundable Advance
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-xl text-xs font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700">
+                  Zero Security Deposit
+                </span>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -435,6 +452,50 @@ const ItemDetail = () => {
                     />
                   </div>
                 </div>
+
+                {/* Live Rental Fee & Advance Deposit Net Settlement Card */}
+                {((item.dailyRate || 0) > 0 || (item.securityDeposit || 0) > 0) && startDate && endDate && (() => {
+                  const days = Math.max(1, Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1);
+                  const rate = item.dailyRate || 0;
+                  const deposit = item.securityDeposit || 0;
+                  const rentalFee = rate * days;
+                  const refund = Math.max(0, deposit - rentalFee);
+
+                  return (
+                    <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-2 text-xs animate-in fade-in">
+                      <div className="flex items-center justify-between font-bold text-gray-900 dark:text-white border-b border-emerald-200/60 dark:border-emerald-800/60 pb-1.5">
+                        <span className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300">
+                          <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          Settlement Summary
+                        </span>
+                        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                          {days} Day{days > 1 ? 's' : ''} Duration
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-gray-600 dark:text-gray-300 text-[11px]">
+                        <div className="flex justify-between">
+                          <span>Rental Fee ({days} days @ ₹{rate}/day):</span>
+                          <span className="font-bold text-gray-900 dark:text-white">₹{rentalFee}</span>
+                        </div>
+                        {deposit > 0 && (
+                          <div className="flex justify-between">
+                            <span>Advance Deposit (paid at pickup):</span>
+                            <span className="font-bold text-amber-700 dark:text-amber-400">₹{deposit}</span>
+                          </div>
+                        )}
+                        {deposit > 0 && (
+                          <div className="flex justify-between pt-1 border-t border-emerald-200/40 dark:border-emerald-800/40 font-bold text-xs text-emerald-800 dark:text-emerald-300">
+                            <span>Balance Refund (Owner returns to you):</span>
+                            <span className="font-black text-sm text-emerald-600 dark:text-emerald-400">₹{refund}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">
+                        💡 Advance is paid to owner at handover. When you return the item in good condition, the owner refunds your balance of ₹{refund}.
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Message to Owner (optional)</label>

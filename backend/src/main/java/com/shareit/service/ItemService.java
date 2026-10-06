@@ -40,6 +40,8 @@ public class ItemService {
                 .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? dto.getLocation() : "Local Community")
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
+                .dailyRate(dto.getDailyRate() != null && dto.getDailyRate() >= 0 ? dto.getDailyRate() : 0.0)
+                .securityDeposit(dto.getSecurityDeposit() != null && dto.getSecurityDeposit() >= 0 ? dto.getSecurityDeposit() : 0.0)
                 .status(dto.getStatus() != null ? dto.getStatus() : ItemStatus.AVAILABLE)
                 .owner(user)
                 .build();
@@ -183,6 +185,12 @@ public class ItemService {
         if (dto.getLongitude() != null) {
             item.setLongitude(dto.getLongitude());
         }
+        if (dto.getDailyRate() != null && dto.getDailyRate() >= 0) {
+            item.setDailyRate(dto.getDailyRate());
+        }
+        if (dto.getSecurityDeposit() != null && dto.getSecurityDeposit() >= 0) {
+            item.setSecurityDeposit(dto.getSecurityDeposit());
+        }
         if (dto.getStatus() != null) {
             item.setStatus(dto.getStatus());
         }
@@ -222,6 +230,8 @@ public class ItemService {
                 .location(item.getLocation())
                 .latitude(item.getLatitude())
                 .longitude(item.getLongitude())
+                .dailyRate(item.getDailyRate() != null ? item.getDailyRate() : 0.0)
+                .securityDeposit(item.getSecurityDeposit() != null ? item.getSecurityDeposit() : 0.0)
                 .status(item.getStatus())
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount(reviewCnt != null ? reviewCnt : 0L)

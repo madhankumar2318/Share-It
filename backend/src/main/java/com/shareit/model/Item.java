@@ -47,6 +47,12 @@ public class Item {
     private Double latitude;
     private Double longitude;
 
+    @Builder.Default
+    private Double dailyRate = 0.0; // ₹ per day (0.0 = Free)
+
+    @Builder.Default
+    private Double securityDeposit = 0.0; // ₹ upfront advance caution deposit (0.0 = None)
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

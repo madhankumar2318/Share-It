@@ -23,6 +23,9 @@ public class ItemResponseDto {
     private Double longitude;
     private ItemStatus status;
 
+    private Double dailyRate;
+    private Double securityDeposit;
+
     private Double averageRating;
     private Long reviewCount;
     private Boolean isBookedToday;

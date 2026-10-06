@@ -12,7 +12,8 @@ import {
   Image as ImageIcon, 
   MapPin, 
   Loader2, 
-  Search 
+  Search,
+  Coins 
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
@@ -36,6 +37,8 @@ const AddItem = () => {
     description: '',
     category: '',
     imageUrl: '',
+    dailyRate: '',
+    securityDeposit: '',
   });
 
   // Structured Indian location states for lending pickup point
@@ -209,6 +212,8 @@ const AddItem = () => {
 
       await api.post('/items', {
         ...formData,
+        dailyRate: formData.dailyRate ? Math.max(0, parseFloat(formData.dailyRate)) : 0,
+        securityDeposit: formData.securityDeposit ? Math.max(0, parseFloat(formData.securityDeposit)) : 0,
         imageUrl: finalImageUrl,
         location: formattedLocation,
         latitude: sampleCoords?.lat || null,
@@ -482,6 +487,82 @@ const AddItem = () => {
               placeholder="Describe condition, accessories included, rules, or any instructions for borrowers..."
               className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 outline-none transition text-sm"
             />
+          </div>
+
+          {/* Pricing & Refundable Security Deposit Section */}
+          <div className="p-4 sm:p-5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
+                <Coins className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  Rental Pricing & Advance Deposit (Optional)
+                </h4>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Set daily borrow rent and refundable advance caution deposit, or leave as ₹0 for free sharing.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Daily Rental Fee (₹ / day)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-gray-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="dailyRate"
+                    value={formData.dailyRate}
+                    onChange={handleChange}
+                    placeholder="0 (Free to borrow)"
+                    className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+                <span className="text-[10px] text-gray-400 mt-1 block">Leave 0 if you are lending for free.</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Advance Security Deposit (₹)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-gray-400">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="securityDeposit"
+                    value={formData.securityDeposit}
+                    onChange={handleChange}
+                    placeholder="0 (No advance deposit)"
+                    className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+                <span className="text-[10px] text-gray-400 mt-1 block">Upfront deposit returned to borrower minus rental fee.</span>
+              </div>
+            </div>
+
+            {(Number(formData.dailyRate) > 0 || Number(formData.securityDeposit) > 0) && (
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-emerald-100 dark:border-slate-800 text-[11px] text-gray-600 dark:text-gray-300 space-y-1">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  💡 Net Settlement Preview (Example: 1-Day Borrow)
+                </span>
+                <p>
+                  • Upfront Advance collected at pickup: <strong>₹{Number(formData.securityDeposit) || 0}</strong>
+                </p>
+                <p>
+                  • Rental charge earned: <strong>₹{Number(formData.dailyRate) || 0}</strong>
+                </p>
+                <p>
+                  • Net refund you return to neighbor: <strong>₹{Math.max(0, (Number(formData.securityDeposit) || 0) - (Number(formData.dailyRate) || 0))}</strong>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

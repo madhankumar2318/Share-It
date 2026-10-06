@@ -68,6 +68,14 @@ public class BorrowRequestService {
             ));
         }
 
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(dto.getStartDate(), dto.getEndDate()) + 1;
+        int totalDays = (int) Math.max(1, daysBetween);
+        double rate = item.getDailyRate() != null ? item.getDailyRate() : 0.0;
+        double deposit = item.getSecurityDeposit() != null ? item.getSecurityDeposit() : 0.0;
+        double totalRentalFee = rate * totalDays;
+        double refund = Math.max(0.0, deposit - totalRentalFee);
+        String paymentStatus = (rate > 0 || deposit > 0) ? "PENDING_HANDOVER" : "FREE";
+
         BorrowRequest request = BorrowRequest.builder()
                 .item(item)
                 .borrower(borrower)
@@ -75,6 +83,12 @@ public class BorrowRequestService {
                 .endDate(dto.getEndDate())
                 .message(dto.getMessage())
                 .status(RequestStatus.PENDING)
+                .dailyRate(rate)
+                .securityDeposit(deposit)
+                .totalDays(totalDays)
+                .totalRentalFee(totalRentalFee)
+                .refundAmount(refund)
+                .paymentStatus(paymentStatus)
                 .build();
 
         BorrowRequest saved = borrowRequestRepository.save(request);
@@ -367,6 +381,10 @@ public class BorrowRequestService {
         request.setPickupAttempts(0);
         request.setPickupLockoutUntil(null);
         request.setHandoverAt(java.time.LocalDateTime.now());
+        if (!"FREE".equalsIgnoreCase(request.getPaymentStatus())) {
+            request.setPaymentStatus("ADVANCE_PAID");
+            request.setAdvancePaidAt(java.time.LocalDateTime.now());
+        }
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setPickupPhotoUrl(photoUrl.trim());
         }
@@ -474,6 +492,23 @@ public class BorrowRequestService {
         request.setReturnLockoutUntil(null);
         request.setReturnedAt(java.time.LocalDateTime.now());
         request.setStatus(RequestStatus.RETURNED);
+
+        // Compute final rental fee and balance refund settlement
+        long scheduledDays = request.getTotalDays() != null ? request.getTotalDays() : 1;
+        long actualDays = Math.max(scheduledDays, java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), java.time.LocalDate.now()) + 1);
+        double rate = request.getDailyRate() != null ? request.getDailyRate() : 0.0;
+        double deposit = request.getSecurityDeposit() != null ? request.getSecurityDeposit() : 0.0;
+        double finalRental = rate * actualDays;
+        double finalRefund = Math.max(0.0, deposit - finalRental);
+
+        request.setTotalDays((int) actualDays);
+        request.setTotalRentalFee(finalRental);
+        request.setRefundAmount(finalRefund);
+        if (!"FREE".equalsIgnoreCase(request.getPaymentStatus())) {
+            request.setPaymentStatus("REFUND_SETTLED");
+            request.setRefundSettledAt(java.time.LocalDateTime.now());
+        }
+
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setReturnPhotoUrl(photoUrl.trim());
         }
@@ -579,6 +614,14 @@ public class BorrowRequestService {
                 .returnDropoffNote(req.getReturnDropoffNote())
                 .returnDropoffAt(req.getReturnDropoffAt())
                 .returnDropoffStatus(req.getReturnDropoffStatus())
+                .dailyRate(req.getDailyRate())
+                .securityDeposit(req.getSecurityDeposit())
+                .totalDays(req.getTotalDays())
+                .totalRentalFee(req.getTotalRentalFee())
+                .refundAmount(req.getRefundAmount())
+                .paymentStatus(req.getPaymentStatus())
+                .advancePaidAt(req.getAdvancePaidAt())
+                .refundSettledAt(req.getRefundSettledAt())
                 .createdAt(req.getCreatedAt())
                 .updatedAt(req.getUpdatedAt())
                 .build();
@@ -915,6 +958,10 @@ public class BorrowRequestService {
 
         request.setDropoffStatus("COLLECTED");
         request.setHandoverAt(java.time.LocalDateTime.now());
+        if (!"FREE".equalsIgnoreCase(request.getPaymentStatus())) {
+            request.setPaymentStatus("ADVANCE_PAID");
+            request.setAdvancePaidAt(java.time.LocalDateTime.now());
+        }
 
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setPickupPhotoUrl(photoUrl.trim());
@@ -1038,6 +1085,22 @@ public class BorrowRequestService {
         request.setStatus(RequestStatus.RETURNED);
         request.setReturnedAt(java.time.LocalDateTime.now());
 
+        // Compute final rental fee and balance refund settlement
+        long scheduledDays = request.getTotalDays() != null ? request.getTotalDays() : 1;
+        long actualDays = Math.max(scheduledDays, java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), java.time.LocalDate.now()) + 1);
+        double rate = request.getDailyRate() != null ? request.getDailyRate() : 0.0;
+        double deposit = request.getSecurityDeposit() != null ? request.getSecurityDeposit() : 0.0;
+        double finalRental = rate * actualDays;
+        double finalRefund = Math.max(0.0, deposit - finalRental);
+
+        request.setTotalDays((int) actualDays);
+        request.setTotalRentalFee(finalRental);
+        request.setRefundAmount(finalRefund);
+        if (!"FREE".equalsIgnoreCase(request.getPaymentStatus())) {
+            request.setPaymentStatus("REFUND_SETTLED");
+            request.setRefundSettledAt(java.time.LocalDateTime.now());
+        }
+
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setReturnPhotoUrl(photoUrl.trim());
         }
@@ -1063,6 +1126,45 @@ public class BorrowRequestService {
                 "🎉 Return Confirmed!",
                 currentUser.getFullName() + " retrieved \"" + request.getItem().getTitle() + "\" and confirmed safe return. Thank you for sharing!",
                 "RETURN_CONFIRMED",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto settleRefund(Long requestId, Double customRefund, String userEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getItem().getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the item owner can settle the refund");
+        }
+
+        if (customRefund != null && customRefund >= 0) {
+            request.setRefundAmount(customRefund);
+        }
+        request.setPaymentStatus("REFUND_SETTLED");
+        request.setRefundSettledAt(java.time.LocalDateTime.now());
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "REFUND_SETTLED",
+                "BorrowRequest",
+                saved.getId(),
+                userEmail,
+                "Advance refund of ₹" + saved.getRefundAmount() + " settled and handed back to borrower"
+        );
+
+        notificationService.sendNotification(
+                request.getBorrower(),
+                "💰 Advance Deposit Refund Settled!",
+                "Your refund balance of ₹" + saved.getRefundAmount() + " for \"" + request.getItem().getTitle() + "\" has been settled by " + currentUser.getFullName() + ".",
+                "REFUND_SETTLED",
                 "/dashboard"
         );
 

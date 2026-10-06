@@ -28,6 +28,7 @@ import {
   Bell,
   Building2,
   PackageCheck,
+  Coins,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -73,6 +74,96 @@ const DueDateBadge = ({ endDate }) => {
   );
 };
 
+/** Financial Breakdown and Caution Deposit Refund Settlement card */
+const FinancialSummaryCard = ({ req, isLender, onSettleRefund, isSettling }) => {
+  const hasFinance = (req?.securityDeposit && req.securityDeposit > 0) || (req?.dailyRate && req.dailyRate > 0);
+  if (!hasFinance) return null;
+
+  const deposit = req.securityDeposit || 0;
+  const rate = req.dailyRate || 0;
+  const days = req.totalDays || 1;
+  const fee = req.totalRentalFee || (rate * days);
+  const refund = req.refundAmount ?? Math.max(0, deposit - fee);
+  const status = req.paymentStatus || 'FREE';
+
+  return (
+    <div className="p-3.5 bg-gradient-to-r from-amber-50/90 to-orange-50/70 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/90 dark:border-amber-800/60 rounded-xl space-y-2.5 text-xs shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/60 dark:border-amber-800/40 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-amber-500 text-white rounded-lg flex-shrink-0 shadow-2xs">
+            <Coins className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <span className="font-extrabold text-amber-950 dark:text-amber-200">
+              Pricing & Caution Deposit
+            </span>
+            <span className="text-[11px] text-amber-700/80 dark:text-amber-400 ml-1.5 font-medium">
+              ({rate > 0 ? `₹${rate}/day` : 'Free Daily Use'} &bull; ₹{deposit} Advance)
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {status === 'REFUND_SETTLED' ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+              <CheckCircle2 className="w-3 h-3" />
+              Refund Settled (₹{refund})
+            </span>
+          ) : status === 'ADVANCE_PAID' ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+              <ShieldCheck className="w-3 h-3" />
+              Advance Held (₹{deposit})
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+              <Clock className="w-3 h-3" />
+              Advance Due at Pickup (₹{deposit})
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Grid of values */}
+      <div className="grid grid-cols-3 gap-2 text-center font-mono">
+        <div className="p-2 bg-white/80 dark:bg-slate-900/70 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
+          <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Advance Deposit</div>
+          <div className="text-xs font-black text-amber-800 dark:text-amber-300">₹{deposit}</div>
+        </div>
+        <div className="p-2 bg-white/80 dark:bg-slate-900/70 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
+          <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Rental Fee ({days}d)</div>
+          <div className="text-xs font-black text-rose-600 dark:text-rose-400">₹{fee}</div>
+        </div>
+        <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg border border-emerald-300 dark:border-emerald-800">
+          <div className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300">Net Refund</div>
+          <div className="text-xs font-black text-emerald-700 dark:text-emerald-300">₹{refund}</div>
+        </div>
+      </div>
+
+      {/* Explanatory subtitle and lender settlement button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px] text-gray-600 dark:text-gray-300">
+        <p className="italic">
+          {status === 'REFUND_SETTLED'
+            ? `Net balance of ₹${refund} has been settled and returned to the borrower.`
+            : status === 'ADVANCE_PAID'
+            ? `₹${deposit} advance held in trust. ₹${refund} will be refunded upon verified return.`
+            : `Borrower pays ₹${deposit} advance caution deposit to owner during pickup handover.`}
+        </p>
+
+        {isLender && req.status === 'RETURNED' && status !== 'REFUND_SETTLED' && (
+          <button
+            type="button"
+            onClick={() => onSettleRefund(req.id, refund)}
+            disabled={isSettling}
+            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-xs transition whitespace-nowrap self-end sm:self-auto"
+          >
+            {isSettling ? 'Settling...' : `Confirm ₹${refund} Refund Paid`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const toast = useToast();
@@ -107,6 +198,7 @@ const Dashboard = () => {
   const [slipModalData, setSlipModalData] = useState({ isOpen: false, request: null });
   const [dropoffModalData, setDropoffModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
   const [collectModalData, setCollectModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
+  const [settlingRefundId, setSettlingRefundId] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -271,6 +363,19 @@ const Dashboard = () => {
       toast.error(err.response?.data?.message || 'Invalid Return PIN. Please check with borrower.');
     } finally {
       setVerifyingReturnId(null);
+    }
+  };
+
+  const handleSettleRefund = async (requestId, refundAmount = null) => {
+    setSettlingRefundId(requestId);
+    try {
+      await api.post(`/requests/${requestId}/settle-refund`, { refundAmount });
+      toast.success('Net refund settled and marked as returned to borrower! 💰');
+      fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to settle refund');
+    } finally {
+      setSettlingRefundId(null);
     }
   };
 
@@ -496,6 +601,14 @@ const Dashboard = () => {
                           "{req.message}"
                         </p>
                       )}
+
+                      {/* Financial Caution Deposit & Rental Settlement Breakdown */}
+                      <FinancialSummaryCard
+                        req={req}
+                        isLender={true}
+                        onSettleRefund={handleSettleRefund}
+                        isSettling={settlingRefundId === req.id}
+                      />
 
                       {/* Lender In-App Extension Request Approval/Decline Box */}
                       {req.status === 'ACCEPTED' && req.extensionStatus === 'PENDING' && (
@@ -1146,6 +1259,12 @@ const Dashboard = () => {
                         Your message: "{req.message}"
                       </p>
                     )}
+
+                    {/* Financial Caution Deposit & Rental Settlement Breakdown */}
+                    <FinancialSummaryCard
+                      req={req}
+                      isLender={false}
+                    />
 
                     {/* Contactless Drop-off Notice Card for Borrower */}
                     {req.status === 'ACCEPTED' && !req.handoverAt && req.dropoffStatus === 'DROPPED_OFF' && (

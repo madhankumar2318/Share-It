@@ -160,4 +160,18 @@ public class BorrowRequestController {
         String conditionNote = payload != null ? payload.get("conditionNote") : null;
         return ResponseEntity.ok(borrowRequestService.confirmContactlessReturn(id, photoUrl, conditionNote, userDetails.getUsername()));
     }
+
+    @PostMapping("/{id}/settle-refund")
+    public ResponseEntity<BorrowResponseDto> settleRefund(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Double customRefund = null;
+        if (payload != null && payload.get("customRefund") != null) {
+            try {
+                customRefund = Double.valueOf(String.valueOf(payload.get("customRefund")));
+            } catch (Exception ignored) {}
+        }
+        return ResponseEntity.ok(borrowRequestService.settleRefund(id, customRefund, userDetails.getUsername()));
+    }
 }

@@ -8,6 +8,7 @@ import {
   Phone,
   Mail,
   Clock,
+  Coins,
 } from 'lucide-react';
 
 const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
@@ -178,6 +179,38 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
               )}
             </div>
           </div>
+
+          {/* Financial Summary & Caution Deposit Breakdown */}
+          {((request.securityDeposit && request.securityDeposit > 0) || (request.dailyRate && request.dailyRate > 0)) && (
+            <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/80 dark:border-amber-800/40 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-amber-900 dark:text-amber-200 font-bold border-b border-amber-200/60 pb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  Caution Deposit & Settlement Invoice
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
+                  {request.paymentStatus || 'FREE'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+                <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
+                  <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Advance Deposit</div>
+                  <div className="text-xs font-black text-amber-700 dark:text-amber-300">₹{request.securityDeposit || 0}</div>
+                </div>
+                <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
+                  <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Rental ({request.totalDays || 1}d)</div>
+                  <div className="text-xs font-black text-rose-600 dark:text-rose-400">₹{request.totalRentalFee || 0}</div>
+                </div>
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg border border-emerald-300 dark:border-emerald-800">
+                  <div className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300">Net Refund</div>
+                  <div className="text-xs font-black text-emerald-700 dark:text-emerald-300">₹{request.refundAmount ?? Math.max(0, (request.securityDeposit || 0) - (request.totalRentalFee || 0))}</div>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 italic text-center">
+                Advance deposit collected at pickup. Net refund balance settled upon verified return.
+              </p>
+            </div>
+          )}
 
           {/* Timestamps & PIN Proof Verification Ledger */}
           <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 space-y-2 text-xs">
