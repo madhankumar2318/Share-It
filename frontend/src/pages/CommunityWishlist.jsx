@@ -10,17 +10,12 @@ import {
   Sparkles,
   Search,
   MapPin,
-  Clock,
-  User,
   PlusCircle,
   CheckCircle2,
   Trash2,
   HandHeart,
   Navigation,
   MessageSquare,
-  AlertCircle,
-  Tag,
-  Loader2,
 } from 'lucide-react';
 
 const CATEGORIES = [

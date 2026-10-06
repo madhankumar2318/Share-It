@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getItemCoordinates, calculateDistanceKm, formatDistance } from '../utils/geo';
-import { Navigation, MapPin, ExternalLink, Package } from 'lucide-react';
+import { Navigation, MapPin } from 'lucide-react';
 
 const NeighborhoodMap = ({
   items = [],

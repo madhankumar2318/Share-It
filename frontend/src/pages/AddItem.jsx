@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
 import { getItemCoordinates } from '../utils/geo';
@@ -13,7 +12,6 @@ import {
   Image as ImageIcon, 
   MapPin, 
   Loader2, 
-  Sparkles, 
   Search 
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
@@ -31,7 +29,6 @@ const CATEGORIES = [
 
 const AddItem = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const toast = useToast();
 
   const [formData, setFormData] = useState({

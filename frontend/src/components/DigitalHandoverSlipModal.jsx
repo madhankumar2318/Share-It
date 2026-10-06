@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import {
-  X,
   Printer,
   ShieldCheck,
   CheckCircle2,
@@ -8,9 +7,6 @@ import {
   User,
   Phone,
   Mail,
-  Camera,
-  QrCode,
-  FileText,
   Clock,
 } from 'lucide-react';
 

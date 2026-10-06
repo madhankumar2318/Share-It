@@ -10,8 +10,7 @@ import {
   Package,
   Award,
   X,
-  Sparkles,
-  Info
+  Sparkles
 } from 'lucide-react';
 
 /**

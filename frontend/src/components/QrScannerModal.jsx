@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, AlertCircle, CheckCircle2, RefreshCw, KeyRound, ShieldAlert } from 'lucide-react';
+import { X, Camera, AlertCircle, CheckCircle2, RefreshCw, KeyRound } from 'lucide-react';
 
 const QrScannerModal = ({
   isOpen,
@@ -9,8 +9,6 @@ const QrScannerModal = ({
   type = 'pickup',
   onScanSuccess,
 }) => {
-  if (!isOpen || !request) return null;
-
   const [scanError, setScanError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [scannedPin, setScannedPin] = useState('');
@@ -19,6 +17,7 @@ const QrScannerModal = ({
   const isPickup = type === 'pickup';
 
   useEffect(() => {
+    if (!isOpen || !request) return;
     let html5QrCode = null;
     let isMounted = true;
     const scannerElementId = 'shareit-qr-reader';
@@ -133,6 +132,8 @@ const QrScannerModal = ({
       onScanSuccess(pinExtracted);
     }, 700);
   };
+
+  if (!isOpen || !request) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">

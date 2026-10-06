@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
-import { X, Sparkles, AlertCircle, Loader2, MapPin, Clock } from 'lucide-react';
+import { X, Sparkles, AlertCircle, Loader2, MapPin } from 'lucide-react';
 
 const CATEGORIES = [
   'Electronics',
@@ -22,7 +21,6 @@ const URGENCIES = [
 ];
 
 const CreateWishlistModal = ({ isOpen, onClose, onSuccess }) => {
-  const { isAuthenticated } = useAuth();
   const { selectedLocation } = useLocationFilter();
 
   const [formData, setFormData] = useState({

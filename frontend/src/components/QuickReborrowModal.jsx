@@ -3,54 +3,51 @@ import api from '../services/api';
 import {
   X,
   RotateCcw,
-  Calendar,
   User,
   Clock,
   AlertCircle,
-  CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 const QuickReborrowModal = ({ isOpen, onClose, request, onSuccess }) => {
   const toast = useToast();
-  if (!isOpen || !request) return null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  const dayAfterTomorrow = new Date();
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-  const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
-
-  const [startDate, setStartDate] = useState(tomorrowStr);
-  const [endDate, setEndDate] = useState(dayAfterTomorrowStr);
-  const [message, setMessage] = useState(
-    `Hi ${request.ownerName || 'there'}, I'd love to borrow "${request.itemTitle}" again!`
-  );
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [message, setMessage] = useState('');
   const [bookedRanges, setBookedRanges] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (request) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const dayAfterTomorrow = new Date();
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
+
+      setStartDate(tomorrowStr);
+      setEndDate(dayAfterTomorrowStr);
+      setMessage(`Hi ${request.ownerName || 'there'}, I'd love to borrow "${request.itemTitle}" again!`);
+    }
+  }, [request]);
+
+  useEffect(() => {
     const fetchBookedRanges = async () => {
-      if (!request.itemId) return;
-      setLoading(true);
+      if (!request?.itemId) return;
       try {
         const res = await api.get(`/requests/item/${request.itemId}/booked-ranges`);
         setBookedRanges(res.data || []);
       } catch (err) {
         console.warn('Could not load booked ranges', err);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchBookedRanges();
-  }, [request.itemId]);
+  }, [request?.itemId]);
 
   const hasConflict = (start, end) => {
     if (!start || !end) return false;
@@ -108,6 +105,8 @@ const QuickReborrowModal = ({ isOpen, onClose, request, onSuccess }) => {
       setSubmitting(false);
     }
   };
+
+  if (!isOpen || !request) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">

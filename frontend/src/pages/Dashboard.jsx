@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   Send,
   Camera,
-  Image as ImageIcon,
   RefreshCw,
   QrCode,
   FileText,
@@ -36,7 +35,6 @@ import HandoverQrModal from '../components/HandoverQrModal';
 import QrScannerModal from '../components/QrScannerModal';
 import DigitalHandoverSlipModal from '../components/DigitalHandoverSlipModal';
 import QuickReborrowModal from '../components/QuickReborrowModal';
-import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';

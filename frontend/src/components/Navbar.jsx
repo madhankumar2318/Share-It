@@ -21,7 +21,6 @@ import {
   X,
   Compass,
   Sparkles,
-  Settings,
   User,
   Globe2,
   ShieldCheck

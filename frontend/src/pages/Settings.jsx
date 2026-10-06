@@ -42,7 +42,6 @@ const Settings = () => {
   const toast = useToast();
   const fileInputRef = useRef(null);
 
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [trustScore, setTrustScore] = useState(null);
@@ -77,7 +76,6 @@ const Settings = () => {
   // Fetch current user profile details & trust score
   useEffect(() => {
     const fetchProfile = async () => {
-      setLoading(true);
       try {
         const res = await api.get('/users/profile');
         if (res.data) {
@@ -106,8 +104,6 @@ const Settings = () => {
             avatarUrl: user.avatarUrl || '',
           });
         }
-      } finally {
-        setLoading(false);
       }
     };
 

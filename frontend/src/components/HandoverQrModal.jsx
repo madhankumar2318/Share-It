@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { X, QrCode, Copy, Check, ShieldCheck, KeyRound, Sparkles } from 'lucide-react';
+import { X, Copy, Check, ShieldCheck, KeyRound, Sparkles } from 'lucide-react';
 
 const HandoverQrModal = ({ isOpen, onClose, request, type = 'pickup' }) => {
+  const [copied, setCopied] = useState(false);
+
   if (!isOpen || !request) return null;
 
-  const [copied, setCopied] = useState(false);
   const isPickup = type === 'pickup';
   const pin = isPickup ? request.pickupOtp : request.returnOtp;
   const targetName = request.ownerName || 'Lender';

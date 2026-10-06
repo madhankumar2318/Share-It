@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import { Calendar, Clock, AlertCircle, CheckCircle2, X, RefreshCw } from 'lucide-react';
+import { AlertCircle, X, RefreshCw } from 'lucide-react';
 
 const ExtendReturnModal = ({ isOpen, onClose, request, onSuccess }) => {
-  if (!isOpen || !request) return null;
-
-  const currentEndDate = request.endDate; // "YYYY-MM-DD"
+  const currentEndDate = request?.endDate || ''; // "YYYY-MM-DD"
   
   // Quick options helper
   const calculateDate = (daysToAdd) => {
+    if (!currentEndDate) return '';
     const d = new Date(currentEndDate);
     d.setDate(d.getDate() + daysToAdd);
     return d.toISOString().split('T')[0];
@@ -18,6 +17,8 @@ const ExtendReturnModal = ({ isOpen, onClose, request, onSuccess }) => {
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (!isOpen || !request) return null;
 
   // Calculate days extended
   const getDaysDifference = (newDateStr) => {

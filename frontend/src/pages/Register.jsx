@@ -50,7 +50,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const { confirmPassword, ...registerPayload } = formData;
+      const { confirmPassword: _confirmPassword, ...registerPayload } = formData;
       if (registerPayload.phone && !registerPayload.phone.startsWith('+91')) {
         registerPayload.phone = `+91 ${registerPayload.phone.trim()}`;
       }

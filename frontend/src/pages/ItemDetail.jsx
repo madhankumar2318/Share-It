@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
-import { MapPin, Calendar, User, Phone, Mail, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';

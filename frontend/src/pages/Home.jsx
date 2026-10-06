@@ -17,7 +17,6 @@ import {
   Star,
   CheckCircle2,
   Clock,
-  ArrowUpDown,
   Mic,
 } from 'lucide-react';
 import NeighborhoodMap from '../components/NeighborhoodMap';

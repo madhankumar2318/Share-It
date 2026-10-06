@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, ShieldCheck, AlertCircle, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, RotateCcw } from 'lucide-react';
 
 /**
  * Formats a Date object to YYYY-MM-DD in local time

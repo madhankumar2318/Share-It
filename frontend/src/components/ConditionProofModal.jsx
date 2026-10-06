@@ -1,12 +1,8 @@
 import React from 'react';
 import {
   Camera,
-  CheckCircle2,
-  Calendar,
   X,
   ShieldCheck,
-  AlertCircle,
-  FileText,
   Clock,
   ArrowRight
 } from 'lucide-react';
