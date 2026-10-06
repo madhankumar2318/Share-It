@@ -814,24 +814,46 @@ const Dashboard = () => {
                         );
                       })()}
 
-                      {req.status === 'PENDING' && (
-                        <>
-                          <button
-                            onClick={() => handleUpdateStatus(req.id, 'ACCEPTED')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleUpdateStatus(req.id, 'REJECTED')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 rounded-xl text-xs font-semibold transition border border-red-200 dark:border-red-900"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject
-                          </button>
-                        </>
-                      )}
+                      {req.status === 'PENDING' && (() => {
+                        const conflict = receivedRequests.find(
+                          (other) =>
+                            other.id !== req.id &&
+                            other.itemId === req.itemId &&
+                            other.status === 'ACCEPTED' &&
+                            !other.returnedAt &&
+                            req.startDate <= other.endDate &&
+                            req.endDate >= other.startDate
+                        );
+
+                        return (
+                          <>
+                            {conflict ? (
+                              <div
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-200"
+                                title={`Already booked by ${conflict.borrowerName || 'another neighbor'} from ${conflict.startDate} to ${conflict.endDate}`}
+                              >
+                                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                <span>Dates Overlap with Confirmed Booking</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleUpdateStatus(req.id, 'ACCEPTED')}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition shadow-xs"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Accept
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleUpdateStatus(req.id, 'REJECTED')}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 rounded-xl text-xs font-semibold transition border border-red-200 dark:border-red-900"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Reject
+                            </button>
+                          </>
+                        );
+                      })()}
 
                       {req.status === 'ACCEPTED' && (
                         <button
@@ -987,7 +1009,7 @@ const Dashboard = () => {
                     )}
 
                     {/* Friendly Polite Return Reminder Banner for Borrower */}
-                    {req.status === 'ACCEPTED' && req.handoverAt && !req.returnedAt && (() => {
+                    {req.status === 'ACCEPTED' && !req.returnedAt && (() => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
                       const due = new Date(req.endDate);
@@ -999,34 +1021,42 @@ const Dashboard = () => {
                       if (!isUpcomingOrOverdue && !hasReminder) return null;
 
                       return (
-                        <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
-                          <div className="flex items-start gap-2.5">
-                            <div className="p-1.5 bg-amber-500 text-white rounded-lg mt-0.5 shadow-2xs flex-shrink-0">
+                        <div className={`p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs border ${
+                          diffDays < 0
+                            ? 'bg-red-50/80 dark:bg-red-950/40 border-red-200 dark:border-red-900/60'
+                            : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60'
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl mt-0.5 shadow-2xs flex-shrink-0 text-white ${
+                              diffDays < 0 ? 'bg-red-600' : 'bg-amber-500'
+                            }`}>
                               <Bell className="w-4 h-4" />
                             </div>
-                            <div>
-                              <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                            <div className="space-y-0.5">
+                              <div className={`font-bold flex items-center gap-2 ${
+                                diffDays < 0 ? 'text-red-900 dark:text-red-200' : 'text-amber-900 dark:text-amber-200'
+                              }`}>
                                 <span>
                                   {diffDays < 0
-                                    ? 'Item Return Overdue'
+                                    ? '⚠️ Item Return Overdue'
                                     : diffDays === 0
-                                    ? 'Item Due for Return Today'
-                                    : 'Polite Return Reminder'}
+                                    ? '⏰ Return Due Today!'
+                                    : '📅 Return Due Tomorrow'}
                                 </span>
                                 {hasReminder && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 font-semibold">
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 font-bold">
                                     Nudged by Lender
                                   </span>
                                 )}
                               </div>
-                              <p className="text-amber-800/90 dark:text-amber-300/90 mt-0.5">
-                                {req.ownerName} is expecting <strong>{req.itemTitle}</strong> back{' '}
-                                {diffDays < 0
-                                  ? 'as soon as possible'
-                                  : diffDays === 0
-                                  ? 'today'
-                                  : 'tomorrow'}
-                                . Need more time with it?
+                              <p className={`leading-relaxed ${
+                                diffDays < 0 ? 'text-red-800/90 dark:text-red-300/90' : 'text-amber-800/90 dark:text-amber-300/90'
+                              }`}>
+                                {diffDays === 0
+                                  ? `Reminder: Please return "${req.itemTitle}" to ${req.ownerName} by 6 PM today! Have your 6-digit Return PIN or QR code ready.`
+                                  : diffDays < 0
+                                  ? `"${req.itemTitle}" was due on ${req.endDate}. Please return it to ${req.ownerName} as soon as possible, or request an extension.`
+                                  : `Friendly reminder: "${req.itemTitle}" is due for return to ${req.ownerName} tomorrow (${req.endDate}).`}
                               </p>
                             </div>
                           </div>
@@ -1034,7 +1064,7 @@ const Dashboard = () => {
                             <button
                               type="button"
                               onClick={() => setSelectedExtendRequest(req)}
-                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs transition shadow-2xs whitespace-nowrap self-end sm:self-auto flex items-center gap-1.5"
+                              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs transition shadow-2xs whitespace-nowrap self-end sm:self-auto flex items-center gap-1.5"
                             >
                               <RefreshCw className="w-3.5 h-3.5" />
                               Request Extension

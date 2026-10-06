@@ -37,6 +37,7 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     @Query("SELECT r FROM BorrowRequest r WHERE r.item.id = :itemId " +
            "AND (:excludeId IS NULL OR r.id != :excludeId) " +
            "AND r.status = 'ACCEPTED' " +
+           "AND r.returnedAt IS NULL " +
            "AND (:startDate <= r.endDate AND :endDate >= r.startDate)")
     List<BorrowRequest> findConflictingAcceptedRequests(
             @Param("itemId") Long itemId,

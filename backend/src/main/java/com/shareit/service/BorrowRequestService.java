@@ -104,8 +104,23 @@ public class BorrowRequestService {
         return String.valueOf(100000 + random.nextInt(900000));
     }
 
+    private volatile long lastReminderRunTimestamp = 0;
+
+    private void checkAutomatedRemindersOpportunistically() {
+        long now = System.currentTimeMillis();
+        if (now - lastReminderRunTimestamp > 15 * 60 * 1000) {
+            lastReminderRunTimestamp = now;
+            try {
+                runAutomatedDueReminders();
+            } catch (Exception e) {
+                // Ignore opportunistic reminder errors
+            }
+        }
+    }
+
     @Transactional
     public List<BorrowResponseDto> getMyBorrowRequests(String borrowerEmail) {
+        checkAutomatedRemindersOpportunistically();
         User borrower = userRepository.findByEmail(borrowerEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -183,6 +198,28 @@ public class BorrowRequestService {
                 }
                 if (request.getReturnOtp() == null) {
                     request.setReturnOtp(generateSecureOtp());
+                }
+
+                // 🔒 Automatic Calendar Lock: Auto-reject any other PENDING requests for this item that overlap with these approved dates
+                List<BorrowRequest> otherPending = borrowRequestRepository.findByItemIdAndStatus(item.getId(), RequestStatus.PENDING);
+                for (BorrowRequest other : otherPending) {
+                    if (!other.getId().equals(request.getId())) {
+                        boolean overlaps = (other.getStartDate().compareTo(request.getEndDate()) <= 0) &&
+                                           (other.getEndDate().compareTo(request.getStartDate()) >= 0);
+                        if (overlaps) {
+                            other.setStatus(RequestStatus.REJECTED);
+                            borrowRequestRepository.save(other);
+
+                            notificationService.sendNotification(
+                                    other.getBorrower(),
+                                    "📅 Dates Booked by Another Neighbor",
+                                    String.format("Sorry, \"%s\" was just booked by another neighbor for overlapping dates (%s to %s). Check the calendar for other open dates!",
+                                            item.getTitle(), request.getStartDate(), request.getEndDate()),
+                                    "REQUEST_DECLINED",
+                                    "/items/" + item.getId()
+                            );
+                        }
+                    }
                 }
             }
             case REJECTED -> {
@@ -478,6 +515,7 @@ public class BorrowRequestService {
     public List<Map<String, String>> getBookedDateRanges(Long itemId) {
         return borrowRequestRepository.findByItemIdAndStatus(itemId, RequestStatus.ACCEPTED)
                 .stream()
+                .filter(req -> req.getReturnedAt() == null)
                 .filter(req -> !req.getEndDate().isBefore(java.time.LocalDate.now()))
                 .sorted(java.util.Comparator.comparing(BorrowRequest::getStartDate))
                 .map(req -> Map.of(
@@ -673,10 +711,9 @@ public class BorrowRequestService {
 
         // Polite, warm in-app notification to borrower
         String friendlyMessage = String.format(
-                "Hi %s! Gentle reminder that \"%s\" is scheduled for return on %s. Need more time? Feel free to request an extension on your dashboard! 😊",
-                request.getBorrower().getFullName(),
+                "Reminder: Please return \"%s\" to %s by 6 PM today! Have your 6-digit Return PIN or QR ready for easy handover.",
                 item.getTitle(),
-                request.getEndDate()
+                currentUser.getFullName()
         );
 
         notificationService.sendNotification(
@@ -736,14 +773,26 @@ public class BorrowRequestService {
             } else if (req.getEndDate().isEqual(today)) {
                 title = "⏰ Return Due Today!";
                 message = String.format(
-                        "Friendly reminder: \"%s\" from %s is due today. Please coordinate drop-off and have your 6-digit Return PIN or QR ready!",
+                        "Reminder: Please return \"%s\" to %s by 6 PM today! Have your 6-digit Return PIN or QR code ready.",
                         req.getItem().getTitle(),
                         req.getItem().getOwner().getFullName()
                 );
+
+                // Also notify the lender so they know today is return day
+                notificationService.sendNotification(
+                        req.getItem().getOwner(),
+                        "📅 Return Due Today: " + req.getItem().getTitle(),
+                        String.format("%s is scheduled to return \"%s\" today. Confirm handover on your dashboard using their Return PIN or QR code.",
+                                req.getBorrower().getFullName(),
+                                req.getItem().getTitle()),
+                        "RETURN_DUE",
+                        "/dashboard"
+                );
             } else {
-                title = "⚠️ Item Return Due";
+                title = "⚠️ Overdue Return Notice";
                 message = String.format(
-                        "Gentle notice: \"%s\" from %s was scheduled for return on %s. Please arrange return or submit an extension request.",
+                        "Hi %s! \"%s\" from %s was due on %s. Please arrange return as soon as possible, or request an extension on your dashboard.",
+                        req.getBorrower().getFullName(),
                         req.getItem().getTitle(),
                         req.getItem().getOwner().getFullName(),
                         req.getEndDate()
