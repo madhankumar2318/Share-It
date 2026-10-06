@@ -14,6 +14,7 @@ const ItemDetail = lazy(() => import('./pages/ItemDetail'));
 const AddItem = lazy(() => import('./pages/AddItem'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CommunityWishlist = lazy(() => import('./pages/CommunityWishlist'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 const PageFallback = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
@@ -62,6 +63,14 @@ function App() {
                         element={
                           <ProtectedRoute>
                             <Dashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/settings"
+                        element={
+                          <ProtectedRoute>
+                            <Settings />
                           </ProtectedRoute>
                         }
                       />

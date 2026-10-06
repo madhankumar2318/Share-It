@@ -19,7 +19,8 @@ import {
   Menu,
   X,
   Compass,
-  Sparkles
+  Sparkles,
+  Settings
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -45,6 +46,7 @@ const Navbar = () => {
   const isWishlist = location.pathname === '/wishlist';
   const isAddItem = location.pathname === '/add-item';
   const isDashboard = location.pathname === '/dashboard';
+  const isSettings = location.pathname === '/settings';
 
   return (
     <>
@@ -127,6 +129,19 @@ const Navbar = () => {
                     Dashboard
                   </Link>
 
+                  <Link
+                    to="/settings"
+                    className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                      isSettings
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                    title="Profile & Neighborhood Settings"
+                  >
+                    <Settings className={`w-4 h-4 ${isSettings ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
+                    Settings
+                  </Link>
+
                   {/* In-App Live Notification Bell */}
                   <NotificationBell />
 
@@ -146,10 +161,27 @@ const Navbar = () => {
                   </button>
 
                   <div className="flex items-center gap-3 pl-2 border-l border-gray-200 dark:border-slate-800">
-                    <div className="flex flex-col text-right">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 max-w-[130px] truncate">{user?.fullName}</span>
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400 max-w-[130px] truncate">{user?.email}</span>
-                    </div>
+                    <Link
+                      to="/settings"
+                      title="View & Edit Profile"
+                      className="flex items-center gap-2.5 hover:opacity-90 transition group"
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-emerald-500/30 flex-shrink-0">
+                        {user?.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 max-w-[120px] truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                          {user?.fullName}
+                        </span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 max-w-[120px] truncate">
+                          {user?.neighborhood || user?.email}
+                        </span>
+                      </div>
+                    </Link>
                     <button
                       onClick={handleLogout}
                       title="Sign Out"
@@ -302,6 +334,19 @@ const Navbar = () => {
                   >
                     <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>My Dashboard (PIN & Requests)</span>
+                  </Link>
+
+                  <Link
+                    to="/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                      isSettings
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <Settings className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Account & Settings</span>
                   </Link>
                 </>
               )}

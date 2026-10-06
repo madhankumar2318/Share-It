@@ -50,6 +50,9 @@ public class AuthService {
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole().name())
                 .phone(savedUser.getPhone())
+                .neighborhood(savedUser.getNeighborhood())
+                .bio(savedUser.getBio())
+                .avatarUrl(savedUser.getAvatarUrl())
                 .build();
     }
 
@@ -78,6 +81,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .phone(user.getPhone())
+                .neighborhood(user.getNeighborhood())
+                .bio(user.getBio())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 }

@@ -1,9 +1,14 @@
 package com.shareit.controller;
 
+import com.shareit.dto.UpdateProfileRequest;
+import com.shareit.dto.UserProfileDto;
 import com.shareit.dto.UserTrustDto;
+import com.shareit.service.UserService;
 import com.shareit.service.UserTrustService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,7 +17,26 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class UserController {
 
+    private final UserService userService;
     private final UserTrustService userTrustService;
+
+    @GetMapping("/profile")
+    public ResponseEntity<UserProfileDto> getCurrentUserProfile(Authentication authentication) {
+        return ResponseEntity.ok(userService.getUserProfile(authentication.getName()));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserProfileDto> updateProfile(
+            Authentication authentication,
+            @Valid @RequestBody UpdateProfileRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateProfile(authentication.getName(), request));
+    }
+
+    @GetMapping("/{userId}/public-profile")
+    public ResponseEntity<UserProfileDto> getPublicProfile(@PathVariable Long userId) {
+        return ResponseEntity.ok(userService.getPublicProfile(userId));
+    }
 
     @GetMapping("/{userId}/trust-score")
     public ResponseEntity<UserTrustDto> getUserTrustScore(@PathVariable Long userId) {

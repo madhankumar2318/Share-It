@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/files/**").permitAll()
                         .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
                         .requestMatchers("/api/reviews/item/**").permitAll()
-                        .requestMatchers("/api/users/*/trust-score").permitAll()
+                        .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // Protected endpoints
                         .anyRequest().authenticated()
