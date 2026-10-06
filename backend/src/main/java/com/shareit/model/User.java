@@ -50,7 +50,7 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default true")
     @Builder.Default
     private boolean active = true;
 
