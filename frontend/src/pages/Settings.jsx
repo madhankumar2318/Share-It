@@ -35,13 +35,9 @@ const Settings = () => {
   const { user, updateUser, logout } = useAuth();
   const { language, changeLanguage, t, currentLang, languages } = useLanguage();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const currentTab = tabParam === 'language' ? 'language' : (tabParam === 'security' ? 'security' : 'profile');
-
-  const handleTabChange = (tabKey) => {
-    setSearchParams({ tab: tabKey });
-  };
 
   const toast = useToast();
   const fileInputRef = useRef(null);
@@ -285,51 +281,6 @@ const Settings = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
-      {/* 🧭 Settings Segmented Tabs Navigation */}
-      <div className="flex items-center gap-2 p-1.5 bg-gray-100 dark:bg-slate-800/80 rounded-2xl w-fit border border-gray-200 dark:border-slate-700/60 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => handleTabChange('profile')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
-            currentTab === 'profile'
-              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>{t('yourProfile')}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('language')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
-            currentTab === 'language'
-              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>{t('appLanguageOption')}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-extrabold uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-            {currentLang.nativeName}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('security')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
-            currentTab === 'security'
-              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>{t('securityOption', 'Security & Account')}</span>
-        </button>
-      </div>
-
       {currentTab === 'profile' ? (
         <div className="space-y-8">
           {/* Header */}
