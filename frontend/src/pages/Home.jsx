@@ -302,7 +302,10 @@ const Home = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => setIsVoiceModalOpen(true)}
+                  onClick={() => {
+                    setIsSearchFocused(false);
+                    setIsVoiceModalOpen(true);
+                  }}
                   className="px-2 py-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/80 border border-emerald-200 dark:border-emerald-800 rounded-xl transition flex items-center gap-1 text-xs font-bold shadow-2xs"
                   title="Search by Voice (Hindi, Tamil, Telugu, Kannada, Bengali, English...)"
                   aria-label="Search by Voice in Regional Languages"
