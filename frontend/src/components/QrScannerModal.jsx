@@ -12,71 +12,8 @@ const QrScannerModal = ({
   const [scanError, setScanError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [scannedPin, setScannedPin] = useState('');
-  const [cameraStarting, setCameraStarting] = useState(true);
   const scannerRef = useRef(null);
   const isPickup = type === 'pickup';
-
-  useEffect(() => {
-    if (!isOpen || !request) return;
-    let html5QrCode = null;
-    let isMounted = true;
-    const scannerElementId = 'shareit-qr-reader';
-
-    const startScanner = async () => {
-      setCameraStarting(true);
-      setScanError(null);
-
-      try {
-        html5QrCode = new Html5Qrcode(scannerElementId);
-        scannerRef.current = html5QrCode;
-
-        const config = {
-          fps: 10,
-          qrbox: { width: 240, height: 240 },
-          aspectRatio: 1.0,
-        };
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          config,
-          (decodedText) => {
-            // QR Scanned Successfully
-            handleSuccessfulScan(decodedText, html5QrCode);
-          },
-          () => {
-            // Frame scan failure (safe to ignore for stream)
-          }
-        );
-
-        if (isMounted) {
-          setCameraStarting(false);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setCameraStarting(false);
-          const errorMsg =
-            typeof err === 'string'
-              ? err
-              : err?.message || 'Unable to access camera. Please check camera permissions.';
-          setScanError(errorMsg);
-        }
-      }
-    };
-
-    const timer = setTimeout(() => {
-      startScanner();
-    }, 150);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current
-          .stop()
-          .catch((e) => console.warn('QR scanner stop error:', e));
-      }
-    };
-  }, []);
 
   const handleSuccessfulScan = async (decodedText, scannerInstance) => {
     let pinExtracted = '';
@@ -121,7 +58,9 @@ const QrScannerModal = ({
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate([80, 40, 80]);
-      } catch (_) {}
+      } catch {
+        // Safe ignore
+      }
     }
 
     setIsSuccess(true);
@@ -132,6 +71,58 @@ const QrScannerModal = ({
       onScanSuccess(pinExtracted);
     }, 700);
   };
+
+  useEffect(() => {
+    if (!isOpen || !request) return;
+    let html5QrCode = null;
+    const scannerElementId = 'shareit-qr-reader';
+
+    const startScanner = async () => {
+      setScanError(null);
+
+      try {
+        html5QrCode = new Html5Qrcode(scannerElementId);
+        scannerRef.current = html5QrCode;
+
+        const config = {
+          fps: 10,
+          qrbox: { width: 240, height: 240 },
+          aspectRatio: 1.0,
+        };
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          config,
+          (decodedText) => {
+            // QR Scanned Successfully
+            handleSuccessfulScan(decodedText, html5QrCode);
+          },
+          () => {
+            // Frame scan failure (safe to ignore for stream)
+          }
+        );
+      } catch (err) {
+        const errorMsg =
+          typeof err === 'string'
+            ? err
+            : err?.message || 'Unable to access camera. Please check camera permissions.';
+        setScanError(errorMsg);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      startScanner();
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current
+          .stop()
+          .catch((e) => console.warn('QR scanner stop error:', e));
+      }
+    };
+  }, [isOpen, request]);
 
   if (!isOpen || !request) return null;
 

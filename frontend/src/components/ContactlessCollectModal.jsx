@@ -79,7 +79,7 @@ const ContactlessCollectModal = ({
         setPhotoUrl(uploadedUrl);
         toast.success('Collection photo recorded! 📸');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to upload photo. Please try again.');
     } finally {
       setUploadingPhoto(false);

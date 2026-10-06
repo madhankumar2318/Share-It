@@ -52,7 +52,7 @@ const FavoriteButton = ({
       if (onToggle) {
         onToggle(itemId, isNowFav);
       }
-    } catch (err) {
+    } catch {
       // Revert on error
       setFavorited(previousState);
       toast.error('Failed to update favorite status. Please try again.');

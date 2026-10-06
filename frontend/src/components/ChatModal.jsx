@@ -49,7 +49,7 @@ const ChatModal = ({ isOpen, onClose, request }) => {
       });
       setMessages((prev) => [...prev, response.data]);
       setNewMessage('');
-    } catch (err) {
+    } catch {
       toast.error('Failed to send message');
     } finally {
       setSending(false);

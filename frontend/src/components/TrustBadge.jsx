@@ -16,7 +16,7 @@ import {
 /**
  * Renders a color-coded Trust Tier Badge pill and optional interactive Trust Card Modal
  */
-const TrustBadge = ({ trust, size = 'sm', showScore = true, className = '' }) => {
+const TrustBadge = ({ trust, showScore = true, className = '' }) => {
   const [showModal, setShowModal] = useState(false);
 
   if (!trust) return null;
@@ -28,9 +28,7 @@ const TrustBadge = ({ trust, size = 'sm', showScore = true, className = '' }) =>
     tierDescription,
     trustScore = 50,
     phoneVerified,
-    emailVerified,
     completedReturns = 0,
-    onTimeReturns = 0,
     onTimeRate = 100,
     itemsLentCount = 0,
     averageRating = 0,

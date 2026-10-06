@@ -8,7 +8,6 @@ const NeighborhoodMap = ({
   items = [],
   userCoords = null,
   distanceRadius = null, // in km, or null for 'all'
-  onSelectRadius,
 }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);

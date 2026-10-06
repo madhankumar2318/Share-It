@@ -16,13 +16,40 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
 
   const selectedLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLang) || SUPPORTED_LANGUAGES[0];
 
+  const startListening = () => {
+    if (recognitionRef.current) {
+      try {
+        setErrorMessage('');
+        recognitionRef.current.lang = selectedLang;
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        // Already started or busy
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+  };
+
   // Initialize SpeechRecognition instance
   useEffect(() => {
     if (!isOpen) {
-      stopListening();
-      setTranscript('');
-      setInterimTranscript('');
-      setErrorMessage('');
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Ignore
+        }
+      }
       return;
     }
 
@@ -81,39 +108,25 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
       };
 
       recognitionRef.current = recognition;
-      startListening();
-    } catch (err) {
+      try {
+        recognition.start();
+      } catch {
+        // Ignore start error
+      }
+    } catch {
       setErrorMessage('Could not initialize microphone. Please check browser settings.');
     }
 
     return () => {
-      stopListening();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Ignore
+        }
+      }
     };
   }, [isOpen, selectedLang]);
-
-  const startListening = () => {
-    if (recognitionRef.current) {
-      try {
-        setErrorMessage('');
-        recognitionRef.current.lang = selectedLang;
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (e) {
-        // Already started or busy
-      }
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        // Ignore
-      }
-      setIsListening(false);
-    }
-  };
 
   const handleLanguageChange = (langCode) => {
     setSelectedLang(langCode);

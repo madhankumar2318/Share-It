@@ -225,7 +225,7 @@ const Dashboard = () => {
       await api.post(`/favorites/${itemId}/toggle`);
       setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
       toast.info('Item removed from saved list.');
-    } catch (err) {
+    } catch {
       toast.error('Failed to remove item from saved list.');
     }
   };
@@ -313,7 +313,7 @@ const Dashboard = () => {
       const url = res.data?.fileUrl;
       setPhotos((prev) => ({ ...prev, [requestId]: url }));
       toast.success('Condition photo uploaded! 📸');
-    } catch (err) {
+    } catch {
       toast.error('Failed to upload condition photo. Please try again.');
     } finally {
       setUploading((prev) => ({ ...prev, [requestId]: false }));
@@ -398,7 +398,7 @@ const Dashboard = () => {
         await api.delete(`/items/${itemId}`);
         toast.success('Listing deleted.');
         fetchDashboardData();
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete item');
       }
     }

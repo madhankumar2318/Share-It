@@ -104,7 +104,7 @@ const AddItem = () => {
         } else {
           setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
         }
-      } catch (err) {
+      } catch {
         setPincodeMessage('⚠️ Could not verify PIN code online. You can choose manually.');
       } finally {
         setPincodeLoading(false);

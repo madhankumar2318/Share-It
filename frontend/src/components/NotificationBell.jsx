@@ -49,7 +49,7 @@ const NotificationBell = () => {
     try {
       const res = await api.get('/notifications/unread-count');
       setUnreadCount(res.data?.unreadCount || 0);
-    } catch (err) {
+    } catch {
       // Silent error for background polling
     }
   };
@@ -121,7 +121,7 @@ const NotificationBell = () => {
           prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
-      } catch (err) {
+      } catch {
         // Continue navigation even if read patch fails
       }
     }

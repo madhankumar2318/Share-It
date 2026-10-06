@@ -67,11 +67,11 @@ const ItemDetail = () => {
           try {
             const trustRes = await api.get(`/users/${itemRes.data.ownerId}/trust-score`);
             setOwnerTrust(trustRes.data);
-          } catch (e) {
+          } catch {
             // Ignore trust fetch error
           }
         }
-      } catch (err) {
+      } catch {
         setError('Item not found or unavailable');
       } finally {
         setLoading(false);

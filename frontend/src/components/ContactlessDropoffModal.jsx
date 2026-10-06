@@ -83,7 +83,7 @@ const ContactlessDropoffModal = ({
         setPhotoUrl(uploadedUrl);
         toast.success('Drop-off spot photo uploaded! 📸');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to upload photo. Please try again.');
     } finally {
       setUploadingPhoto(false);
