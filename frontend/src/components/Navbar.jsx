@@ -217,76 +217,16 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                        {/* Navigation Links */}
-                        <div className="p-1.5 space-y-0.5">
+                        {/* Navigation Links - Only Your Profile & Locality */}
+                        <div className="p-1.5">
                           <Link
                             to="/settings"
                             onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
                           >
                             <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             <span>Your Profile & Locality</span>
                           </Link>
-
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
-                          >
-                            <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>Dashboard & Handover PINs</span>
-                          </Link>
-
-                          <Link
-                            to="/add-item"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
-                          >
-                            <PlusCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>List an Item for Lending</span>
-                          </Link>
-
-                          <Link
-                            to="/settings"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:text-gray-200 transition"
-                          >
-                            <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                            <span>Account Settings</span>
-                          </Link>
-                        </div>
-
-                        {/* Appearance / Theme Toggle Inside Dropdown (Like GitHub!) */}
-                        <div className="p-1.5">
-                          <button
-                            type="button"
-                            onClick={toggleTheme}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              {isDark ? (
-                                <Sun className="w-4 h-4 text-amber-400" />
-                              ) : (
-                                <Moon className="w-4 h-4 text-slate-600" />
-                              )}
-                              <span>Appearance</span>
-                            </div>
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">
-                              {isDark ? 'Dark' : 'Light'}
-                            </span>
-                          </button>
-                        </div>
-
-                        {/* Sign Out Action at Bottom (GitHub style) */}
-                        <div className="p-1.5">
-                          <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            <span>Sign out</span>
-                          </button>
                         </div>
                       </div>
                     )}
