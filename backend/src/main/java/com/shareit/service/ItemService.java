@@ -62,11 +62,20 @@ public class ItemService {
             }
 
             if (cleanSearch != null) {
-                String pattern = "%" + cleanSearch.toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("title")), pattern),
-                        cb.like(cb.lower(root.get("description")), pattern)
-                ));
+                String[] terms = cleanSearch.toLowerCase().split("[,|]+");
+                java.util.List<jakarta.persistence.criteria.Predicate> searchPredicates = new java.util.ArrayList<>();
+                for (String term : terms) {
+                    String trimmed = term.trim();
+                    if (!trimmed.isEmpty()) {
+                        String pattern = "%" + trimmed + "%";
+                        searchPredicates.add(cb.like(cb.lower(root.get("title")), pattern));
+                        searchPredicates.add(cb.like(cb.lower(root.get("description")), pattern));
+                        searchPredicates.add(cb.like(cb.lower(root.get("category")), pattern));
+                    }
+                }
+                if (!searchPredicates.isEmpty()) {
+                    predicates.add(cb.or(searchPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
+                }
             }
 
             if (cleanLocation != null) {

@@ -17,13 +17,15 @@ import {
   Star,
   CheckCircle2,
   Clock,
-  ArrowUpDown
+  ArrowUpDown,
+  Mic,
 } from 'lucide-react';
 import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
 import { ItemCardSkeleton } from '../components/SkeletonCard';
+import VoiceSearchModal from '../components/VoiceSearchModal';
 
 const CATEGORIES = [
   'All',
@@ -72,6 +74,10 @@ const Home = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchContainerRef = useRef(null);
 
+  // Multilingual Voice Search States
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [activeVoiceMapping, setActiveVoiceMapping] = useState(null);
+
   useEffect(() => {
     const fetchFavoriteIds = async () => {
       if (!user) {
@@ -101,15 +107,16 @@ const Home = () => {
     });
   };
 
-  const fetchItems = async () => {
+  const fetchItems = async (customQuery = null) => {
     setLoading(true);
     try {
       const params = {};
       if (selectedCategory && selectedCategory !== 'All') {
         params.category = selectedCategory;
       }
-      if (search.trim()) {
-        params.search = search.trim();
+      const queryToSearch = customQuery !== null ? customQuery : search;
+      if (queryToSearch && queryToSearch.trim()) {
+        params.search = queryToSearch.trim();
       }
       if (selectedLocation && selectedLocation.type !== 'ALL' && selectedLocation.value) {
         params.location = selectedLocation.value;
@@ -121,6 +128,14 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVoiceSearchSubmit = (mappedResult) => {
+    setActiveVoiceMapping(mappedResult);
+    const query = mappedResult.mappedKeyword || mappedResult.original;
+    setSearch(query);
+    setIsSearchFocused(false);
+    fetchItems(mappedResult.combinedQuery || query);
   };
 
   useEffect(() => {
@@ -268,18 +283,34 @@ const Home = () => {
                   setIsSearchFocused(true);
                 }}
                 placeholder="Search cameras, tents, drill, monitor, textbooks..."
-                className="w-full pl-11 pr-10 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full pl-11 pr-24 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
-              {search && (
+              <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch('');
+                      setActiveVoiceMapping(null);
+                      fetchItems('');
+                    }}
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition rounded-lg"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
-                  title="Clear search"
+                  onClick={() => setIsVoiceModalOpen(true)}
+                  className="px-2 py-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/80 border border-emerald-200 dark:border-emerald-800 rounded-xl transition flex items-center gap-1 text-xs font-bold shadow-2xs"
+                  title="Search by Voice (Hindi, Tamil, Telugu, Kannada, Bengali, English...)"
+                  aria-label="Search by Voice in Regional Languages"
                 >
-                  <X className="w-4 h-4" />
+                  <Mic className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                  <span className="hidden sm:inline">Voice</span>
                 </button>
-              )}
+              </div>
             </div>
             <button
               type="submit"
@@ -289,6 +320,36 @@ const Home = () => {
               <span>Search</span>
             </button>
           </form>
+
+          {/* 🎙️ Active Voice Query Dialect Mapping Tag */}
+          {activeVoiceMapping && (
+            <div className="mt-2.5 flex items-center gap-2 p-2.5 px-3.5 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200">
+              <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 animate-pulse" />
+              <div className="flex-1">
+                <span>
+                  Voice input: <strong>"{activeVoiceMapping.original}"</strong>
+                </span>
+                {activeVoiceMapping.matchedTerm && (
+                  <span className="ml-1 text-emerald-700 dark:text-emerald-300">
+                    &bull; Auto-mapped dialect <strong>"{activeVoiceMapping.matchedTerm}"</strong> ➔ catalog keyword{' '}
+                    <strong>"{activeVoiceMapping.mappedKeyword}"</strong>
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveVoiceMapping(null);
+                  setSearch('');
+                  fetchItems('');
+                }}
+                className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100 p-1 rounded-lg hover:bg-emerald-100/60 transition"
+                title="Clear voice query"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* ⚡ Instant Search Autocomplete Suggestions Dropdown */}
           {isSearchFocused && search.trim().length >= 1 && (
@@ -760,6 +821,13 @@ const Home = () => {
           </div>
         )
       )}
+
+      {/* 🎙️ Multilingual Voice Search Modal */}
+      <VoiceSearchModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onSearchSubmit={handleVoiceSearchSubmit}
+      />
     </div>
   );
 };
