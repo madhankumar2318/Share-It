@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import { AlertCircle, X, RefreshCw } from 'lucide-react';
+import { AlertCircle, X, RefreshCw, Coins } from 'lucide-react';
 
 const ExtendReturnModal = ({ isOpen, onClose, request, onSuccess }) => {
   const currentEndDate = request?.endDate || ''; // "YYYY-MM-DD"
@@ -29,6 +29,12 @@ const ExtendReturnModal = ({ isOpen, onClose, request, onSuccess }) => {
   };
 
   const daysExtended = getDaysDifference(selectedDate);
+  const dailyRate = request?.dailyRate || 0;
+  const additionalRental = dailyRate * (daysExtended > 0 ? daysExtended : 0);
+  const deposit = request?.securityDeposit || 0;
+  const currentRental = request?.totalRentalFee || (dailyRate * (request?.totalDays || 1));
+  const newTotalRental = currentRental + additionalRental;
+  const estimatedRefund = Math.max(0, deposit - newTotalRental);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,18 +127,45 @@ const ExtendReturnModal = ({ isOpen, onClose, request, onSuccess }) => {
                       setSelectedDate(targetDate);
                       setError('');
                     }}
-                    className={`p-2.5 rounded-xl border text-center transition font-bold text-xs ${
+                    className={`p-2.5 rounded-xl border text-center transition font-bold text-xs flex flex-col items-center justify-center gap-0.5 ${
                       isSelected
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                         : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-800 hover:border-emerald-300'
                     }`}
                   >
-                    +{days} {days === 1 ? 'Day' : 'Days'}
+                    <span>+{days} {days === 1 ? 'Day' : 'Days'}</span>
+                    <span className={`text-[10px] font-normal ${isSelected ? 'text-emerald-100' : 'text-gray-400'}`}>
+                      {dailyRate > 0 ? `+₹${dailyRate * days}` : 'Free'}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Dynamic Financial Calculation Box */}
+          {dailyRate > 0 ? (
+            <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 text-xs space-y-1.5">
+              <div className="flex justify-between items-center text-emerald-900 dark:text-emerald-200 font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                  Additional Rental ({daysExtended} day{daysExtended > 1 ? 's' : ''} @ ₹{dailyRate}/day):
+                </span>
+                <span className="font-mono text-sm font-black">+₹{additionalRental}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-emerald-800/80 dark:text-emerald-300/80 border-t border-emerald-200/60 dark:border-emerald-800/40 pt-1">
+                <span>New Total Rental: ₹{newTotalRental}</span>
+                {deposit > 0 && (
+                  <span>Adjusted Refund: <strong className="font-mono font-bold">₹{estimatedRefund}</strong></span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-2.5 bg-blue-50/80 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-800/60 text-xs text-blue-800 dark:text-blue-300 flex items-center justify-between font-semibold">
+              <span>🤝 Community Item Sharing</span>
+              <span className="font-bold">Free Extension (₹0)</span>
+            </div>
+          )}
 
           {/* Custom Date Picker */}
           <div className="space-y-1.5">

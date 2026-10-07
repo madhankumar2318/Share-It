@@ -244,6 +244,40 @@ const Dashboard = () => {
     }
   };
 
+  const [extendingRequestId, setExtendingRequestId] = useState(null);
+
+  const handleQuick1DayExtension = async (req) => {
+    if (!req?.endDate) return;
+    const current = new Date(req.endDate);
+    current.setDate(current.getDate() + 1);
+    const newEndDate = current.toISOString().split('T')[0];
+
+    const feeText = req.dailyRate > 0 ? ` (+₹${req.dailyRate} rental fee)` : '';
+    setExtendingRequestId(req.id);
+    try {
+      await api.post(`/requests/${req.id}/extend`, {
+        newEndDate,
+        reason: 'Quick 1-day extension requested via dashboard',
+      });
+      toast.success(`⚡ 1-Day extension requested until ${newEndDate}${feeText}! Lender notified. ⏳`);
+      fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request 1-day extension. Check date conflicts.');
+    } finally {
+      setExtendingRequestId(null);
+    }
+  };
+
+  const handleCancelExtension = async (requestId) => {
+    try {
+      await api.post(`/requests/${requestId}/extend/cancel`);
+      toast.info('Extension request cancelled.');
+      fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel extension request.');
+    }
+  };
+
   const handleRespondExtension = async (requestId, approve) => {
     try {
       await api.post(`/requests/${requestId}/extend/respond`, { approve });
@@ -611,46 +645,78 @@ const Dashboard = () => {
                       />
 
                       {/* Lender In-App Extension Request Approval/Decline Box */}
-                      {req.status === 'ACCEPTED' && req.extensionStatus === 'PENDING' && (
-                        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-xl space-y-2.5 shadow-xs">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="p-1.5 bg-amber-500 text-white rounded-lg flex-shrink-0">
-                                <RefreshCw className="w-3.5 h-3.5" />
-                              </span>
-                              <div>
-                                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                                  🔄 Extension Requested by {req.borrowerName}
+                      {req.status === 'ACCEPTED' && req.extensionStatus === 'PENDING' && (() => {
+                        const curEnd = new Date(req.endDate);
+                        const propEnd = new Date(req.extensionProposedEndDate);
+                        const extraDays = Math.max(1, Math.ceil((propEnd - curEnd) / (1000 * 60 * 60 * 24)));
+                        const dailyRate = req.dailyRate || 0;
+                        const extraRental = dailyRate * extraDays;
+                        const currentTotalRental = req.totalRentalFee || (dailyRate * (req.totalDays || 1));
+                        const newTotalRental = currentTotalRental + extraRental;
+                        const deposit = req.securityDeposit || 0;
+                        const adjustedRefund = Math.max(0, deposit - newTotalRental);
+
+                        return (
+                          <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700/80 rounded-2xl space-y-3 shadow-md">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-start gap-2.5">
+                                <span className="p-2 bg-amber-500 text-white rounded-xl shadow-2xs mt-0.5">
+                                  <RefreshCw className="w-4 h-4" />
                                 </span>
-                                <div className="text-[11px] text-amber-800 dark:text-amber-300">
-                                  Current return: <strong>{req.endDate}</strong> &rarr; Proposed: <strong className="underline decoration-amber-500 underline-offset-2">{req.extensionProposedEndDate}</strong>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-amber-950 dark:text-amber-100 uppercase tracking-wide">
+                                      🔄 Extension Requested by {req.borrowerName}
+                                    </span>
+                                    <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 rounded-md text-[10px] font-bold">
+                                      +{extraDays} {extraDays === 1 ? 'Day' : 'Days'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-amber-900 dark:text-amber-200 mt-0.5">
+                                    Current return: <strong>{req.endDate}</strong> &rarr; Proposed: <strong className="underline decoration-amber-500 underline-offset-2">{req.extensionProposedEndDate}</strong>
+                                  </div>
+                                  {dailyRate > 0 ? (
+                                    <div className="text-[11px] text-amber-800 dark:text-amber-300 font-semibold mt-1">
+                                      💰 Adds <strong>+₹{extraRental}</strong> to rental earnings &bull; New total: <strong>₹{newTotalRental}</strong>
+                                      {deposit > 0 && (
+                                        <span className="block text-[10px] opacity-90 font-normal">
+                                          Adjusted refund to return to borrower: ₹{adjustedRefund} (Caution deposit: ₹{deposit})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="text-[11px] text-amber-800 dark:text-amber-300 font-semibold mt-1">
+                                      🤝 Community item sharing (No extra rental fee)
+                                    </div>
+                                  )}
                                 </div>
                               </div>
+                              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRespondExtension(req.id, true)}
+                                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition hover:scale-102 flex items-center gap-1.5"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve (+{extraDays}d{dailyRate > 0 ? ` &bull; +₹${extraRental}` : ''})</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRespondExtension(req.id, false)}
+                                  className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold border border-red-200 dark:border-red-900 transition"
+                                >
+                                  ✕ Decline
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 self-end sm:self-auto">
-                              <button
-                                type="button"
-                                onClick={() => handleRespondExtension(req.id, true)}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
-                              >
-                                ✓ Approve Extension
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRespondExtension(req.id, false)}
-                                className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold border border-red-200 dark:border-red-900 transition"
-                              >
-                                ✕ Decline
-                              </button>
-                            </div>
+                            {req.extensionReason && (
+                              <p className="text-xs text-gray-700 dark:text-gray-300 italic bg-white/80 dark:bg-slate-900/70 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
+                                Note from {req.borrowerName}: "{req.extensionReason}"
+                              </p>
+                            )}
                           </div>
-                          {req.extensionReason && (
-                            <p className="text-xs text-gray-600 dark:text-gray-300 italic bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg border border-amber-200/60 dark:border-amber-800/50">
-                              Note from borrower: "{req.extensionReason}"
-                            </p>
-                          )}
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* In-App Uber-style PIN Handover Verification for Lender */}
                       {req.status === 'ACCEPTED' && !req.handoverAt && (() => {
@@ -1186,6 +1252,76 @@ const Dashboard = () => {
                           </span>
                         )}
                       </div>
+                    )}
+
+                    {/* Active Booking Extension & Timeline Box */}
+                    {req.status === 'ACCEPTED' && !req.returnedAt && (
+                      req.extensionStatus === 'PENDING' ? (
+                        <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-amber-950 dark:text-amber-100 flex items-center gap-2">
+                                <span>⏳ 1-Day Extension Pending Approval</span>
+                              </div>
+                              <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90">
+                                Requested return date: <strong>{req.extensionProposedEndDate}</strong>{req.dailyRate > 0 ? ` (+₹${req.dailyRate} rental)` : ''}. Waiting for {req.ownerName} to confirm.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelExtension(req.id)}
+                            className="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-200 dark:border-red-900 transition self-end sm:self-auto"
+                          >
+                            Cancel Request
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs shrink-0">
+                              <Calendar className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>Scheduled Return: <strong>{req.endDate}</strong></span>
+                                {req.extensionStatus === 'APPROVED' && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold border border-emerald-300 dark:border-emerald-700">
+                                    ✓ Extended
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                Need more time? Tap below to extend by 1 day automatically without awkward phone calls.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                              type="button"
+                              onClick={() => handleQuick1DayExtension(req)}
+                              disabled={extendingRequestId === req.id}
+                              className="flex-1 sm:flex-initial px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold shadow-xs transition hover:scale-102 flex items-center justify-center gap-1.5 whitespace-nowrap"
+                              title="Request 1 extra day automatically"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${extendingRequestId === req.id ? 'animate-spin' : ''}`} />
+                              <span>{extendingRequestId === req.id ? 'Requesting...' : `⚡ Extend by 1 Day${req.dailyRate > 0 ? ` (+₹${req.dailyRate})` : ''}`}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedExtendRequest(req)}
+                              className="px-3 py-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-slate-700 transition whitespace-nowrap"
+                              title="Select custom return dates"
+                            >
+                              Custom...
+                            </button>
+                          </div>
+                        </div>
+                      )
                     )}
 
                     {/* Friendly Polite Return Reminder Banner for Borrower */}

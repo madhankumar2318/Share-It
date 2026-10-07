@@ -111,6 +111,13 @@ public class BorrowRequestController {
         return ResponseEntity.ok(borrowRequestService.respondToExtension(id, approve, userDetails.getUsername()));
     }
 
+    @PostMapping("/{id}/extend/cancel")
+    public ResponseEntity<BorrowResponseDto> cancelExtension(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(borrowRequestService.cancelExtension(id, userDetails.getUsername()));
+    }
+
     @PostMapping("/{id}/send-reminder")
     public ResponseEntity<BorrowResponseDto> sendReturnReminder(
             @PathVariable Long id,

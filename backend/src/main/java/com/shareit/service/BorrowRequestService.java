@@ -670,13 +670,30 @@ public class BorrowRequestService {
 
         BorrowRequest saved = borrowRequestRepository.save(request);
 
+        // Calculate financial extra cost to inform lender clearly
+        long extraDays = java.time.temporal.ChronoUnit.DAYS.between(request.getEndDate(), newEndDate);
+        double dailyRate = request.getDailyRate() != null ? request.getDailyRate() : 0.0;
+        double extraRentalFee = dailyRate * extraDays;
+
+        String feeSnippet = extraRentalFee > 0
+                ? String.format(" (+₹%.0f rental fee for %d extra day%s)", extraRentalFee, extraDays, extraDays > 1 ? "s" : "")
+                : (extraDays == 1 ? " (1 extra day)" : " (" + extraDays + " extra days)");
+
         // Notify item owner
         notificationService.sendNotification(
                 item.getOwner(),
                 "🔄 Extension Requested",
-                borrower.getFullName() + " requested to extend return date for \"" + item.getTitle() + "\" to " + newEndDate + ".",
+                borrower.getFullName() + " requested to extend return date for \"" + item.getTitle() + "\" to " + newEndDate + feeSnippet + ". Review and approve with 1 tap on your dashboard.",
                 "EXTENSION_REQUESTED",
                 "/dashboard"
+        );
+
+        auditLogService.log(
+                "EXTENSION_REQUESTED",
+                "BorrowRequest",
+                saved.getId(),
+                borrowerEmail,
+                "Borrower requested return extension to " + newEndDate + " (" + extraDays + " days)" + feeSnippet
         );
 
         return mapToDto(saved, true);
@@ -710,16 +727,35 @@ public class BorrowRequestService {
                 throw new IllegalArgumentException("Cannot approve: Conflicting booking exists during the extension period.");
             }
 
+            // Recalculate total days, rental fee, and refund balance accurately
+            long updatedDays = java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), newEndDate) + 1;
+            double dailyRate = request.getDailyRate() != null ? request.getDailyRate() : 0.0;
+            double newRentalFee = dailyRate * updatedDays;
+            double deposit = request.getSecurityDeposit() != null ? request.getSecurityDeposit() : 0.0;
+            double newRefund = Math.max(0.0, deposit - newRentalFee);
+
             request.setEndDate(newEndDate);
+            request.setTotalDays((int) updatedDays);
+            request.setTotalRentalFee(newRentalFee);
+            request.setRefundAmount(newRefund);
             request.setExtensionStatus("APPROVED");
 
             // Notify borrower
+            String feeNotice = dailyRate > 0 ? String.format(" (Total rental fee updated to ₹%.0f)", newRentalFee) : "";
             notificationService.sendNotification(
                     request.getBorrower(),
                     "✓ Extension Approved!",
-                    owner.getFullName() + " approved your return extension for \"" + item.getTitle() + "\" until " + newEndDate + ".",
+                    owner.getFullName() + " approved your return extension for \"" + item.getTitle() + "\" until " + newEndDate + "." + feeNotice,
                     "EXTENSION_APPROVED",
                     "/dashboard"
+            );
+
+            auditLogService.log(
+                    "EXTENSION_APPROVED",
+                    "BorrowRequest",
+                    request.getId(),
+                    ownerEmail,
+                    "Lender approved extension until " + newEndDate + "; total days updated to " + updatedDays + ", rental fee: ₹" + newRentalFee
             );
         } else {
             request.setExtensionStatus("REJECTED");
@@ -732,10 +768,51 @@ public class BorrowRequestService {
                     "EXTENSION_DECLINED",
                     "/dashboard"
             );
+
+            auditLogService.log(
+                    "EXTENSION_DECLINED",
+                    "BorrowRequest",
+                    request.getId(),
+                    ownerEmail,
+                    "Lender declined return extension request"
+            );
         }
 
         BorrowRequest saved = borrowRequestRepository.save(request);
         return mapToDto(saved, false);
+    }
+
+    @Transactional
+    public BorrowResponseDto cancelExtension(Long requestId, String borrowerEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User borrower = userRepository.findByEmail(borrowerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!request.getBorrower().getId().equals(borrower.getId())) {
+            throw new AccessDeniedException("Only the borrower can cancel their extension request");
+        }
+
+        if (!"PENDING".equalsIgnoreCase(request.getExtensionStatus())) {
+            throw new IllegalArgumentException("No pending extension request to cancel");
+        }
+
+        request.setExtensionStatus(null);
+        request.setExtensionProposedEndDate(null);
+        request.setExtensionReason(null);
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "EXTENSION_CANCELLED",
+                "BorrowRequest",
+                saved.getId(),
+                borrowerEmail,
+                "Borrower cancelled their pending return extension request"
+        );
+
+        return mapToDto(saved, true);
     }
 
     @Transactional
