@@ -816,6 +816,62 @@ public class BorrowRequestService {
     }
 
     @Transactional
+    public BorrowResponseDto updateConditionSnapshot(Long requestId, String stage, String photoUrl, String conditionNote, String userEmail) {
+        BorrowRequest request = borrowRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));
+
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        boolean isOwner = request.getItem().getOwner().getId().equals(currentUser.getId());
+        boolean isBorrower = request.getBorrower().getId().equals(currentUser.getId());
+
+        if (!isOwner && !isBorrower) {
+            throw new AccessDeniedException("Only the lender or borrower can attach condition snapshots");
+        }
+
+        if ("pickup".equalsIgnoreCase(stage)) {
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                request.setPickupPhotoUrl(photoUrl.trim());
+            }
+            if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+                request.setPickupConditionNote(conditionNote.trim());
+            }
+        } else if ("return".equalsIgnoreCase(stage)) {
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                request.setReturnPhotoUrl(photoUrl.trim());
+            }
+            if (conditionNote != null && !conditionNote.trim().isEmpty()) {
+                request.setReturnConditionNote(conditionNote.trim());
+            }
+        } else {
+            throw new IllegalArgumentException("Invalid stage: Must be 'pickup' or 'return'");
+        }
+
+        BorrowRequest saved = borrowRequestRepository.save(request);
+
+        auditLogService.log(
+                "CONDITION_SNAPSHOT_UPDATED",
+                "BorrowRequest",
+                saved.getId(),
+                userEmail,
+                (isOwner ? "Lender " : "Borrower ") + currentUser.getFullName() + " attached " + stage + " condition snapshot"
+        );
+
+        // Notify other party
+        User recipient = isOwner ? request.getBorrower() : request.getItem().getOwner();
+        notificationService.sendNotification(
+                recipient,
+                "📸 Condition Snapshot Recorded",
+                currentUser.getFullName() + " attached a " + stage + " condition snapshot for \"" + request.getItem().getTitle() + "\".",
+                "CONDITION_SNAPSHOT",
+                "/dashboard"
+        );
+
+        return mapToDto(saved, isBorrower);
+    }
+
+    @Transactional
     public BorrowResponseDto sendReturnReminder(Long requestId, String lenderEmail) {
         BorrowRequest request = borrowRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Request not found with id: " + requestId));

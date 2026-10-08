@@ -961,15 +961,25 @@ const Dashboard = () => {
 
                     {/* Lender Action Buttons */}
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-                      {/* Condition Proof Button if item handed over or photos recorded */}
-                      {(req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
+                      {/* Condition Snapshots Button for active or completed bookings */}
+                      {(req.status === 'ACCEPTED' || req.status === 'BORROWED' || req.status === 'RETURNED' || req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
                         <button
                           onClick={() => setSelectedProofRequest(req)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
-                          title="View item condition proof photos"
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${
+                            req.pickupPhotoUrl && req.returnPhotoUrl
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100'
+                              : req.pickupPhotoUrl || req.returnPhotoUrl
+                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60 hover:bg-blue-100'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                          title="View & record item condition proof photos for deposit protection"
                         >
                           <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          Condition Proof
+                          {req.pickupPhotoUrl && req.returnPhotoUrl
+                            ? 'Snapshots (2/2 Verified)'
+                            : req.pickupPhotoUrl || req.returnPhotoUrl
+                            ? 'Snapshots (1/2 Recorded)'
+                            : 'Condition Snapshots'}
                         </button>
                       )}
 
@@ -1535,15 +1545,25 @@ const Dashboard = () => {
 
                   {/* Borrower Action Button */}
                   <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-                    {/* Condition Proof Button if item handed over or photos recorded */}
-                    {(req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
+                    {/* Condition Snapshots Button for active or completed bookings */}
+                    {(req.status === 'ACCEPTED' || req.status === 'BORROWED' || req.status === 'RETURNED' || req.handoverAt || req.pickupPhotoUrl || req.returnPhotoUrl) && (
                       <button
                         onClick={() => setSelectedProofRequest(req)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700"
-                        title="View item condition proof photos"
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${
+                          req.pickupPhotoUrl && req.returnPhotoUrl
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100'
+                            : req.pickupPhotoUrl || req.returnPhotoUrl
+                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60 hover:bg-blue-100'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                        title="View & record item condition proof photos for deposit protection"
                       >
                         <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        Condition Proof
+                        {req.pickupPhotoUrl && req.returnPhotoUrl
+                          ? 'Snapshots (2/2 Verified)'
+                          : req.pickupPhotoUrl || req.returnPhotoUrl
+                          ? 'Snapshots (1/2 Recorded)'
+                          : 'Condition Snapshots'}
                       </button>
                     )}
 
@@ -1772,6 +1792,13 @@ const Dashboard = () => {
         isOpen={!!selectedProofRequest}
         onClose={() => setSelectedProofRequest(null)}
         request={selectedProofRequest}
+        currentUser={user}
+        onSettleRefund={handleSettleRefund}
+        isSettlingRefund={settlingRefundId === selectedProofRequest?.id}
+        onSnapshotUpdated={(updatedReq) => {
+          setSelectedProofRequest(updatedReq);
+          fetchDashboardData();
+        }}
       />
 
       {/* 1-Click Borrow Return Extension Modal */}

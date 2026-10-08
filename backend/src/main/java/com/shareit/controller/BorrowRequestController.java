@@ -174,11 +174,25 @@ public class BorrowRequestController {
             @RequestBody(required = false) Map<String, Object> payload,
             @AuthenticationPrincipal UserDetails userDetails) {
         Double customRefund = null;
-        if (payload != null && payload.get("customRefund") != null) {
-            try {
-                customRefund = Double.valueOf(String.valueOf(payload.get("customRefund")));
-            } catch (Exception ignored) {}
+        if (payload != null) {
+            Object val = payload.get("customRefund") != null ? payload.get("customRefund") : payload.get("refundAmount");
+            if (val != null) {
+                try {
+                    customRefund = Double.valueOf(String.valueOf(val));
+                } catch (Exception ignored) {}
+            }
         }
         return ResponseEntity.ok(borrowRequestService.settleRefund(id, customRefund, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/condition-photo")
+    public ResponseEntity<BorrowResponseDto> updateConditionSnapshot(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String stage = payload.get("stage");
+        String photoUrl = payload.get("photoUrl");
+        String conditionNote = payload.get("conditionNote");
+        return ResponseEntity.ok(borrowRequestService.updateConditionSnapshot(id, stage, photoUrl, conditionNote, userDetails.getUsername()));
     }
 }
