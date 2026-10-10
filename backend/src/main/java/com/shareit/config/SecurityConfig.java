@@ -43,6 +43,10 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(type -> {})
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/", "/api/health").permitAll()
