@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import javax.imageio.ImageIO;
 
 @Service
 public class FileStorageService {
@@ -57,6 +61,25 @@ public class FileStorageService {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException("Only images (jpg, jpeg, png, webp) are permitted. Received: " + extension);
         }
+
+        // ── Magic Bytes Binary Inspection ────────────────────────────────────
+        // Reads the actual binary header of the uploaded file to confirm it is
+        // a genuine image. This blocks renamed executables, scripts, or ZIP files
+        // disguised with a .jpg/.png extension from reaching the database.
+        try {
+            byte[] fileBytes = file.getBytes();
+            try (InputStream magicStream = new ByteArrayInputStream(fileBytes)) {
+                if (ImageIO.read(magicStream) == null) {
+                    throw new IllegalArgumentException(
+                            "File validation failed: The uploaded file is not a valid or readable image. Disguised files are rejected.");
+                }
+            }
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("File validation error: Could not read the uploaded file for safety inspection.");
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         // Generate collision-proof file name
         String fileName = UUID.randomUUID().toString() + "." + extension;
