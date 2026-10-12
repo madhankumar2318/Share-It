@@ -5,16 +5,20 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 public class JwtService {
 
@@ -23,6 +27,20 @@ public class JwtService {
 
     @Value("${jwt.expiration-ms:86400000}")
     private long jwtExpiration;
+
+    @PostConstruct
+    public void validateSecretKey() {
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret key is not configured! Please provide a secure JWT_SECRET.");
+        }
+        if (secretKey.contains("change_in_production")) {
+            log.warn("⚠️ CRITICAL SECURITY WARNING: Default placeholder JWT secret in use! Set JWT_SECRET in production.");
+        }
+        byte[] rawBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        if (rawBytes.length < 32) {
+            throw new IllegalStateException("JWT secret key must be at least 256 bits (32 bytes) long for HS256 security! Current length: " + rawBytes.length + " bytes.");
+        }
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -73,7 +91,12 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (Exception e) {
+            keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
