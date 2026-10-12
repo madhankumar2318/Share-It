@@ -85,15 +85,17 @@ public class RefreshTokenService {
     }
 
     /**
-     * Daily background job to purge expired or revoked refresh tokens from database.
+     * Daily background cron job running at 03:00 AM to purge expired or revoked refresh tokens from PostgreSQL.
      */
-    @Scheduled(fixedRate = 86400000)
+    @Scheduled(cron = "${app.refresh-token.cleanup-cron:0 0 3 * * *}")
     @Transactional
     public void purgeExpiredTokens() {
         try {
+            log.info("🧹 Starting scheduled cleanup of expired and revoked refresh tokens...");
             refreshTokenRepository.deleteAllExpiredOrRevoked(Instant.now());
+            log.info("✅ Refresh token database cleanup completed successfully.");
         } catch (Exception e) {
-            log.error("Failed to purge expired refresh tokens", e);
+            log.error("❌ Failed to purge expired refresh tokens from database: {}", e.getMessage(), e);
         }
     }
 }
