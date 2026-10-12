@@ -9,6 +9,7 @@ import com.shareit.model.User;
 import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ReviewRepository;
 import com.shareit.repository.UserRepository;
+import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -54,7 +55,7 @@ public class ReviewService {
                 .item(request.getItem())
                 .reviewer(reviewer)
                 .rating(dto.getRating())
-                .comment(dto.getComment())
+                .comment(dto.getComment() != null ? HtmlSanitizer.sanitize(dto.getComment()) : null)
                 .build();
 
         Review saved = reviewRepository.save(review);

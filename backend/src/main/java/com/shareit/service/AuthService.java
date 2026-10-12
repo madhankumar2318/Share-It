@@ -8,6 +8,7 @@ import com.shareit.model.Role;
 import com.shareit.model.User;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.CustomUserDetails;
+import com.shareit.security.HtmlSanitizer;
 import com.shareit.security.JwtService;
 import com.shareit.security.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,7 @@ public class AuthService {
         }
 
         User user = User.builder()
-                .fullName(request.getFullName())
+                .fullName(HtmlSanitizer.sanitize(request.getFullName()))
                 .email(request.getEmail().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())

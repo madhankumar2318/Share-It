@@ -10,6 +10,7 @@ import com.shareit.model.WishlistStatus;
 import com.shareit.repository.ItemWishlistRepository;
 import com.shareit.repository.UserRepository;
 import com.shareit.repository.WishlistOfferRepository;
+import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
@@ -35,11 +36,11 @@ public class ItemWishlistService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userEmail));
 
         ItemWishlist wishlist = ItemWishlist.builder()
-                .title(dto.getTitle())
-                .description(dto.getDescription())
-                .category(dto.getCategory())
-                .urgency(dto.getUrgency() != null && !dto.getUrgency().trim().isEmpty() ? dto.getUrgency().trim() : "Flexible")
-                .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? dto.getLocation().trim() : "Local Community")
+                .title(HtmlSanitizer.sanitize(dto.getTitle()))
+                .description(HtmlSanitizer.sanitize(dto.getDescription()))
+                .category(HtmlSanitizer.sanitize(dto.getCategory()))
+                .urgency(dto.getUrgency() != null && !dto.getUrgency().trim().isEmpty() ? HtmlSanitizer.sanitize(dto.getUrgency()) : "Flexible")
+                .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? HtmlSanitizer.sanitize(dto.getLocation()) : "Local Community")
                 .status(WishlistStatus.OPEN)
                 .user(user)
                 .build();
@@ -149,7 +150,7 @@ public class ItemWishlistService {
         WishlistOffer offer = WishlistOffer.builder()
                 .wishlist(wishlist)
                 .lender(lender)
-                .message(message != null ? message.trim() : "I have this item available and can lend it to you!")
+                .message(message != null ? HtmlSanitizer.sanitize(message) : "I have this item available and can lend it to you!")
                 .build();
 
         WishlistOffer saved = offerRepository.save(offer);

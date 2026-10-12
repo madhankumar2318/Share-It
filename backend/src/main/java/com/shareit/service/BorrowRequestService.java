@@ -11,6 +11,7 @@ import com.shareit.model.User;
 import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
 import com.shareit.repository.UserRepository;
+import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -389,7 +390,7 @@ public class BorrowRequestService {
             request.setPickupPhotoUrl(photoUrl.trim());
         }
         if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-            request.setPickupConditionNote(conditionNote.trim());
+            request.setPickupConditionNote(HtmlSanitizer.sanitize(conditionNote));
         }
 
         BorrowRequest saved = borrowRequestRepository.save(request);
@@ -513,7 +514,7 @@ public class BorrowRequestService {
             request.setReturnPhotoUrl(photoUrl.trim());
         }
         if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-            request.setReturnConditionNote(conditionNote.trim());
+            request.setReturnConditionNote(HtmlSanitizer.sanitize(conditionNote));
         }
 
         Item item = request.getItem();
@@ -666,7 +667,7 @@ public class BorrowRequestService {
 
         request.setExtensionProposedEndDate(newEndDate);
         request.setExtensionStatus("PENDING");
-        request.setExtensionReason(reason != null && !reason.trim().isEmpty() ? reason.trim() : "Needs item for longer");
+        request.setExtensionReason(reason != null && !reason.trim().isEmpty() ? HtmlSanitizer.sanitize(reason) : "Needs item for longer");
 
         BorrowRequest saved = borrowRequestRepository.save(request);
 
@@ -835,14 +836,14 @@ public class BorrowRequestService {
                 request.setPickupPhotoUrl(photoUrl.trim());
             }
             if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-                request.setPickupConditionNote(conditionNote.trim());
+                request.setPickupConditionNote(HtmlSanitizer.sanitize(conditionNote));
             }
         } else if ("return".equalsIgnoreCase(stage)) {
             if (photoUrl != null && !photoUrl.trim().isEmpty()) {
                 request.setReturnPhotoUrl(photoUrl.trim());
             }
             if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-                request.setReturnConditionNote(conditionNote.trim());
+                request.setReturnConditionNote(HtmlSanitizer.sanitize(conditionNote));
             }
         } else {
             throw new IllegalArgumentException("Invalid stage: Must be 'pickup' or 'return'");
@@ -1100,7 +1101,7 @@ public class BorrowRequestService {
             request.setPickupPhotoUrl(photoUrl.trim());
         }
         if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-            request.setPickupConditionNote(conditionNote.trim());
+            request.setPickupConditionNote(HtmlSanitizer.sanitize(conditionNote));
         }
 
         if (request.getReturnOtp() == null) {
@@ -1238,7 +1239,7 @@ public class BorrowRequestService {
             request.setReturnPhotoUrl(photoUrl.trim());
         }
         if (conditionNote != null && !conditionNote.trim().isEmpty()) {
-            request.setReturnConditionNote(conditionNote.trim());
+            request.setReturnConditionNote(HtmlSanitizer.sanitize(conditionNote));
         }
 
         // Release item back to available

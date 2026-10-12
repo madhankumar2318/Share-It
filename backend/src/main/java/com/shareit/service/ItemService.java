@@ -9,6 +9,7 @@ import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
 import com.shareit.repository.ReviewRepository;
 import com.shareit.repository.UserRepository;
+import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -33,11 +34,11 @@ public class ItemService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userEmail));
 
         Item item = Item.builder()
-                .title(dto.getTitle())
-                .description(dto.getDescription())
-                .category(dto.getCategory())
+                .title(HtmlSanitizer.sanitize(dto.getTitle()))
+                .description(HtmlSanitizer.sanitize(dto.getDescription()))
+                .category(HtmlSanitizer.sanitize(dto.getCategory()))
                 .imageUrl(dto.getImageUrl())
-                .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? dto.getLocation() : "Local Community")
+                .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? HtmlSanitizer.sanitize(dto.getLocation()) : "Local Community")
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
                 .dailyRate(dto.getDailyRate() != null && dto.getDailyRate() >= 0 ? dto.getDailyRate() : 0.0)
@@ -170,14 +171,20 @@ public class ItemService {
             throw new AccessDeniedException("You are not authorized to update this item");
         }
 
-        item.setTitle(dto.getTitle());
-        item.setDescription(dto.getDescription());
-        item.setCategory(dto.getCategory());
+        if (dto.getTitle() != null) {
+            item.setTitle(HtmlSanitizer.sanitize(dto.getTitle()));
+        }
+        if (dto.getDescription() != null) {
+            item.setDescription(HtmlSanitizer.sanitize(dto.getDescription()));
+        }
+        if (dto.getCategory() != null) {
+            item.setCategory(HtmlSanitizer.sanitize(dto.getCategory()));
+        }
         if (dto.getImageUrl() != null) {
             item.setImageUrl(dto.getImageUrl());
         }
         if (dto.getLocation() != null) {
-            item.setLocation(dto.getLocation());
+            item.setLocation(HtmlSanitizer.sanitize(dto.getLocation()));
         }
         if (dto.getLatitude() != null) {
             item.setLatitude(dto.getLatitude());

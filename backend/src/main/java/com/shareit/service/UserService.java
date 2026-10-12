@@ -11,6 +11,7 @@ import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.CustomUserDetails;
+import com.shareit.security.HtmlSanitizer;
 import com.shareit.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,10 +58,10 @@ public class UserService {
             newToken = jwtService.generateToken(updatedUserDetails);
         }
 
-        user.setFullName(request.getFullName().trim());
+        user.setFullName(HtmlSanitizer.sanitize(request.getFullName()));
         user.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
-        user.setNeighborhood(request.getNeighborhood() != null ? request.getNeighborhood().trim() : null);
-        user.setBio(request.getBio() != null ? request.getBio().trim() : null);
+        user.setNeighborhood(request.getNeighborhood() != null ? HtmlSanitizer.sanitize(request.getNeighborhood()) : null);
+        user.setBio(request.getBio() != null ? HtmlSanitizer.sanitize(request.getBio()) : null);
         user.setAvatarUrl(request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank() ? request.getAvatarUrl().trim() : null);
 
         User savedUser = userRepository.save(user);
