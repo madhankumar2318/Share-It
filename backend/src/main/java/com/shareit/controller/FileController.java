@@ -59,6 +59,7 @@ public class FileController {
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + storedFile.getId() + "\"")
                     .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                    .header("X-Content-Type-Options", "nosniff")
                     .body(resource);
         }
 
@@ -78,6 +79,7 @@ public class FileController {
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(resource);
     }
 }
