@@ -9,6 +9,7 @@ import com.shareit.model.ItemStatus;
 import com.shareit.model.User;
 import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
+import com.shareit.repository.RefreshTokenRepository;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.CustomUserDetails;
 import com.shareit.security.HtmlSanitizer;
@@ -32,6 +33,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final BorrowRequestRepository borrowRequestRepository;
     private final ItemRepository itemRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional(readOnly = true)
     public UserProfileDto getUserProfile(String email) {
@@ -108,6 +110,9 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
+        // Security: Invalidate all existing refresh tokens across all sessions to terminate compromised or lingering logins
+        refreshTokenRepository.deleteByUser(user);
+
         auditLogService.log(
                 "USER_PASSWORD_CHANGED",
                 "USER",
@@ -137,6 +142,9 @@ public class UserService {
             item.setStatus(ItemStatus.UNAVAILABLE);
         }
         itemRepository.saveAll(userItems);
+
+        // Invalidate all active refresh tokens immediately
+        refreshTokenRepository.deleteByUser(user);
 
         // Deactivate account
         user.setActive(false);
