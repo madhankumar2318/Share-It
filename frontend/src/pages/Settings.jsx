@@ -214,8 +214,16 @@ const Settings = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    if (passwordForm.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters.');
+    const newPwd = passwordForm.newPassword;
+    const isStrong =
+      newPwd.length >= 8 &&
+      /[A-Z]/.test(newPwd) &&
+      /[a-z]/.test(newPwd) &&
+      /\d/.test(newPwd) &&
+      /[@$!%*?&#_~^+=.-]/.test(newPwd);
+
+    if (!isStrong) {
+      toast.error('New password must be at least 8 characters with uppercase, lowercase, number, and special character.');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -789,22 +797,77 @@ const Settings = () => {
               {/* Password Requirements Checklist */}
               {passwordForm.newPassword && (
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-gray-200 dark:border-slate-800 text-xs space-y-1.5">
+                  <span className="font-bold text-gray-700 dark:text-gray-300 block mb-1">Password Requirements:</span>
                   <div className="flex items-center gap-2">
                     <CheckCircle2
                       className={`w-3.5 h-3.5 ${
-                        passwordForm.newPassword.length >= 6
+                        passwordForm.newPassword.length >= 8
                           ? 'text-emerald-500'
                           : 'text-gray-300 dark:text-gray-600'
                       }`}
                     />
                     <span
                       className={
-                        passwordForm.newPassword.length >= 6
+                        passwordForm.newPassword.length >= 8
                           ? 'text-emerald-700 dark:text-emerald-400 font-medium'
                           : 'text-gray-500 dark:text-gray-400'
                       }
                     >
-                      At least 6 characters long
+                      At least 8 characters long
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2
+                      className={`w-3.5 h-3.5 ${
+                        /[A-Z]/.test(passwordForm.newPassword) && /[a-z]/.test(passwordForm.newPassword)
+                          ? 'text-emerald-500'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
+                    />
+                    <span
+                      className={
+                        /[A-Z]/.test(passwordForm.newPassword) && /[a-z]/.test(passwordForm.newPassword)
+                          ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }
+                    >
+                      Uppercase & lowercase letters (A-Z, a-z)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2
+                      className={`w-3.5 h-3.5 ${
+                        /\d/.test(passwordForm.newPassword)
+                          ? 'text-emerald-500'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
+                    />
+                    <span
+                      className={
+                        /\d/.test(passwordForm.newPassword)
+                          ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }
+                    >
+                      At least one number (0-9)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2
+                      className={`w-3.5 h-3.5 ${
+                        /[@$!%*?&#_~^+=.-]/.test(passwordForm.newPassword)
+                          ? 'text-emerald-500'
+                          : 'text-gray-300 dark:text-gray-600'
+                      }`}
+                    />
+                    <span
+                      className={
+                        /[@$!%*?&#_~^+=.-]/.test(passwordForm.newPassword)
+                          ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }
+                    >
+                      At least one special character (@, $, !, %, *, ?, &, #, etc.)
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -838,7 +901,11 @@ const Settings = () => {
                   disabled={
                     changingPassword ||
                     !passwordForm.currentPassword ||
-                    passwordForm.newPassword.length < 6 ||
+                    passwordForm.newPassword.length < 8 ||
+                    !/[A-Z]/.test(passwordForm.newPassword) ||
+                    !/[a-z]/.test(passwordForm.newPassword) ||
+                    !/\d/.test(passwordForm.newPassword) ||
+                    !/[@$!%*?&#_~^+=.-]/.test(passwordForm.newPassword) ||
                     passwordForm.newPassword !== passwordForm.confirmPassword
                   }
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-xs"
