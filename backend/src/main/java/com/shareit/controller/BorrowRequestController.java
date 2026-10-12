@@ -18,7 +18,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class BorrowRequestController {
 
     private final BorrowRequestService borrowRequestService;

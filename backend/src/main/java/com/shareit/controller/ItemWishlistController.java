@@ -19,7 +19,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/wishlists")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ItemWishlistController {
 
     private final ItemWishlistService wishlistService;
