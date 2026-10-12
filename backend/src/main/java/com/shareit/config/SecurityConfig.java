@@ -47,20 +47,23 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.deny())
-                        .contentTypeOptions(type -> {})
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .includeSubDomains(true)
-                                .maxAgeInSeconds(31536000)
-                        )
-                        .referrerPolicy(referrer -> referrer
-                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
-                        )
-                        .permissionsPolicy(permissions -> permissions
+                .headers(headers -> {
+                        headers.frameOptions(frame -> frame.deny())
+                                .contentTypeOptions(type -> {})
+                                .httpStrictTransportSecurity(hsts -> hsts
+                                        .includeSubDomains(true)
+                                        .maxAgeInSeconds(31536000)
+                                )
+                                .referrerPolicy(referrer -> referrer
+                                        .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+                                )
+                                .contentSecurityPolicy(csp -> csp
+                                        .policyDirectives("default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;")
+                                );
+                        headers.permissionsPolicy(permissions -> permissions
                                 .policy("camera=(), microphone=(), geolocation=(self)")
-                        )
-                )
+                        );
+                })
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/", "/api/health").permitAll()
