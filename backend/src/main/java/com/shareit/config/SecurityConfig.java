@@ -46,6 +46,10 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.deny())
                         .contentTypeOptions(type -> {})
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)
+                        )
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
