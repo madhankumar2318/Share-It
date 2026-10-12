@@ -2,6 +2,7 @@ package com.shareit.dto;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,5 +26,6 @@ public class BorrowRequestDto {
     @NotNull(message = "End date is required")
     private LocalDate endDate;
 
+    @Size(max = 1000, message = "Borrow request message cannot exceed 1000 characters")
     private String message;
 }
