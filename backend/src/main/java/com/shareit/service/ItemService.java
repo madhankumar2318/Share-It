@@ -10,6 +10,7 @@ import com.shareit.repository.ItemRepository;
 import com.shareit.repository.ReviewRepository;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.HtmlSanitizer;
+import com.shareit.security.PiiMasker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -158,7 +159,7 @@ public class ItemService {
 
         return itemRepository.findByOwnerId(user.getId())
                 .stream()
-                .map(this::mapToDto)
+                .map(item -> this.mapToDto(item, true))
                 .collect(Collectors.toList());
     }
 
@@ -219,14 +220,17 @@ public class ItemService {
     }
 
     public ItemResponseDto mapToDto(Item item) {
-        return mapToDto(item, true);
+        return mapToDto(item, false);
     }
 
-    public ItemResponseDto mapToDto(Item item, boolean includePhone) {
+    public ItemResponseDto mapToDto(Item item, boolean includeRawPhone) {
         Double avgRating = reviewRepository.getAverageRatingByItemId(item.getId());
         Long reviewCnt = reviewRepository.countReviewsByItemId(item.getId());
         boolean bookedToday = item.getStatus() == ItemStatus.BORROWED ||
                 !borrowRequestRepository.findConflictingAcceptedRequests(item.getId(), LocalDate.now(), LocalDate.now()).isEmpty();
+
+        String rawPhone = item.getOwner().getPhone();
+        String displayPhone = includeRawPhone ? rawPhone : PiiMasker.maskPhone(rawPhone);
 
         return ItemResponseDto.builder()
                 .id(item.getId())
@@ -245,8 +249,8 @@ public class ItemService {
                 .isBookedToday(bookedToday)
                 .ownerId(item.getOwner().getId())
                 .ownerName(item.getOwner().getFullName())
-                .ownerEmail(item.getOwner().getEmail())
-                .ownerPhone(includePhone ? item.getOwner().getPhone() : null)
+                .ownerEmail(PiiMasker.maskEmail(item.getOwner().getEmail()))
+                .ownerPhone(displayPhone)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();

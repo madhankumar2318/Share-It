@@ -203,6 +203,12 @@ const ItemDetail = () => {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{item.ownerName}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.ownerEmail}</p>
+                {item.ownerPhone && (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                    <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />
+                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">{item.ownerPhone}</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -224,7 +230,7 @@ const ItemDetail = () => {
             {!isOwner && (
               <div className="pt-2 border-t border-gray-200/60 dark:border-slate-700/60">
                 {isAuthenticated ? (
-                  item.ownerPhone ? (
+                  whatsAppUrl ? (
                     <WhatsAppButton
                       href={whatsAppUrl}
                       recipientName={item.ownerName}
@@ -234,7 +240,7 @@ const ItemDetail = () => {
                     />
                   ) : (
                     <p className="text-[11px] text-gray-400 dark:text-gray-500 italic text-center">
-                      Owner has not added a mobile number for WhatsApp.
+                      Full contact number unlocked once borrow request is accepted.
                     </p>
                   )
                 ) : (
@@ -244,7 +250,7 @@ const ItemDetail = () => {
                     className="w-full py-2.5 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100/70 dark:hover:bg-emerald-950/60 transition flex items-center justify-center gap-2"
                   >
                     <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Log in to Chat on WhatsApp with Owner</span>
+                    <span>Log in to View Full Contact & Request</span>
                   </button>
                 )}
               </div>

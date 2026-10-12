@@ -12,6 +12,7 @@ import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.ItemRepository;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.HtmlSanitizer;
+import com.shareit.security.PiiMasker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -570,6 +571,20 @@ public class BorrowRequestService {
                 ? userTrustService.getTrustScore(req.getBorrower().getId())
                 : null;
 
+        // Privacy Guard: Only reveal full contact numbers once request is formally ACCEPTED or PAID
+        boolean isContactUnlocked = req.getStatus() == RequestStatus.ACCEPTED ||
+                req.getStatus() == RequestStatus.RETURNED ||
+                "PAID".equalsIgnoreCase(req.getPaymentStatus()) ||
+                "ADVANCE_PAID".equalsIgnoreCase(req.getPaymentStatus());
+
+        String ownerPhone = isContactUnlocked
+                ? req.getItem().getOwner().getPhone()
+                : PiiMasker.maskPhone(req.getItem().getOwner().getPhone());
+
+        String borrowerPhone = isContactUnlocked
+                ? req.getBorrower().getPhone()
+                : PiiMasker.maskPhone(req.getBorrower().getPhone());
+
         return BorrowResponseDto.builder()
                 .id(req.getId())
                 .itemId(req.getItem().getId())
@@ -579,11 +594,11 @@ public class BorrowRequestService {
                 .ownerId(req.getItem().getOwner().getId())
                 .ownerName(req.getItem().getOwner().getFullName())
                 .ownerEmail(req.getItem().getOwner().getEmail())
-                .ownerPhone(req.getItem().getOwner().getPhone())
+                .ownerPhone(ownerPhone)
                 .borrowerId(req.getBorrower().getId())
                 .borrowerName(req.getBorrower().getFullName())
                 .borrowerEmail(req.getBorrower().getEmail())
-                .borrowerPhone(req.getBorrower().getPhone())
+                .borrowerPhone(borrowerPhone)
                 .borrowerTrust(borrowerTrust)
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
