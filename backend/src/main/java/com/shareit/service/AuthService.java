@@ -11,6 +11,7 @@ import com.shareit.security.CustomUserDetails;
 import com.shareit.security.HtmlSanitizer;
 import com.shareit.security.JwtService;
 import com.shareit.security.LoginAttemptService;
+import com.shareit.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,6 +28,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final LoginAttemptService loginAttemptService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final AuthenticationManager authenticationManager;
 
     @Transactional
@@ -100,5 +102,11 @@ public class AuthService {
                 .bio(user.getBio())
                 .avatarUrl(user.getAvatarUrl())
                 .build();
+    }
+
+    public void logout(String token) {
+        if (token != null && !token.trim().isEmpty()) {
+            tokenBlacklistService.blacklistToken(token);
+        }
     }
 }
