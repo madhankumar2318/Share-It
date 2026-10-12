@@ -128,6 +128,9 @@ public class FileStorageService {
         // Fallback to disk
         try {
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            if (!filePath.startsWith(this.fileStorageLocation)) {
+                throw new SecurityException("Directory traversal attempt detected: " + fileName);
+            }
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists() && resource.isReadable()) {
                 return resource;
