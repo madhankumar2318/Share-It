@@ -43,6 +43,11 @@ public class BorrowRequestService {
             throw new IllegalArgumentException("End date cannot be before start date");
         }
 
+        long rentalDays = java.time.temporal.ChronoUnit.DAYS.between(dto.getStartDate(), dto.getEndDate()) + 1;
+        if (rentalDays > 90) {
+            throw new IllegalArgumentException("Maximum borrow duration cannot exceed 90 days. Requested: " + rentalDays + " days.");
+        }
+
         User borrower = userRepository.findByEmail(borrowerEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Borrower not found"));
 
