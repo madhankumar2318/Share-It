@@ -25,6 +25,9 @@ public class AuthController {
     private final AuthService authService;
     private static final long REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
+    private String allowedOrigins;
+
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
@@ -48,6 +51,9 @@ public class AuthController {
             HttpServletRequest request,
             @RequestBody(required = false) Map<String, String> body
     ) {
+        // CSRF / Cross-Origin Protection for SameSite=None cookie requests
+        validateOriginOrReferer(request);
+
         String refreshToken = extractRefreshToken(request, body);
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             throw new BadCredentialsException("Refresh token is required to issue a new access token.");
@@ -103,5 +109,31 @@ public class AuthController {
             return body.get("refreshToken").trim();
         }
         return null;
+    }
+
+    private void validateOriginOrReferer(HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        String referer = request.getHeader("Referer");
+
+        // Native apps or tools without browser Origin/Referer headers (like Postman or curl with manual tokens)
+        if (origin == null && referer == null) {
+            return;
+        }
+
+        String[] allowedList = allowedOrigins.split(",");
+        String source = origin != null ? origin.trim() : referer.trim();
+
+        boolean isAllowed = false;
+        for (String allowed : allowedList) {
+            String trimmed = allowed.trim();
+            if (!trimmed.isEmpty() && source.startsWith(trimmed)) {
+                isAllowed = true;
+                break;
+            }
+        }
+
+        if (!isAllowed) {
+            throw new BadCredentialsException("Cross-Origin request blocked. Untrusted Origin: " + source);
+        }
     }
 }
