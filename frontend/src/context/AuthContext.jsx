@@ -21,8 +21,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const { token, ...userData } = response.data;
+    const { token, refreshToken, ...userData } = response.data;
     localStorage.setItem('token', token);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     return userData;
@@ -30,8 +33,11 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (registerData) => {
     const response = await api.post('/auth/register', registerData);
-    const { token, ...userData } = response.data;
+    const { token, refreshToken, ...userData } = response.data;
     localStorage.setItem('token', token);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     return userData;
@@ -39,11 +45,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
+      const refreshToken = localStorage.getItem('refreshToken');
+      await api.post('/auth/logout', refreshToken ? { refreshToken } : {});
     } catch {
       // Ignore network errors so local logout always completes cleanly
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       setUser(null);
     }

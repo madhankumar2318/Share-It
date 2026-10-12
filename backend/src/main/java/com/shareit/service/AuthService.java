@@ -29,6 +29,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final LoginAttemptService loginAttemptService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
 
     @Transactional
@@ -48,9 +49,11 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         String jwtToken = jwtService.generateToken(userDetails);
+        com.shareit.model.RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);
 
         return AuthResponse.builder()
                 .token(jwtToken)
+                .refreshToken(refreshToken.getToken())
                 .id(savedUser.getId())
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
@@ -62,6 +65,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().toLowerCase().trim();
 
@@ -90,9 +94,11 @@ public class AuthService {
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
         String jwtToken = jwtService.generateToken(userDetails);
+        com.shareit.model.RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
                 .token(jwtToken)
+                .refreshToken(refreshToken.getToken())
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
@@ -104,9 +110,34 @@ public class AuthService {
                 .build();
     }
 
-    public void logout(String token) {
-        if (token != null && !token.trim().isEmpty()) {
-            tokenBlacklistService.blacklistToken(token);
+    @Transactional
+    public AuthResponse refreshAccessToken(String refreshTokenString) {
+        com.shareit.model.RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(refreshTokenString);
+        User user = newRefreshToken.getUser();
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String newAccessToken = jwtService.generateToken(userDetails);
+
+        return AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken.getToken())
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .phone(user.getPhone())
+                .neighborhood(user.getNeighborhood())
+                .bio(user.getBio())
+                .avatarUrl(user.getAvatarUrl())
+                .build();
+    }
+
+    @Transactional
+    public void logout(String accessToken, String refreshTokenString) {
+        if (accessToken != null && !accessToken.trim().isEmpty()) {
+            tokenBlacklistService.blacklistToken(accessToken);
+        }
+        if (refreshTokenString != null && !refreshTokenString.trim().isEmpty()) {
+            refreshTokenService.revokeToken(refreshTokenString);
         }
     }
 }

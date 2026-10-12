@@ -4,11 +4,15 @@ import com.shareit.dto.AuthResponse;
 import com.shareit.dto.LoginRequest;
 import com.shareit.dto.RegisterRequest;
 import com.shareit.service.AuthService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -19,24 +23,85 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private static final long REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return new ResponseEntity<>(authService.register(request), HttpStatus.CREATED);
+        AuthResponse response = authService.register(request);
+        ResponseCookie cookie = createRefreshTokenCookie(response.getRefreshToken(), REFRESH_COOKIE_MAX_AGE_SECONDS);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+        AuthResponse response = authService.login(request);
+        ResponseCookie cookie = createRefreshTokenCookie(response.getRefreshToken(), REFRESH_COOKIE_MAX_AGE_SECONDS);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            HttpServletRequest request,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String refreshToken = extractRefreshToken(request, body);
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            throw new BadCredentialsException("Refresh token is required to issue a new access token.");
+        }
+
+        AuthResponse response = authService.refreshAccessToken(refreshToken);
+        ResponseCookie cookie = createRefreshTokenCookie(response.getRefreshToken(), REFRESH_COOKIE_MAX_AGE_SECONDS);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> logout(
+            HttpServletRequest request,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
         String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            authService.logout(token);
+        String accessToken = (authHeader != null && authHeader.startsWith("Bearer "))
+                ? authHeader.substring(7)
+                : null;
+
+        String refreshToken = extractRefreshToken(request, body);
+        authService.logout(accessToken, refreshToken);
+
+        ResponseCookie deleteCookie = createRefreshTokenCookie("", 0);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(Map.of("message", "Logged out successfully 🚪"));
+    }
+
+    private ResponseCookie createRefreshTokenCookie(String token, long maxAgeSeconds) {
+        return ResponseCookie.from("refreshToken", token)
+                .httpOnly(true)
+                .secure(true)
+                .path("/api/auth")
+                .maxAge(maxAgeSeconds)
+                .sameSite("None")
+                .build();
+    }
+
+    private String extractRefreshToken(HttpServletRequest request, Map<String, String> body) {
+        // 1. Try reading from HttpOnly Cookie first
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refreshToken".equals(cookie.getName()) && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                    return cookie.getValue().trim();
+                }
+            }
         }
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+        // 2. Fallback to JSON request body for clients with strict third-party cookie blocking
+        if (body != null && body.containsKey("refreshToken") && body.get("refreshToken") != null) {
+            return body.get("refreshToken").trim();
+        }
+        return null;
     }
 }
