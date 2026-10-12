@@ -71,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/reviews/item/**").permitAll()
                         .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Admin-only endpoints
+                        .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
                         // Protected endpoints
                         .anyRequest().authenticated()
                 )
