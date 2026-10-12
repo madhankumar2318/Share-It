@@ -8,6 +8,7 @@ import com.shareit.model.User;
 import com.shareit.repository.BorrowRequestRepository;
 import com.shareit.repository.MessageRepository;
 import com.shareit.repository.UserRepository;
+import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class MessageService {
         Message message = Message.builder()
                 .borrowRequest(request)
                 .sender(sender)
-                .content(dto.getContent().trim())
+                .content(HtmlSanitizer.sanitize(dto.getContent()))
                 .build();
 
         Message saved = messageRepository.save(message);

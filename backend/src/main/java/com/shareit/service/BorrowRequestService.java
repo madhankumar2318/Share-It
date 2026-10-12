@@ -83,7 +83,7 @@ public class BorrowRequestService {
                 .borrower(borrower)
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())
-                .message(dto.getMessage())
+                .message(dto.getMessage() != null ? HtmlSanitizer.sanitize(dto.getMessage()) : null)
                 .status(RequestStatus.PENDING)
                 .dailyRate(rate)
                 .securityDeposit(deposit)
@@ -1049,12 +1049,12 @@ public class BorrowRequestService {
                 : String.format("%04d", new java.security.SecureRandom().nextInt(10000));
 
         request.setIsContactless(true);
-        request.setDropoffLocation(location.trim());
+        request.setDropoffLocation(HtmlSanitizer.sanitize(location));
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setDropoffPhotoUrl(photoUrl.trim());
         }
         if (note != null && !note.trim().isEmpty()) {
-            request.setDropoffNote(note.trim());
+            request.setDropoffNote(HtmlSanitizer.sanitize(note));
         }
         request.setDropoffPasscode(securePasscode);
         request.setDropoffAt(java.time.LocalDateTime.now());
@@ -1176,14 +1176,15 @@ public class BorrowRequestService {
             throw new IllegalArgumentException("Return drop-off spot or location is required");
         }
 
-        request.setReturnDropoffLocation(location.trim());
+        request.setReturnDropoffLocation(HtmlSanitizer.sanitize(location));
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setReturnDropoffPhotoUrl(photoUrl.trim());
             request.setReturnPhotoUrl(photoUrl.trim());
         }
         if (note != null && !note.trim().isEmpty()) {
-            request.setReturnDropoffNote(note.trim());
-            request.setReturnConditionNote(note.trim());
+            String sanitizedNote = HtmlSanitizer.sanitize(note);
+            request.setReturnDropoffNote(sanitizedNote);
+            request.setReturnConditionNote(sanitizedNote);
         }
         request.setReturnDropoffAt(java.time.LocalDateTime.now());
         request.setReturnDropoffStatus("DROPPED_OFF");
