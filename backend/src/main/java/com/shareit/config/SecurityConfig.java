@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -72,7 +73,7 @@ public class SecurityConfig {
                         auth.requestMatchers("/", "/api/health").permitAll()
                             .requestMatchers("/api/auth/**").permitAll()
                             .requestMatchers("/api/items", "/api/items/{id:[0-9]+}", "/api/items/search").permitAll()
-                            .requestMatchers("/api/files/**").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                             .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
                             .requestMatchers("/api/reviews/item/**").permitAll()
                             .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll();
