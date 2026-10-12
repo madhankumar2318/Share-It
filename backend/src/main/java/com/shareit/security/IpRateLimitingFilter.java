@@ -25,7 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class IpRateLimitingFilter extends OncePerRequestFilter {
 
     private final int maxRequestsPerMinute;
-    private static final long WINDOW_MS = 60_000L; // 1 minute sliding window
+    private final int maxRegistrationsPerWindow;
+    private static final long WINDOW_MS = 60_000L; // 1 minute sliding window for general requests
+    private static final long REGISTER_WINDOW_MS = 15 * 60_000L; // 15 minutes window for account registration
 
     private static class IpRequestTracker {
         final AtomicInteger count = new AtomicInteger(1);
@@ -37,9 +39,14 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
     }
 
     private final ConcurrentHashMap<String, IpRequestTracker> ipTrackerCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, IpRequestTracker> registerTrackerCache = new ConcurrentHashMap<>();
 
-    public IpRateLimitingFilter(@Value("${app.rate-limit.max-per-minute:100}") int maxRequestsPerMinute) {
+    public IpRateLimitingFilter(
+            @Value("${app.rate-limit.max-per-minute:100}") int maxRequestsPerMinute,
+            @Value("${app.rate-limit.register-max:10}") int maxRegistrationsPerWindow
+    ) {
         this.maxRequestsPerMinute = maxRequestsPerMinute;
+        this.maxRegistrationsPerWindow = maxRegistrationsPerWindow;
     }
 
     @Override
@@ -65,6 +72,32 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
         String clientIp = extractClientIp(request);
         long now = System.currentTimeMillis();
 
+        // 3. Stricter Sub-Bucket: Account Registration Abuse & Sybil/Bot Attack Prevention
+        if ("POST".equalsIgnoreCase(request.getMethod()) && "/api/auth/register".equals(path)) {
+            IpRequestTracker regTracker = registerTrackerCache.compute(clientIp, (ip, existing) -> {
+                if (existing == null || (now - existing.windowStartMs) >= REGISTER_WINDOW_MS) {
+                    return new IpRequestTracker(now);
+                }
+                existing.count.incrementAndGet();
+                return existing;
+            });
+
+            if (regTracker.count.get() > maxRegistrationsPerWindow) {
+                log.warn("🚨 Registration rate limit exceeded for client IP: {} ({} registrations in current 15m window)",
+                        clientIp, regTracker.count.get());
+
+                response.setStatus(429);
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.setHeader("Retry-After", "900");
+                response.getWriter().write(
+                        "{\"status\":429,\"error\":\"Too Many Requests\",\"message\":\"🚨 Too many registration attempts from your IP address. For security and spam prevention, please wait 15 minutes before registering another account.\"}"
+                );
+                return;
+            }
+        }
+
+        // 4. Global Sliding Window Rate Limiting (100 req/min)
         IpRequestTracker tracker = ipTrackerCache.compute(clientIp, (ip, existing) -> {
             if (existing == null || (now - existing.windowStartMs) >= WINDOW_MS) {
                 return new IpRequestTracker(now);
@@ -112,7 +145,11 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
      */
     @Scheduled(fixedRate = 300000)
     public void cleanupOldEntries() {
-        long threshold = System.currentTimeMillis() - (2 * WINDOW_MS);
-        ipTrackerCache.entrySet().removeIf(entry -> entry.getValue().windowStartMs < threshold);
+        long now = System.currentTimeMillis();
+        long generalThreshold = now - (2 * WINDOW_MS);
+        ipTrackerCache.entrySet().removeIf(entry -> entry.getValue().windowStartMs < generalThreshold);
+
+        long registerThreshold = now - (2 * REGISTER_WINDOW_MS);
+        registerTrackerCache.entrySet().removeIf(entry -> entry.getValue().windowStartMs < registerThreshold);
     }
 }
