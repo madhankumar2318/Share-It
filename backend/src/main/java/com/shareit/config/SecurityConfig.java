@@ -42,6 +42,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
     private String allowedOrigins;
 
+    @Value("${app.swagger.public-access:true}")
+    private boolean swaggerPublicAccess;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -53,7 +56,7 @@ public class SecurityConfig {
                                 .httpStrictTransportSecurity(hsts -> hsts
                                         .includeSubDomains(true)
                                         .maxAgeInSeconds(31536000)
-                                )
+                                        )
                                 .referrerPolicy(referrer -> referrer
                                         .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
                                 )
@@ -64,21 +67,28 @@ public class SecurityConfig {
                                 .policy("camera=(), microphone=(), geolocation=(self)")
                         );
                 })
-                .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> {
                         // Public endpoints
-                        .requestMatchers("/", "/api/health").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/items", "/api/items/{id:[0-9]+}", "/api/items/search").permitAll()
-                        .requestMatchers("/api/files/**").permitAll()
-                        .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
-                        .requestMatchers("/api/reviews/item/**").permitAll()
-                        .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        auth.requestMatchers("/", "/api/health").permitAll()
+                            .requestMatchers("/api/auth/**").permitAll()
+                            .requestMatchers("/api/items", "/api/items/{id:[0-9]+}", "/api/items/search").permitAll()
+                            .requestMatchers("/api/files/**").permitAll()
+                            .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
+                            .requestMatchers("/api/reviews/item/**").permitAll()
+                            .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll();
+
+                        // Swagger UI / OpenAPI Documentation: Public in dev, strictly ADMIN-only in production
+                        if (swaggerPublicAccess) {
+                            auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
+                        } else {
+                            auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").hasRole("ADMIN");
+                        }
+
                         // Admin-only endpoints
-                        .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
-                        // Protected endpoints
-                        .anyRequest().authenticated()
-                )
+                        auth.requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
+                            // Protected endpoints
+                            .anyRequest().authenticated();
+                })
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(ipRateLimitingFilter, SecurityContextHolderFilter.class)
