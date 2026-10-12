@@ -3,11 +3,13 @@ package com.shareit.service;
 import com.shareit.dto.AuthResponse;
 import com.shareit.dto.LoginRequest;
 import com.shareit.dto.RegisterRequest;
+import com.shareit.exception.AccountLockedException;
 import com.shareit.model.Role;
 import com.shareit.model.User;
 import com.shareit.repository.UserRepository;
 import com.shareit.security.CustomUserDetails;
 import com.shareit.security.JwtService;
+import com.shareit.security.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
     private final AuthenticationManager authenticationManager;
 
     @Transactional
@@ -57,18 +60,29 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail().toLowerCase().trim();
+
+        // 1. Enforce brute-force rate limiting and lockout check
+        loginAttemptService.checkLoginAllowed(email);
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getEmail().toLowerCase().trim(),
+                            email,
                             request.getPassword()
                     )
             );
+        } catch (AccountLockedException e) {
+            throw e;
         } catch (Exception e) {
-            throw new BadCredentialsException("Invalid email or password");
+            int remaining = loginAttemptService.recordFailedAttempt(email);
+            throw new BadCredentialsException("Invalid email or password. " + remaining + " attempt(s) remaining before security lockout.");
         }
 
-        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+        // 2. Successful authentication: reset failed attempt counter
+        loginAttemptService.loginSucceeded(email);
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
