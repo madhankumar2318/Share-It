@@ -39,9 +39,15 @@ public class UserController {
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(
             Authentication authentication,
-            @Valid @RequestBody ChangePasswordRequest request
+            @Valid @RequestBody ChangePasswordRequest request,
+            jakarta.servlet.http.HttpServletRequest httpRequest
     ) {
-        userService.changePassword(authentication.getName(), request);
+        // Extract current access token so it can be blacklisted immediately after password change
+        String authHeader = httpRequest.getHeader("Authorization");
+        String accessToken = (authHeader != null && authHeader.startsWith("Bearer "))
+                ? authHeader.substring(7)
+                : null;
+        userService.changePassword(authentication.getName(), request, accessToken);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully! 🔒"));
     }
 

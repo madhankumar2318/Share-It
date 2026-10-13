@@ -14,6 +14,7 @@ import com.shareit.repository.UserRepository;
 import com.shareit.security.CustomUserDetails;
 import com.shareit.security.HtmlSanitizer;
 import com.shareit.security.JwtService;
+import com.shareit.security.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +35,7 @@ public class UserService {
     private final BorrowRequestRepository borrowRequestRepository;
     private final ItemRepository itemRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Transactional(readOnly = true)
     public UserProfileDto getUserProfile(String email) {
@@ -96,7 +98,7 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(String email, ChangePasswordRequest request) {
+    public void changePassword(String email, ChangePasswordRequest request, String currentAccessToken) {
         User user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
 
@@ -115,6 +117,13 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Security: Blacklist the current access token immediately so even the caller's
+        // own unexpired JWT is rejected — critical when the account was hijacked and the
+        // legitimate user resets their password from a different session.
+        if (currentAccessToken != null && !currentAccessToken.trim().isEmpty()) {
+            tokenBlacklistService.blacklistToken(currentAccessToken);
+        }
 
         // Security: Invalidate all existing refresh tokens across all sessions to terminate compromised or lingering logins
         refreshTokenRepository.deleteByUser(user);

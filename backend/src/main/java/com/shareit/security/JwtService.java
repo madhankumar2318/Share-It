@@ -67,7 +67,12 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        // Security: Also enforce account status flags so deactivated or locked accounts
+        // are rejected immediately without waiting for JWT expiry (up to 15 minutes)
+        return (username.equals(userDetails.getUsername()))
+                && !isTokenExpired(token)
+                && userDetails.isEnabled()
+                && userDetails.isAccountNonLocked();
     }
 
     private boolean isTokenExpired(String token) {

@@ -118,8 +118,11 @@ public class ItemService {
     @Transactional(readOnly = true)
     public com.shareit.dto.PageResponseDto<ItemResponseDto> getPagedItems(
             String category, String search, String location, ItemStatus status, Boolean availableToday, int page, int size) {
+        // Security: Enforce a hard upper ceiling on page size to prevent unbounded
+        // DB fetches (heap exhaustion DoS) via crafted ?size=500000 parameters.
+        int safeSize = Math.min(100, Math.max(1, size));
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
-                Math.max(0, page), Math.max(1, size), org.springframework.data.domain.Sort.by("createdAt").descending()
+                Math.max(0, page), safeSize, org.springframework.data.domain.Sort.by("createdAt").descending()
         );
         org.springframework.data.jpa.domain.Specification<Item> spec = buildSpecification(category, search, location, status);
         org.springframework.data.domain.Page<Item> itemPage = itemRepository.findAll(spec, pageable);
