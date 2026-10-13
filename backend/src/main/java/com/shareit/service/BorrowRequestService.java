@@ -18,6 +18,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +28,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BorrowRequestService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final BorrowRequestRepository borrowRequestRepository;
     private final ItemRepository itemRepository;
@@ -121,8 +126,7 @@ public class BorrowRequestService {
     }
 
     private String generateSecureOtp() {
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        return String.valueOf(100000 + random.nextInt(900000));
+        return String.valueOf(100000 + SECURE_RANDOM.nextInt(900000));
     }
 
     private volatile long lastReminderRunTimestamp = 0;
@@ -343,8 +347,14 @@ public class BorrowRequestService {
             }
         }
 
-        // 2. Validate OTP with Brute-Force Rate Limiting
-        if (otp == null || !otp.trim().equals(request.getPickupOtp())) {
+        // 2. Validate OTP with Constant-Time Comparison & Brute-Force Rate Limiting
+        boolean isPickupOtpValid = otp != null && request.getPickupOtp() != null &&
+                MessageDigest.isEqual(
+                        otp.trim().getBytes(StandardCharsets.UTF_8),
+                        request.getPickupOtp().getBytes(StandardCharsets.UTF_8)
+                );
+
+        if (!isPickupOtpValid) {
             int attempts = (request.getPickupAttempts() != null ? request.getPickupAttempts() : 0) + 1;
             request.setPickupAttempts(attempts);
 
@@ -453,8 +463,14 @@ public class BorrowRequestService {
             }
         }
 
-        // 2. Validate Return OTP with Brute-Force Rate Limiting
-        if (otp == null || !otp.trim().equals(request.getReturnOtp())) {
+        // 2. Validate Return OTP with Constant-Time Comparison & Brute-Force Rate Limiting
+        boolean isReturnOtpValid = otp != null && request.getReturnOtp() != null &&
+                MessageDigest.isEqual(
+                        otp.trim().getBytes(StandardCharsets.UTF_8),
+                        request.getReturnOtp().getBytes(StandardCharsets.UTF_8)
+                );
+
+        if (!isReturnOtpValid) {
             int attempts = (request.getReturnAttempts() != null ? request.getReturnAttempts() : 0) + 1;
             request.setReturnAttempts(attempts);
 
