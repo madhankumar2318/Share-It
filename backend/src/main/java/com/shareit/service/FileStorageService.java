@@ -1,5 +1,7 @@
 package com.shareit.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.shareit.model.StoredFile;
 import com.shareit.repository.StoredFileRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +23,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,11 +34,14 @@ public class FileStorageService {
 
     private final Path fileStorageLocation;
     private final StoredFileRepository storedFileRepository;
+    private final Cloudinary cloudinary;
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "webp");
 
     public FileStorageService(@Value("${file.upload-dir:uploads}") String uploadDir,
-                              StoredFileRepository storedFileRepository) {
+                              StoredFileRepository storedFileRepository,
+                              Optional<Cloudinary> cloudinaryOptional) {
         this.storedFileRepository = storedFileRepository;
+        this.cloudinary = cloudinaryOptional != null ? cloudinaryOptional.orElse(null) : null;
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
 
         try {
@@ -81,7 +87,31 @@ public class FileStorageService {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        // Generate collision-proof file name
+        // ── Cloudinary Cloud Storage Upload ─────────────────────────────────
+        // When Cloudinary credentials are provided, images are uploaded directly
+        // to Cloudinary CDN so the Neon PostgreSQL database never exhausts its
+        // free storage quota.
+        if (this.cloudinary != null) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> uploadResult = (Map<String, Object>) this.cloudinary.uploader().upload(
+                        file.getBytes(),
+                        ObjectUtils.asMap(
+                                "folder", "shareit_items",
+                                "resource_type", "image"
+                        )
+                );
+                String secureUrl = (String) uploadResult.get("secure_url");
+                if (StringUtils.hasText(secureUrl)) {
+                    return secureUrl;
+                }
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to upload image to Cloudinary: " + ex.getMessage(), ex);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        // Fallback: Generate collision-proof file name and store in PostgreSQL
         String fileName = UUID.randomUUID().toString() + "." + extension;
 
         try {

@@ -24,17 +24,26 @@ public class FileController {
 
     @PostMapping("/upload")
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileName = fileStorageService.storeFile(file);
+        String result = fileStorageService.storeFile(file);
 
-        String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/files/")
-                .path(fileName)
-                .toUriString();
+        String fileDownloadUri;
+        String fileName;
+        if (result != null && (result.startsWith("http://") || result.startsWith("https://"))) {
+            fileDownloadUri = result;
+            fileName = result.substring(result.lastIndexOf('/') + 1);
+        } else {
+            fileName = result != null ? result : "";
+            fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/api/files/")
+                    .path(fileName)
+                    .toUriString();
+        }
 
         return new ResponseEntity<>(
                 Map.of(
                         "fileName", fileName,
-                        "fileUrl", fileDownloadUri
+                        "fileUrl", fileDownloadUri,
+                        "url", fileDownloadUri
                 ),
                 HttpStatus.CREATED
         );
