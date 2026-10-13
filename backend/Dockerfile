@@ -14,7 +14,14 @@ RUN mvn clean package -DskipTests -B
 # Run stage
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/shareit-backend-0.0.1-SNAPSHOT.jar app.jar
+
+# Run as non-root user (Principle of Least Privilege / CIS Docker Benchmark)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY --from=build --chown=appuser:appgroup /app/target/shareit-backend-0.0.1-SNAPSHOT.jar app.jar
+
+USER appuser
 EXPOSE 8080
 ENV PORT=8080
 ENTRYPOINT ["sh", "-c", "java -Djava.security.egd=file:/dev/./urandom -Dserver.address=0.0.0.0 -Dserver.port=${PORT:-8080} -Xmx384m -XX:+UseSerialGC -jar app.jar"]
+
