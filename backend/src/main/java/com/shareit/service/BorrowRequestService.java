@@ -684,6 +684,17 @@ public class BorrowRequestService {
             throw new IllegalArgumentException("New return date must be after current return date (" + request.getEndDate() + ")");
         }
 
+        // Security: Enforce 90-day total rental duration ceiling to prevent indefinite retention abuse
+        long totalDays = java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), newEndDate) + 1;
+        if (totalDays > 90) {
+            throw new IllegalArgumentException("Total rental duration cannot exceed 90 days (including extensions). Requested: " + totalDays + " days.");
+        }
+
+        // Security: Bound extension reason to prevent database column truncation error
+        if (reason != null && reason.length() > 500) {
+            throw new IllegalArgumentException("Extension reason cannot exceed 500 characters");
+        }
+
         Item item = request.getItem();
 
         // Date Conflict Shield: Check if another neighbor booked this item during the extension window
