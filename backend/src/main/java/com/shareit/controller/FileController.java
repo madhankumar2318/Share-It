@@ -40,14 +40,22 @@ public class FileController {
         );
     }
 
+    private static final Map<String, String> SAFE_IMAGE_MIME_TYPES = Map.of(
+            "jpg", "image/jpeg",
+            "jpeg", "image/jpeg",
+            "png", "image/png",
+            "webp", "image/webp"
+    );
+
     @GetMapping("/{fileName:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
+        String safeContentType = resolveSafeContentType(fileName);
+
         com.shareit.model.StoredFile storedFile = fileStorageService.getStoredFile(fileName);
         if (storedFile != null) {
-            String contentType = storedFile.getContentType();
-            if (contentType == null || contentType.isBlank()) {
-                contentType = "image/jpeg";
-            }
+            String dbContentType = storedFile.getContentType();
+            String finalContentType = isAllowedImageContentType(dbContentType) ? dbContentType : safeContentType;
+
             org.springframework.core.io.ByteArrayResource resource =
                     new org.springframework.core.io.ByteArrayResource(storedFile.getData()) {
                         @Override
@@ -56,7 +64,7 @@ public class FileController {
                         }
                     };
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
+                    .contentType(MediaType.parseMediaType(finalContentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + storedFile.getId() + "\"")
                     .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
                     .header("X-Content-Type-Options", "nosniff")
@@ -65,21 +73,29 @@ public class FileController {
 
         Resource resource = fileStorageService.loadFileAsResource(fileName);
 
-        String contentType = null;
-        try {
-            contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
-        } catch (Exception ignored) {
-        }
-
-        if (contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
+                .contentType(MediaType.parseMediaType(safeContentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
                 .header("X-Content-Type-Options", "nosniff")
                 .body(resource);
+    }
+
+    private boolean isAllowedImageContentType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return false;
+        }
+        String clean = contentType.toLowerCase().trim();
+        return clean.equals("image/jpeg") || clean.equals("image/png") || clean.equals("image/webp");
+    }
+
+    private String resolveSafeContentType(String fileName) {
+        if (fileName != null && fileName.contains(".")) {
+            String extension = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase().trim();
+            if (SAFE_IMAGE_MIME_TYPES.containsKey(extension)) {
+                return SAFE_IMAGE_MIME_TYPES.get(extension);
+            }
+        }
+        return "image/jpeg";
     }
 }
