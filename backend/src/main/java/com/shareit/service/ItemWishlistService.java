@@ -147,6 +147,10 @@ public class ItemWishlistService {
             throw new IllegalArgumentException("You cannot offer to lend your own requested item!");
         }
 
+        if (message != null && message.trim().length() > 1000) {
+            throw new IllegalArgumentException("Offer message cannot exceed 1000 characters");
+        }
+
         WishlistOffer offer = WishlistOffer.builder()
                 .wishlist(wishlist)
                 .lender(lender)

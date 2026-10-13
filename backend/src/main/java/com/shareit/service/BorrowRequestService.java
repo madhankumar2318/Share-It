@@ -402,6 +402,13 @@ public class BorrowRequestService {
             request.setPaymentStatus("ADVANCE_PAID");
             request.setAdvancePaidAt(java.time.LocalDateTime.now());
         }
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Pickup photo URL cannot exceed 500 characters");
+        }
+        if (conditionNote != null && conditionNote.trim().length() > 500) {
+            throw new IllegalArgumentException("Pickup condition note cannot exceed 500 characters");
+        }
+
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setPickupPhotoUrl(photoUrl.trim());
         }
@@ -530,6 +537,13 @@ public class BorrowRequestService {
         if (!"FREE".equalsIgnoreCase(request.getPaymentStatus())) {
             request.setPaymentStatus("REFUND_SETTLED");
             request.setRefundSettledAt(java.time.LocalDateTime.now());
+        }
+
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Return photo URL cannot exceed 500 characters");
+        }
+        if (conditionNote != null && conditionNote.trim().length() > 500) {
+            throw new IllegalArgumentException("Return condition note cannot exceed 500 characters");
         }
 
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
@@ -1075,10 +1089,22 @@ public class BorrowRequestService {
         if (location == null || location.trim().isEmpty()) {
             throw new IllegalArgumentException("Drop-off spot or location is required (e.g. Main Gate Security, Doorstep)");
         }
+        if (location.trim().length() > 200) {
+            throw new IllegalArgumentException("Drop-off location cannot exceed 200 characters");
+        }
+        if (note != null && note.trim().length() > 500) {
+            throw new IllegalArgumentException("Drop-off note cannot exceed 500 characters");
+        }
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Drop-off photo URL cannot exceed 500 characters");
+        }
+        if (passcode != null && passcode.trim().length() > 50) {
+            throw new IllegalArgumentException("Drop-off passcode cannot exceed 50 characters");
+        }
 
         String securePasscode = (passcode != null && !passcode.trim().isEmpty())
                 ? passcode.trim()
-                : String.format("%04d", new java.security.SecureRandom().nextInt(10000));
+                : String.format("%04d", SECURE_RANDOM.nextInt(10000));
 
         request.setIsContactless(true);
         request.setDropoffLocation(HtmlSanitizer.sanitize(location));
@@ -1144,6 +1170,13 @@ public class BorrowRequestService {
             request.setAdvancePaidAt(java.time.LocalDateTime.now());
         }
 
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Pickup photo URL cannot exceed 500 characters");
+        }
+        if (conditionNote != null && conditionNote.trim().length() > 500) {
+            throw new IllegalArgumentException("Pickup condition note cannot exceed 500 characters");
+        }
+
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setPickupPhotoUrl(photoUrl.trim());
         }
@@ -1206,6 +1239,15 @@ public class BorrowRequestService {
 
         if (location == null || location.trim().isEmpty()) {
             throw new IllegalArgumentException("Return drop-off spot or location is required");
+        }
+        if (location.trim().length() > 200) {
+            throw new IllegalArgumentException("Return drop-off location cannot exceed 200 characters");
+        }
+        if (note != null && note.trim().length() > 500) {
+            throw new IllegalArgumentException("Return drop-off note cannot exceed 500 characters");
+        }
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Return drop-off photo URL cannot exceed 500 characters");
         }
 
         request.setReturnDropoffLocation(HtmlSanitizer.sanitize(location));
@@ -1283,6 +1325,13 @@ public class BorrowRequestService {
             request.setRefundSettledAt(java.time.LocalDateTime.now());
         }
 
+        if (photoUrl != null && photoUrl.trim().length() > 500) {
+            throw new IllegalArgumentException("Return photo URL cannot exceed 500 characters");
+        }
+        if (conditionNote != null && conditionNote.trim().length() > 500) {
+            throw new IllegalArgumentException("Return condition note cannot exceed 500 characters");
+        }
+
         if (photoUrl != null && !photoUrl.trim().isEmpty()) {
             request.setReturnPhotoUrl(photoUrl.trim());
         }
@@ -1326,7 +1375,13 @@ public class BorrowRequestService {
             throw new AccessDeniedException("Only the item owner can settle the refund");
         }
 
-        if (customRefund != null && customRefund >= 0) {
+        if (customRefund != null) {
+            if (customRefund < 0) {
+                throw new IllegalArgumentException("Refund amount cannot be negative");
+            }
+            if (request.getSecurityDeposit() != null && customRefund > request.getSecurityDeposit()) {
+                throw new IllegalArgumentException("Refund amount cannot exceed security deposit of ₹" + request.getSecurityDeposit());
+            }
             request.setRefundAmount(customRefund);
         }
         request.setPaymentStatus("REFUND_SETTLED");
