@@ -82,7 +82,8 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserProfileDto getPublicProfile(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Neighbor profile not found with ID: " + userId));
+                .filter(User::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Neighbor profile not found"));
 
         return UserProfileDto.builder()
                 .id(user.getId())
