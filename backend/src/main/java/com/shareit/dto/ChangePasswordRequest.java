@@ -25,4 +25,9 @@ public class ChangePasswordRequest {
         message = "New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
     )
     private String newPassword;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isPasswordIdentical() {
+        return currentPassword != null && currentPassword.equals(newPassword);
+    }
 }

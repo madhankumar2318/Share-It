@@ -99,6 +99,11 @@ public class UserService {
         User user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
 
+        // Early defense: Fail immediately if input strings are identical before executing costly BCrypt operations
+        if (request.isPasswordIdentical()) {
+            throw new IllegalArgumentException("New password cannot be the same as your current password.");
+        }
+
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect. Please try again.");
         }
