@@ -25,6 +25,10 @@ public class ItemRequestDto {
     private String category;
 
     @Size(max = 2000, message = "Image URL cannot exceed 2000 characters")
+    @Pattern(
+        regexp = "^$|^(https?://|/api/files/).+$",
+        message = "Image URL must be a valid HTTP(S) URL or a relative uploaded file path"
+    )
     private String imageUrl;
 
     @Size(max = 200, message = "Location cannot exceed 200 characters")

@@ -2,6 +2,7 @@ package com.shareit.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,5 +32,10 @@ public class UpdateProfileRequest {
     @Size(max = 1000, message = "Bio cannot exceed 1000 characters")
     private String bio;
 
+    @Size(max = 2000, message = "Avatar URL cannot exceed 2000 characters")
+    @Pattern(
+        regexp = "^$|^(https?://|/api/files/).+$",
+        message = "Avatar URL must be a valid HTTP(S) URL or a relative uploaded file path"
+    )
     private String avatarUrl;
 }
