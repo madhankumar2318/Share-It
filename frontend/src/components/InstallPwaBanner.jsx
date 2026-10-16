@@ -61,7 +61,7 @@ const InstallPwaBanner = () => {
   return (
     <aside
       aria-label="Install Share-It App"
-      className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white dark:bg-slate-900 border border-emerald-500/30 dark:border-emerald-500/20 rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-slide-up"
+      className="fixed bottom-16 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-white dark:bg-slate-900 border border-emerald-500/30 dark:border-emerald-500/20 rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-slide-up"
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md flex-shrink-0 mt-0.5">

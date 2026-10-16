@@ -17,8 +17,6 @@ import {
   Moon, 
   MapPin, 
   ChevronDown,
-  Menu,
-  X,
   Compass,
   Sparkles,
   User,
@@ -35,32 +33,36 @@ const Navbar = () => {
   const { selectedLocation, setIsModalOpen } = useLocationFilter();
   const { t } = useLanguage();
   const toast = useToast();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+  const mobileProfileDropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Close menus on page navigation
   useEffect(() => {
-    setMobileMenuOpen(false);
     setProfileDropdownOpen(false);
   }, [location.pathname]);
 
-  // Close profile dropdown on outside click
+  // Close profile dropdown on outside click or tap
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+      const isOutsideDesktop = !profileDropdownRef.current || !profileDropdownRef.current.contains(event.target);
+      const isOutsideMobile = !mobileProfileDropdownRef.current || !mobileProfileDropdownRef.current.contains(event.target);
+      if (isOutsideDesktop && isOutsideMobile) {
         setProfileDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
     logout();
-    setMobileMenuOpen(false);
     setProfileDropdownOpen(false);
     navigate('/login');
   };
@@ -71,6 +73,99 @@ const Navbar = () => {
   const isDashboard = location.pathname === '/dashboard';
   const isSettings = location.pathname === '/settings';
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+  // 🌟 Unified 4-Option Profile Dropdown Menu (Matches Image 1)
+  const renderProfileMenu = (onClose) => (
+    <div className="absolute right-0 mt-2.5 w-72 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-150">
+      {/* Header: User Info */}
+      <div className="p-3.5 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-xs border border-emerald-500/30 flex-shrink-0">
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+          ) : (
+            <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
+            {user?.fullName}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {user?.email}
+          </div>
+          {user?.neighborhood && (
+            <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{user.neighborhood}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4 Menu Options */}
+      <div className="p-1.5 space-y-0.5">
+        {/* 1. Your Profile & Locality */}
+        <Link
+          to="/settings?tab=profile"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
+        >
+          <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span>{t('yourProfile')}</span>
+        </Link>
+
+        {/* 2. App Language & Region */}
+        <Link
+          to="/settings?tab=language"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
+        >
+          <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span>{t('appLanguageOption')}</span>
+        </Link>
+
+        {/* 3. Security & Account */}
+        <Link
+          to="/settings?tab=security"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span>{t('securityOption')}</span>
+        </Link>
+
+        {/* 4. Install Share-It App */}
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            installPwa(toast);
+          }}
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition text-left group"
+        >
+          <span className="flex items-center gap-2.5">
+            <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <span>Install Share-It App</span>
+          </span>
+          <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold text-[9px] uppercase tracking-wide">
+            APP
+          </span>
+        </button>
+      </div>
+
+      {/* Log Out */}
+      <div className="p-1.5 border-t border-gray-100 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <span>{t('logOut')}</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -177,7 +272,7 @@ const Navbar = () => {
                     )}
                   </button>
 
-                  {/* 🌟 GitHub-Style Profile Dropdown Menu */}
+                  {/* 🌟 Desktop User Badge & Dropdown */}
                   <div className="relative pl-1 border-l border-gray-200 dark:border-slate-800" ref={profileDropdownRef}>
                     <button
                       type="button"
@@ -203,93 +298,8 @@ const Navbar = () => {
                       />
                     </button>
 
-                    {/* Dropdown Menu Container */}
-                    {profileDropdownOpen && (
-                      <div className="absolute right-0 mt-2.5 w-72 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-150">
-                        {/* Header: User Info */}
-                        <div className="p-3.5 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-xs border border-emerald-500/30 flex-shrink-0">
-                            {user?.avatarUrl ? (
-                              <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
-                            ) : (
-                              <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                              {user?.fullName}
-                            </div>
-                            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                              {user?.email}
-                            </div>
-                            {user?.neighborhood && (
-                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate">
-                                <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
-                                <span className="truncate">{user.neighborhood}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Navigation Links - Your Profile & Locality, App Language, Security */}
-                        <div className="p-1.5 space-y-0.5">
-                          <Link
-                            to="/settings?tab=profile"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
-                          >
-                            <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>{t('yourProfile')}</span>
-                          </Link>
-                          <Link
-                            to="/settings?tab=language"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
-                          >
-                            <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>{t('appLanguageOption')}</span>
-                          </Link>
-                          <Link
-                            to="/settings?tab=security"
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition"
-                          >
-                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span>{t('securityOption')}</span>
-                          </Link>
-
-                          {/* 📲 Install App Button */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              installPwa(toast);
-                            }}
-                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition text-left group"
-                          >
-                            <span className="flex items-center gap-2.5">
-                              <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                              <span>Install Share-It App</span>
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold text-[9px] uppercase tracking-wide">
-                              App
-                            </span>
-                          </button>
-                        </div>
-
-                        {/* Sign Out / Log Out Button */}
-                        <div className="p-1.5 border-t border-gray-100 dark:border-slate-800">
-                          <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            <span>{t('logOut')}</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    {/* Desktop Dropdown Menu Container */}
+                    {profileDropdownOpen && renderProfileMenu(() => setProfileDropdownOpen(false))}
                   </div>
                 </>
               ) : (
@@ -330,26 +340,12 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile Actions: Notifications, Theme Toggle & Hamburger Button (Visible only on mobile) */}
-            <div className="flex md:hidden items-center gap-1.5">
+            {/* Mobile Actions: Notifications, Theme Toggle & M-Letter Profile Dropdown (Clean, spacious, NO hamburger) */}
+            <div className="flex md:hidden items-center gap-1.5 sm:gap-2">
               {/* In-App Live Notification Bell (Hidden on Login & Sign Up pages) */}
               {!isAuthPage && <NotificationBell />}
 
-              {/* User Avatar on Mobile Top Bar when logged in */}
-              {isAuthenticated && !isAuthPage && (
-                <Link
-                  to="/settings?tab=profile"
-                  className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-emerald-500/30 flex-shrink-0"
-                  title={user?.fullName || 'Your Profile'}
-                >
-                  {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
-                  )}
-                </Link>
-              )}
-
+              {/* Dark / Light Mode Toggle */}
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -364,207 +360,128 @@ const Navbar = () => {
                 )}
               </button>
 
-              {/* Hamburger Button (Hidden on Login & Sign Up pages) */}
-              {!isAuthPage && (
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  aria-label="Toggle navigation menu"
-                  className="p-2 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition focus:outline-none"
+              {/* 🌟 Mobile M-Letter User Profile Badge & Dropdown (When Logged In) */}
+              {isAuthenticated && !isAuthPage && (
+                <div className="relative" ref={mobileProfileDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                    className="flex items-center gap-1 p-0.5 pl-0.5 pr-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    aria-expanded={profileDropdownOpen}
+                    aria-label="Open user profile menu"
+                  >
+                    <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-extrabold text-xs shadow-xs border border-emerald-500/40 flex-shrink-0">
+                      {user?.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <ChevronDown
+                      className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${
+                        profileDropdownOpen ? 'rotate-180 text-emerald-500' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Mobile Dropdown Menu */}
+                  {profileDropdownOpen && renderProfileMenu(() => setProfileDropdownOpen(false))}
+                </div>
+              )}
+
+              {/* Unauthenticated Quick Action on Mobile */}
+              {!isAuthenticated && !isAuthPage && (
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs shadow-xs transition"
                 >
-                  {mobileMenuOpen ? (
-                    <X className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  ) : (
-                    <Menu className="w-5 h-5" />
-                  )}
-                </button>
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>{t('logIn')}</span>
+                </Link>
               )}
             </div>
           </div>
         </div>
-
-        {/* Mobile Slide-down Menu Drawer */}
-        {mobileMenuOpen && !isAuthPage && (
-          <div className="md:hidden border-t border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl">
-            {/* Authenticated User Status Banner on Mobile */}
-            {isAuthenticated && (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200 dark:border-slate-700/60 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0">
-                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                    {user?.fullName}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {user?.email}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Links */}
-            <div className="flex flex-col space-y-1">
-              <Link
-                to="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                  isBrowse
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>{t('browse')}</span>
-              </Link>
-
-              <Link
-                to="/wishlist"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                  isWishlist
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>{t('wishlist')}</span>
-              </Link>
-
-              {isAuthenticated && (
-                <>
-                  <Link
-                    to="/add-item"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                      isAddItem
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <PlusCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('listAnItem')}</span>
-                  </Link>
-
-                  <Link
-                    to="/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                      isDashboard
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('dashboard')}</span>
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Account & Preferences Section (Visible ONLY when logged in) */}
-            {isAuthenticated && (
-              <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex flex-col space-y-1">
-                <div className="px-3.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
-                  Account &amp; Preferences
-                </div>
-
-                <Link
-                  to="/settings?tab=profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    isSettings && location.search !== '?tab=language' && location.search !== '?tab=security'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>{t('yourProfile')}</span>
-                </Link>
-
-                <Link
-                  to="/settings?tab=language"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    isSettings && location.search === '?tab=language'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>{t('appLanguageOption')}</span>
-                </Link>
-
-                <Link
-                  to="/settings?tab=security"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                    isSettings && location.search === '?tab=security'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>{t('securityOption')}</span>
-                </Link>
-              </div>
-            )}
-
-            {/* Install App Quick Action (Mobile) */}
-            <div className="pt-1 pb-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  installPwa(toast);
-                }}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 transition shadow-2xs"
-              >
-                <span className="flex items-center gap-2.5">
-                  <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Install Share-It App</span>
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wide">
-                  1-Tap
-                </span>
-              </button>
-            </div>
-
-            {/* Mobile Auth Actions */}
-            <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900/60 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>{t('logOut')}</span>
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>{t('logIn')}</span>
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>{t('signUp')}</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </nav>
+
+      {/* Sleek Mobile Bottom Navigation Bar (Hidden on auth pages) */}
+      {!isAuthPage && (
+        <nav
+          aria-label="Mobile Navigation Bar"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 px-3 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.25)]"
+        >
+          <div className="flex items-center justify-around max-w-md mx-auto">
+            {/* Browse */}
+            <Link
+              to="/"
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+                isBrowse
+                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+              }`}
+            >
+              <Compass className={`w-5 h-5 ${isBrowse ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('browse')}</span>
+            </Link>
+
+            {/* Wishlist */}
+            <Link
+              to="/wishlist"
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+                isWishlist
+                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+              }`}
+            >
+              <Sparkles className={`w-5 h-5 ${isWishlist ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('wishlist')}</span>
+            </Link>
+
+            {/* List an Item (when authenticated) */}
+            {isAuthenticated ? (
+              <Link
+                to="/add-item"
+                className="flex flex-col items-center justify-center -mt-3.5 group"
+              >
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition active:scale-95 ${
+                  isAddItem 
+                    ? 'bg-emerald-700 text-white shadow-emerald-700/40 ring-4 ring-emerald-500/20' 
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30'
+                }`}>
+                  <PlusCircle className="w-6 h-6 stroke-[2.3]" />
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 tracking-tight">
+                  {t('listAnItem')}
+                </span>
+              </Link>
+            ) : null}
+
+            {/* Dashboard (when authenticated) OR Log In (when not) */}
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+                  isDashboard
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <LayoutDashboard className={`w-5 h-5 ${isDashboard ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('dashboard')}</span>
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
+              >
+                <LogIn className="w-5 h-5 stroke-[1.8]" />
+                <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('logIn')}</span>
+              </Link>
+            )}
+          </div>
+        </nav>
+      )}
+
       <LocationModal />
     </>
   );

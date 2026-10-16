@@ -43,7 +43,7 @@ function App() {
             <Router>
               <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
                 <Navbar />
-                <main className="flex-1">
+                <main className="flex-1 pb-16 md:pb-0">
                   <Suspense fallback={<PageFallback />}>
                     <Routes>
                       <Route path="/" element={<Home />} />
