@@ -21,6 +21,7 @@ public class BorrowResponseDto {
     private String itemTitle;
     private String itemCategory;
     private String itemImageUrl;
+    private String itemLocation;
 
     // Owner details
     private Long ownerId;

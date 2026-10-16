@@ -12,12 +12,14 @@ import {
   Coins,
   FileText,
   FileCheck2,
-  Sparkles,
   Loader2,
   X,
+  MapPin,
+  QrCode,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useToast } from '../context/ToastContext';
 
 const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
@@ -142,6 +144,24 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
       ? request.refundAmount
       : Math.max(0, securityDeposit - totalRentalFee);
 
+  // Structured QR audit payload for instant mobile scanner verification
+  const qrVerificationValue = JSON.stringify({
+    app: 'Share-It P2P Custody Protocol',
+    ref: txnId,
+    item: request.itemTitle,
+    lender: request.ownerName,
+    borrower: request.borrowerName,
+    duration: `${request.startDate} to ${request.endDate} (${totalDays}d)`,
+    deposit: `₹${securityDeposit}`,
+    status: request.status,
+    verifiedAt: request.handoverAt || new Date().toISOString(),
+  });
+
+  const effectiveLocation =
+    request.dropoffLocation ||
+    request.itemLocation ||
+    'Neighborhood Pickup Point (Coordinated between Lender & Borrower)';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fade-in print:p-0 print:bg-white print:static">
       <style>{`
@@ -212,7 +232,7 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
             className="p-6 sm:p-8 bg-white text-slate-900 rounded-2xl border border-slate-200 shadow-xs space-y-6 print:border-none print:p-2"
             style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif' }}
           >
-            {/* Header: Brand, Title, Status */}
+            {/* Header: Brand, Title, Status & Scannable QR Code */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b-2 border-emerald-600">
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
@@ -240,26 +260,44 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
                 </div>
               </div>
 
-              <div className="text-left sm:text-right space-y-1">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                    isReturned
-                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+              {/* Scannable Verification QR Code & Status */}
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <div className="p-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col items-center">
+                  <QRCodeCanvas
+                    value={qrVerificationValue}
+                    size={68}
+                    level="M"
+                    includeMargin={false}
+                  />
+                  <span className="text-[8px] font-mono text-emerald-800 font-extrabold mt-1 tracking-wider uppercase">
+                    Scan to Verify
+                  </span>
+                </div>
+
+                <div className="text-left space-y-1">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      isReturned
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : isBorrowed
+                        ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                        : 'bg-amber-100 text-amber-900 border border-amber-300'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {isReturned
+                      ? 'Return Verified & Closed'
                       : isBorrowed
-                      ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {isReturned
-                    ? 'Return Verified & Closed'
-                    : isBorrowed
-                    ? 'Active Custody Transfer'
-                    : 'Rental Agreement Confirmed'}
-                </span>
-                <p className="text-[10px] text-slate-500 font-medium">
-                  Generated: {formatDateTime(new Date().toISOString())}
-                </p>
+                      ? 'Active Custody Transfer'
+                      : 'Rental Agreement Confirmed'}
+                  </span>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Issued: {formatDateTime(new Date().toISOString())}
+                  </p>
+                  <p className="text-[9px] font-mono text-slate-400">
+                    Ref #{txnId}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -273,56 +311,90 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
               </p>
             </div>
 
-            {/* Item & Schedule Details */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              {request.itemImageUrl ? (
-                <img
-                  src={request.itemImageUrl}
-                  alt={request.itemTitle}
-                  crossOrigin="anonymous"
-                  className="w-20 h-20 rounded-xl object-cover border border-slate-300 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
-                  <FileText className="w-6 h-6 text-slate-400" />
+            {/* Item & Schedule Details with Location Landmark */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                {request.itemImageUrl ? (
+                  <img
+                    src={request.itemImageUrl}
+                    alt={request.itemTitle}
+                    crossOrigin="anonymous"
+                    className="w-20 h-20 rounded-xl object-cover border border-slate-300 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
+                    <FileText className="w-6 h-6 text-slate-400" />
+                  </div>
+                )}
+
+                <div className="flex-1 w-full text-center sm:text-left space-y-1.5">
+                  <span className="text-[10px] uppercase font-black text-emerald-700 tracking-wider inline-block">
+                    {request.itemCategory || 'Household & Community Equipment'}
+                  </span>
+                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 leading-tight">
+                    {request.itemTitle}
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                    <div className="p-2 bg-white rounded-lg border border-slate-200">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                        Pickup Date
+                      </span>
+                      <span className="font-bold text-slate-800">
+                        {formatDate(request.startDate)}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-white rounded-lg border border-slate-200">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                        Return Due Date
+                      </span>
+                      <span className="font-bold text-slate-800">
+                        {formatDate(request.endDate)}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-white rounded-lg border border-slate-200 col-span-2 sm:col-span-1">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                        Total Duration
+                      </span>
+                      <span className="font-bold text-emerald-800">
+                        {totalDays} {totalDays === 1 ? 'Day' : 'Days'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
-              <div className="flex-1 w-full text-center sm:text-left space-y-1.5">
-                <span className="text-[10px] uppercase font-black text-emerald-700 tracking-wider inline-block">
-                  {request.itemCategory || 'Household & Community Equipment'}
-                </span>
-                <h3 className="font-extrabold text-base sm:text-lg text-slate-900 leading-tight">
-                  {request.itemTitle}
-                </h3>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
-                  <div className="p-2 bg-white rounded-lg border border-slate-200">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
-                      Pickup Date
+              {/* Handover Spot / Designated Meeting Location Landmark */}
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200 flex items-start gap-2.5 text-xs">
+                <div className="p-1.5 bg-emerald-100 rounded-md text-emerald-800 flex-shrink-0 mt-0.5">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] uppercase font-black text-emerald-800 tracking-wider">
+                      Handover Location & Custody Landmark
                     </span>
-                    <span className="font-bold text-slate-800">
-                      {formatDate(request.startDate)}
-                    </span>
+                    {request.isContactless && (
+                      <span className="px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-800 text-[8px] font-extrabold uppercase">
+                        Contactless Drop-off
+                      </span>
+                    )}
                   </div>
-
-                  <div className="p-2 bg-white rounded-lg border border-slate-200">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
-                      Return Due Date
-                    </span>
-                    <span className="font-bold text-slate-800">
-                      {formatDate(request.endDate)}
-                    </span>
-                  </div>
-
-                  <div className="p-2 bg-white rounded-lg border border-slate-200 col-span-2 sm:col-span-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
-                      Total Duration
-                    </span>
-                    <span className="font-bold text-emerald-800">
-                      {totalDays} {totalDays === 1 ? 'Day' : 'Days'}
-                    </span>
-                  </div>
+                  <p className="font-bold text-slate-900 text-xs mt-0.5">
+                    {effectiveLocation}
+                  </p>
+                  {request.dropoffNote && (
+                    <p className="text-[10px] text-slate-600 italic mt-0.5">
+                      Spot note: "{request.dropoffNote}"
+                    </p>
+                  )}
+                  {request.returnDropoffLocation && (
+                    <p className="text-[10px] text-blue-700 font-semibold mt-1">
+                      Return Spot: {request.returnDropoffLocation} {request.returnDropoffNote ? `("${request.returnDropoffNote}")` : ''}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
