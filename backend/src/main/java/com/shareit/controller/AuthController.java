@@ -25,7 +25,7 @@ public class AuthController {
     private final AuthService authService;
     private static final long REFRESH_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:https://share-it-ashen.vercel.app,https://*.vercel.app,http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
     private String allowedOrigins;
 
     @PostMapping("/register")
@@ -126,6 +126,10 @@ public class AuthController {
         boolean isAllowed = false;
         for (String allowed : allowedList) {
             String trimmed = allowed.trim();
+            if (trimmed.contains("*.vercel.app") && source.contains("vercel.app")) {
+                isAllowed = true;
+                break;
+            }
             if (!trimmed.isEmpty() && source.startsWith(trimmed)) {
                 isAllowed = true;
                 break;

@@ -40,7 +40,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
+    @Value("${app.cors.allowed-origins:https://share-it-ashen.vercel.app,https://*.vercel.app,http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:4173}")
     private String allowedOrigins;
 
     @Value("${app.swagger.public-access:true}")
@@ -125,7 +125,7 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty() && !s.equals("*"))
                 .toList();
 
-        config.setAllowedOrigins(origins);
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         config.setExposedHeaders(List.of("Authorization"));

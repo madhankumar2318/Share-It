@@ -62,8 +62,10 @@ const Register = () => {
         msg = Object.values(err.response.data.details).join(', ');
       } else if (err.response?.data?.message) {
         msg = err.response.data.message;
-      } else if (!err.response || err.response?.status === 404 || err.response?.status === 502) {
+      } else if (err.response?.status === 502 || err.response?.status === 503 || err.response?.status === 504) {
         msg = 'Backend server is waking up or deploying on Render. Please wait 30 seconds and try again.';
+      } else if (!err.response) {
+        msg = 'Network connection issue or request was blocked. Please try again in a moment.';
       }
       setError(msg);
     } finally {

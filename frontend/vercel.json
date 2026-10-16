@@ -24,6 +24,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://share-it-wmi3.onrender.com/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

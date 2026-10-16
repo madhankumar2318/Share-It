@@ -21,7 +21,15 @@ const Login = () => {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response?.status === 502 || err.response?.status === 503 || err.response?.status === 504) {
+        setError('Backend server is waking up on Render. Please wait 30 seconds and try again.');
+      } else if (!err.response) {
+        setError('Network or server connection issue. Please check your connection and try again.');
+      } else {
+        setError('Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }

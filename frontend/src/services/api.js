@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+  // When deployed on Vercel, relative '/api' uses Vercel's server-to-server reverse proxy
+  // to connect directly with Render, completely eliminating cross-origin CORS limitations.
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    return '/api';
+  }
+  return import.meta.env.VITE_API_URL || 'https://share-it-wmi3.onrender.com/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://share-it-wmi3.onrender.com/api',
+  baseURL: getBaseUrl(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
