@@ -44,16 +44,6 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;");
                 jdbcTemplate.execute("UPDATE users SET active = TRUE WHERE active IS NULL;");
                 jdbcTemplate.execute("UPDATE users SET role = 'USER' WHERE role IS NULL;");
-                try {
-                    jdbcTemplate.execute("TRUNCATE TABLE refresh_tokens, users RESTART IDENTITY CASCADE;");
-                    log.info("Users table truncated and ID sequence reset to 1 successfully.");
-                } catch (Exception e1) {
-                    try {
-                        jdbcTemplate.execute("DELETE FROM refresh_tokens;");
-                        jdbcTemplate.execute("DELETE FROM users;");
-                        jdbcTemplate.execute("ALTER SEQUENCE IF EXISTS users_id_seq RESTART WITH 1;");
-                    } catch (Exception ignored) {}
-                }
                 log.info("Users table schema verified successfully (active=true, role, profile fields).");
             } catch (Exception e) {
                 log.warn("Notice during users migration: {}", e.getMessage());
