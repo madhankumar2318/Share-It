@@ -170,31 +170,31 @@ const Navbar = () => {
   return (
     <>
       <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            {/* Logo & Location Pill */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-                <div className="bg-emerald-600 text-white p-2 rounded-xl group-hover:bg-emerald-700 transition">
-                  <Share2 className="w-5 h-5" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center gap-2 sm:gap-4">
+            {/* Logo & Location Pill - Left Side */}
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-shrink">
+              <Link to="/" className="flex items-center gap-1.5 group flex-shrink-0">
+                <div className="bg-emerald-600 text-white p-1.5 sm:p-2 rounded-xl group-hover:bg-emerald-700 transition">
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span className="font-extrabold text-xl sm:text-2xl tracking-tight text-gray-900 dark:text-white">
+                <span className="font-extrabold text-lg sm:text-2xl tracking-tight text-gray-900 dark:text-white">
                   Share<span className="text-emerald-600">It</span>
                 </span>
               </Link>
 
-              {/* Location Pill */}
+              {/* Location Pill - Compact on mobile so it never collides with notification bell */}
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 text-gray-700 dark:text-gray-200 transition group shadow-2xs max-w-[140px] sm:max-w-[200px]"
+                className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300 dark:hover:border-emerald-700 text-gray-700 dark:text-gray-200 transition group shadow-2xs max-w-[90px] xs:max-w-[115px] sm:max-w-[190px] min-w-0"
                 title="Filter items by location"
               >
-                <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition flex-shrink-0" />
-                <span className="truncate font-semibold text-[11px] sm:text-xs">
+                <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition flex-shrink-0" />
+                <span className="truncate font-semibold text-[10px] sm:text-xs">
                   {selectedLocation?.type !== 'ALL' ? selectedLocation.label : t('allIndia')}
                 </span>
-                <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex-shrink-0" />
+                <ChevronDown className="w-2.5 h-2.5 text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 flex-shrink-0" />
               </button>
             </div>
 
@@ -340,8 +340,8 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile Actions: Notifications, Theme Toggle & M-Letter Profile Dropdown (Clean, spacious, NO hamburger) */}
-            <div className="flex md:hidden items-center gap-1.5 sm:gap-2">
+            {/* Mobile Actions: Notifications, Theme Toggle & M-Letter Profile Dropdown (Shifted comfortably away from edges) */}
+            <div className="flex md:hidden items-center gap-2 flex-shrink-0 pr-1">
               {/* In-App Live Notification Bell (Hidden on Login & Sign Up pages) */}
               {!isAuthPage && <NotificationBell />}
 
@@ -351,7 +351,7 @@ const Navbar = () => {
                 onClick={toggleTheme}
                 title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 aria-label="Toggle theme"
-                className="p-2 rounded-xl text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition"
+                className="p-1.5 sm:p-2 rounded-xl text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition"
               >
                 {isDark ? (
                   <Sun className="w-4 h-4 text-amber-400" />
@@ -366,7 +366,7 @@ const Navbar = () => {
                   <button
                     type="button"
                     onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                    className="flex items-center gap-1 p-0.5 pl-0.5 pr-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="flex items-center gap-1 p-0.5 pl-0.5 pr-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     aria-expanded={profileDropdownOpen}
                     aria-label="Open user profile menu"
                   >
@@ -393,7 +393,7 @@ const Navbar = () => {
               {!isAuthenticated && !isAuthPage && (
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs shadow-xs transition"
+                  className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1.5 rounded-xl text-xs shadow-xs transition"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>{t('logIn')}</span>
@@ -404,78 +404,90 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Sleek Mobile Bottom Navigation Bar (Hidden on auth pages) */}
+      {/* Sleek Mobile Bottom Navigation Bar (Hidden on auth pages, Perfectly Aligned Horizontal & Vertical Baselines) */}
       {!isAuthPage && (
         <nav
           aria-label="Mobile Navigation Bar"
-          className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 px-3 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.25)]"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 px-2 py-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
         >
-          <div className="flex items-center justify-around max-w-md mx-auto">
-            {/* Browse */}
+          <div className={`grid ${isAuthenticated ? 'grid-cols-4' : 'grid-cols-3'} items-center h-14 max-w-md mx-auto`}>
+            {/* 1. Browse */}
             <Link
               to="/"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center justify-center h-full transition ${
                 isBrowse
                   ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
-              <Compass className={`w-5 h-5 ${isBrowse ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('browse')}</span>
+              <div className="h-6 flex items-center justify-center">
+                <Compass className={`w-5 h-5 ${isBrowse ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight font-medium leading-none">{t('browse')}</span>
             </Link>
 
-            {/* Wishlist */}
+            {/* 2. Wishlist */}
             <Link
               to="/wishlist"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center justify-center h-full transition ${
                 isWishlist
                   ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
-              <Sparkles className={`w-5 h-5 ${isWishlist ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('wishlist')}</span>
+              <div className="h-6 flex items-center justify-center">
+                <Sparkles className={`w-5 h-5 ${isWishlist ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight font-medium leading-none">{t('wishlist')}</span>
             </Link>
 
-            {/* List an Item (when authenticated) */}
-            {isAuthenticated ? (
+            {/* 3. List an Item - Symmetrical, vertically and horizontally centered with identical text baseline */}
+            {isAuthenticated && (
               <Link
                 to="/add-item"
-                className="flex flex-col items-center justify-center -mt-3.5 group"
+                className={`flex flex-col items-center justify-center h-full transition group ${
+                  isAddItem
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
               >
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition active:scale-95 ${
-                  isAddItem 
-                    ? 'bg-emerald-700 text-white shadow-emerald-700/40 ring-4 ring-emerald-500/20' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30'
-                }`}>
-                  <PlusCircle className="w-6 h-6 stroke-[2.3]" />
+                <div className="h-6 flex items-center justify-center">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
+                    isAddItem
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white'
+                  }`}>
+                    <PlusCircle className="w-4 h-4 stroke-[2.4]" />
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 tracking-tight">
-                  {t('listAnItem')}
-                </span>
+                <span className="text-[10px] mt-1 tracking-tight font-semibold leading-none">{t('listAnItem')}</span>
               </Link>
-            ) : null}
+            )}
 
-            {/* Dashboard (when authenticated) OR Log In (when not) */}
+            {/* 4. Dashboard (when authenticated) OR Log In (when not) */}
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+                className={`flex flex-col items-center justify-center h-full transition ${
                   isDashboard
                     ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                     : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                 }`}
               >
-                <LayoutDashboard className={`w-5 h-5 ${isDashboard ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-                <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('dashboard')}</span>
+                <div className="h-6 flex items-center justify-center">
+                  <LayoutDashboard className={`w-5 h-5 ${isDashboard ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                </div>
+                <span className="text-[10px] mt-1 tracking-tight font-medium leading-none">{t('dashboard')}</span>
               </Link>
             ) : (
               <Link
                 to="/login"
-                className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
+                className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
               >
-                <LogIn className="w-5 h-5 stroke-[1.8]" />
-                <span className="text-[10px] mt-0.5 tracking-tight font-medium">{t('logIn')}</span>
+                <div className="h-6 flex items-center justify-center">
+                  <LogIn className="w-5 h-5 stroke-[1.8]" />
+                </div>
+                <span className="text-[10px] mt-1 tracking-tight font-medium leading-none">{t('logIn')}</span>
               </Link>
             )}
           </div>
