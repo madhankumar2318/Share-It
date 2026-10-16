@@ -44,6 +44,10 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;");
                 jdbcTemplate.execute("UPDATE users SET active = TRUE WHERE active IS NULL;");
                 jdbcTemplate.execute("UPDATE users SET role = 'USER' WHERE role IS NULL;");
+                try {
+                    jdbcTemplate.execute("DELETE FROM refresh_tokens WHERE user_id IN (5, 7, 8, 9);");
+                    jdbcTemplate.execute("DELETE FROM users WHERE id IN (5, 7, 8, 9);");
+                } catch (Exception ignored) {}
                 log.info("Users table schema verified successfully (active=true, role, profile fields).");
             } catch (Exception e) {
                 log.warn("Notice during users migration: {}", e.getMessage());
