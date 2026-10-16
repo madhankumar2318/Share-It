@@ -326,6 +326,21 @@ const Navbar = () => {
               {/* In-App Live Notification Bell */}
               <NotificationBell />
 
+              {/* User Avatar on Mobile Top Bar when logged in */}
+              {isAuthenticated && (
+                <Link
+                  to="/settings?tab=profile"
+                  className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-emerald-500/30 flex-shrink-0"
+                  title={user?.fullName || 'Your Profile'}
+                >
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(user?.fullName || 'U').charAt(0).toUpperCase()}</span>
+                  )}
+                </Link>
+              )}
+
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -431,46 +446,58 @@ const Navbar = () => {
                     <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{t('dashboard')}</span>
                   </Link>
-
-                  <Link
-                    to="/settings?tab=profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                      isSettings && location.search !== '?tab=language'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('yourProfile')}</span>
-                  </Link>
-
-                  <Link
-                    to="/settings?tab=language"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                      isSettings && location.search === '?tab=language'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('appLanguageOption')}</span>
-                  </Link>
-
-                  <Link
-                    to="/settings?tab=security"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                      isSettings && location.search === '?tab=security'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('securityOption')}</span>
-                  </Link>
                 </>
+              )}
+            </div>
+
+            {/* Account & Preferences Section (Always visible on mobile) */}
+            <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex flex-col space-y-1">
+              <div className="px-3.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                {isAuthenticated ? 'Account & Preferences' : 'Preferences'}
+              </div>
+
+              {isAuthenticated && (
+                <Link
+                  to="/settings?tab=profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                    isSettings && location.search !== '?tab=language' && location.search !== '?tab=security'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{t('yourProfile')}</span>
+                </Link>
+              )}
+
+              {/* App Language & Region is accessible to EVERY mobile user (Guest & Logged In) */}
+              <Link
+                to="/settings?tab=language"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                  isSettings && location.search === '?tab=language'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>{t('appLanguageOption')}</span>
+              </Link>
+
+              {isAuthenticated && (
+                <Link
+                  to="/settings?tab=security"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                    isSettings && location.search === '?tab=security'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{t('securityOption')}</span>
+                </Link>
               )}
             </div>
 
