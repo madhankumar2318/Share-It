@@ -20,9 +20,35 @@ class SmokeTest {
     @Autowired
     private SecurityFilterChain securityFilterChain;
 
+    @Autowired
+    private com.shareit.service.AuthService authService;
+
     @Test
     void contextLoadsSuccessfully() {
         assertNotNull(applicationContext, "ApplicationContext must load without errors");
         assertNotNull(securityFilterChain, "SecurityFilterChain must initialize with all filters in valid orders");
+    }
+
+    @Test
+    void registerAndLoginWorkSuccessfully() {
+        com.shareit.dto.RegisterRequest req = com.shareit.dto.RegisterRequest.builder()
+                .fullName("Madhan")
+                .email("testuser_local_1@example.com")
+                .password("Password123@")
+                .phone("+91 9876543210")
+                .build();
+
+        com.shareit.dto.AuthResponse res = authService.register(req);
+        assertNotNull(res);
+        assertNotNull(res.getToken());
+        assertNotNull(res.getRefreshToken());
+
+        com.shareit.dto.LoginRequest loginReq = com.shareit.dto.LoginRequest.builder()
+                .email("testuser_local_1@example.com")
+                .password("Password123@")
+                .build();
+        com.shareit.dto.AuthResponse loginRes = authService.login(loginReq);
+        assertNotNull(loginRes);
+        assertNotNull(loginRes.getToken());
     }
 }
