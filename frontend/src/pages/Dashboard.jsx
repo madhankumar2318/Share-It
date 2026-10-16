@@ -983,14 +983,14 @@ const Dashboard = () => {
                         </button>
                       )}
 
-                      {req.handoverAt && (
+                      {(req.handoverAt || ['APPROVED', 'BORROWED', 'RETURNED'].includes(req.status)) && (
                         <button
                           onClick={() => setSlipModalData({ isOpen: true, request: req })}
                           className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
-                          title="View & Print Digital Handover Slip"
+                          title="View & Download Official Rental Agreement & Receipt PDF"
                         >
                           <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          Handover Slip
+                          {req.status === 'RETURNED' ? 'Return Receipt & Slip' : 'Rental Agreement & Slip'}
                         </button>
                       )}
 
@@ -1567,14 +1567,14 @@ const Dashboard = () => {
                       </button>
                     )}
 
-                    {req.handoverAt && (
+                    {(req.handoverAt || ['APPROVED', 'BORROWED', 'RETURNED'].includes(req.status)) && (
                       <button
                         onClick={() => setSlipModalData({ isOpen: true, request: req })}
                         className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800/60 shadow-2xs"
-                        title="View & Print Digital Handover Slip"
+                        title="View & Download Official Rental Agreement & Receipt PDF"
                       >
                         <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        Handover Slip
+                        {req.status === 'RETURNED' ? 'Return Receipt & Slip' : 'Rental Agreement & Slip'}
                       </button>
                     )}
 

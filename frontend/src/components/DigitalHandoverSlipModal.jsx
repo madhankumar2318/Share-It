@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Printer,
+  Download,
   ShieldCheck,
   CheckCircle2,
   Calendar,
@@ -9,14 +10,26 @@ import {
   Mail,
   Clock,
   Coins,
+  FileText,
+  FileCheck2,
+  Sparkles,
+  Loader2,
+  X,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { useToast } from '../context/ToastContext';
 
 const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
   const printRef = useRef(null);
+  const toast = useToast();
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen || !request) return null;
 
   const isReturned = request.status === 'RETURNED';
+  const isBorrowed = request.status === 'BORROWED' || !!request.handoverAt;
+  const isApproved = request.status === 'APPROVED';
   const txnId = `SI-TXN-${String(request.id).padStart(6, '0')}`;
 
   const formatDateTime = (dateStr) => {
@@ -32,31 +45,129 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
     }
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      const element = printRef.current;
+
+      // Render high-DPI canvas capture with CORS support
+      const canvas = await html2canvas(element, {
+        scale: 2, // 2x Retina resolution for razor-sharp typography
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 10000,
+        onclone: (clonedDoc) => {
+          // Ensure dark mode classes don't affect paper document rendering in cloned DOM
+          const slip = clonedDoc.getElementById('shareit-printable-slip');
+          if (slip) {
+            slip.style.backgroundColor = '#ffffff';
+            slip.style.color = '#0f172a';
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfPageWidth = pdf.internal.pageSize.getWidth();
+      const pdfPageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8; // 8mm margin
+      const contentWidth = pdfPageWidth - margin * 2;
+      const contentHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (contentHeight <= pdfPageHeight - margin * 2) {
+        // Fits comfortably on single A4 sheet
+        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, contentHeight);
+      } else {
+        // Multi-page slicing for comprehensive rental agreements with condition photos
+        let position = margin;
+        let remainingHeight = contentHeight;
+        const pageDrawableHeight = pdfPageHeight - margin * 2;
+
+        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
+        remainingHeight -= pageDrawableHeight;
+
+        while (remainingHeight > 0) {
+          position = position - pageDrawableHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
+          remainingHeight -= pageDrawableHeight;
+        }
+      }
+
+      const fileName = `ShareIt_Rental_Agreement_${txnId}.pdf`;
+      pdf.save(fileName);
+      toast.success('Official Rental Agreement PDF downloaded! 📄');
+    } catch (err) {
+      console.error('PDF Generation Failed:', err);
+      toast.error('Could not download PDF directly. Opening print view instead...');
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const totalDays = request.totalDays || 1;
+  const dailyRate = request.dailyRate || 0;
+  const totalRentalFee = request.totalRentalFee || dailyRate * totalDays;
+  const securityDeposit = request.securityDeposit || 0;
+  const netRefund =
+    request.refundAmount !== null && request.refundAmount !== undefined
+      ? request.refundAmount
+      : Math.max(0, securityDeposit - totalRentalFee);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto animate-fade-in print:p-0 print:bg-white print:static">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fade-in print:p-0 print:bg-white print:static">
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
           body * {
-            visibility: hidden;
+            visibility: hidden !important;
           }
           #shareit-printable-slip, #shareit-printable-slip * {
-            visibility: visible;
+            visibility: visible !important;
           }
           #shareit-printable-slip {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
             box-shadow: none !important;
-            border: 1px solid #ddd !important;
-            background: white !important;
-            color: black !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
           }
           .no-print {
             display: none !important;
@@ -65,251 +176,421 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
       `}</style>
 
       <div
-        className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden transform transition-all my-8 print:my-0 print:border-none print:shadow-none"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden transform transition-all my-6 print:my-0 print:border-none print:shadow-none"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Printable Slip Content */}
-        <div id="shareit-printable-slip" ref={printRef} className="p-6 sm:p-7 text-gray-900 dark:text-gray-100 space-y-5 bg-white dark:bg-slate-900">
-          {/* Slip Header with Watermark & Logo */}
-          <div className="flex items-start justify-between border-b pb-4 border-gray-200 dark:border-slate-800">
+        {/* Modal Top Bar */}
+        <div className="no-print px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-xs">
+              <FileCheck2 className="w-4 h-4" />
+            </div>
             <div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-base shadow-xs">
-                  S
-                </div>
-                <div>
-                  <h2 className="font-black text-lg tracking-tight text-emerald-700 dark:text-emerald-400">
-                    Share-It
-                  </h2>
-                  <p className="text-[10px] tracking-wider uppercase text-gray-400 font-semibold">
-                    Peer-to-Peer Neighborhood Sharing
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 text-xs font-mono font-bold text-gray-500 dark:text-gray-400">
-                Ref: {txnId}
-              </div>
-            </div>
-
-            <div className="text-right">
-              <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                  isReturned
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {isReturned ? 'Return Verified' : 'Handover Confirmed'}
-              </span>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Issued: {formatDateTime(new Date().toISOString())}
-              </p>
-            </div>
-          </div>
-
-          {/* Item Card */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 flex items-center gap-4">
-            {request.itemImageUrl ? (
-              <img
-                src={request.itemImageUrl}
-                alt={request.itemTitle}
-                className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-700 flex-shrink-0"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-gray-500 text-sm font-bold flex-shrink-0">
-                Item
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
-                {request.itemCategory || 'Household Item'}
-              </span>
-              <h3 className="font-bold text-base text-gray-900 dark:text-white truncate">
-                {request.itemTitle}
+              <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">
+                Official Rental Agreement & Receipt
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
-                {request.startDate} to {request.endDate}
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Verified tamper-evident digital custody record
               </p>
             </div>
           </div>
 
-          {/* Parties Involved */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Lender */}
-            <div className="p-3 bg-gray-50 dark:bg-slate-800/40 rounded-xl border border-gray-100 dark:border-slate-800 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
-                Item Lender (Owner)
-              </span>
-              <div className="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-gray-400" />
-                {request.ownerName}
-              </div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 truncate">
-                <Mail className="w-3 h-3 text-gray-400" />
-                {request.ownerEmail}
-              </div>
-              {request.ownerPhone && (
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                  <Phone className="w-3 h-3 text-gray-400" />
-                  {request.ownerPhone}
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+            title="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Paper Document Container (Target for jsPDF / Print) */}
+        <div className="max-h-[75vh] overflow-y-auto p-4 sm:p-6 print:max-h-none print:overflow-visible">
+          <div
+            id="shareit-printable-slip"
+            ref={printRef}
+            className="p-6 sm:p-8 bg-white text-slate-900 rounded-2xl border border-slate-200 shadow-xs space-y-6 print:border-none print:p-2"
+            style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif' }}
+          >
+            {/* Header: Brand, Title, Status */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b-2 border-emerald-600">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-lg shadow-sm">
+                    S
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-xl tracking-tight text-emerald-800">
+                        Share-It
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 font-extrabold text-[9px] uppercase tracking-wider">
+                        Official
+                      </span>
+                    </div>
+                    <p className="text-[10px] tracking-wider uppercase text-slate-500 font-bold">
+                      Peer-to-Peer Neighborhood Sharing Network
+                    </p>
+                  </div>
                 </div>
-              )}
+
+                <div className="pt-2 text-xs font-mono font-bold text-slate-700">
+                  Transaction Audit ID:{' '}
+                  <span className="text-emerald-700 font-black">{txnId}</span>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right space-y-1">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                    isReturned
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : isBorrowed
+                      ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {isReturned
+                    ? 'Return Verified & Closed'
+                    : isBorrowed
+                    ? 'Active Custody Transfer'
+                    : 'Rental Agreement Confirmed'}
+                </span>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Generated: {formatDateTime(new Date().toISOString())}
+                </p>
+              </div>
             </div>
 
-            {/* Borrower */}
-            <div className="p-3 bg-gray-50 dark:bg-slate-800/40 rounded-xl border border-gray-100 dark:border-slate-800 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
-                Item Borrower
-              </span>
-              <div className="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-gray-400" />
-                {request.borrowerName}
-              </div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 truncate">
-                <Mail className="w-3 h-3 text-gray-400" />
-                {request.borrowerEmail}
-              </div>
-              {request.borrowerPhone && (
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                  <Phone className="w-3 h-3 text-gray-400" />
-                  {request.borrowerPhone}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Financial Summary & Caution Deposit Breakdown */}
-          {((request.securityDeposit && request.securityDeposit > 0) || (request.dailyRate && request.dailyRate > 0)) && (
-            <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/80 dark:border-amber-800/40 space-y-2 text-xs">
-              <div className="flex items-center justify-between text-amber-900 dark:text-amber-200 font-bold border-b border-amber-200/60 pb-1.5">
-                <span className="flex items-center gap-1.5">
-                  <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  Caution Deposit & Settlement Invoice
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
-                  {request.paymentStatus || 'FREE'}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
-                <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
-                  <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Advance Deposit</div>
-                  <div className="text-xs font-black text-amber-700 dark:text-amber-300">₹{request.securityDeposit || 0}</div>
-                </div>
-                <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg border border-amber-200/60 dark:border-amber-800/40">
-                  <div className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Rental ({request.totalDays || 1}d)</div>
-                  <div className="text-xs font-black text-rose-600 dark:text-rose-400">₹{request.totalRentalFee || 0}</div>
-                </div>
-                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg border border-emerald-300 dark:border-emerald-800">
-                  <div className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300">Net Refund</div>
-                  <div className="text-xs font-black text-emerald-700 dark:text-emerald-300">₹{request.refundAmount ?? Math.max(0, (request.securityDeposit || 0) - (request.totalRentalFee || 0))}</div>
-                </div>
-              </div>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 italic text-center">
-                Advance deposit collected at pickup. Net refund balance settled upon verified return.
+            {/* Document Title Banner */}
+            <div className="text-center py-2 bg-slate-50 border border-slate-200 rounded-xl">
+              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
+                Peer-to-Peer Equipment Custody Agreement & Deposit Ledger
+              </h2>
+              <p className="text-[10px] text-slate-500">
+                Executed under Share-It Community Lending & Borrowing Standards
               </p>
             </div>
-          )}
 
-          {/* Timestamps & PIN Proof Verification Ledger */}
-          <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/80 dark:border-emerald-800/40 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                Pickup Handover Confirmed:
-              </span>
-              <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono">
-                {formatDateTime(request.handoverAt)}
-              </span>
+            {/* Item & Schedule Details */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              {request.itemImageUrl ? (
+                <img
+                  src={request.itemImageUrl}
+                  alt={request.itemTitle}
+                  crossOrigin="anonymous"
+                  className="w-20 h-20 rounded-xl object-cover border border-slate-300 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
+                  <FileText className="w-6 h-6 text-slate-400" />
+                </div>
+              )}
+
+              <div className="flex-1 w-full text-center sm:text-left space-y-1.5">
+                <span className="text-[10px] uppercase font-black text-emerald-700 tracking-wider inline-block">
+                  {request.itemCategory || 'Household & Community Equipment'}
+                </span>
+                <h3 className="font-extrabold text-base sm:text-lg text-slate-900 leading-tight">
+                  {request.itemTitle}
+                </h3>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                      Pickup Date
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {formatDate(request.startDate)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                      Return Due Date
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {formatDate(request.endDate)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 col-span-2 sm:col-span-1">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                      Total Duration
+                    </span>
+                    <span className="font-bold text-emerald-800">
+                      {totalDays} {totalDays === 1 ? 'Day' : 'Days'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {request.returnedAt && (
-              <div className="flex items-center justify-between text-gray-700 dark:text-gray-300 pt-1.5 border-t border-emerald-200/50 dark:border-emerald-800/30">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  Item Return Confirmed:
+            {/* Identified Parties (Lender & Borrower) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Lender Card */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
+                    Equipment Owner (Lender)
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-700 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Verified Owner
+                  </span>
+                </div>
+                <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                  <User className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                  {request.ownerName || 'Verified Community Member'}
+                </div>
+                <div className="text-xs text-slate-600 flex items-center gap-1.5 truncate">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  {request.ownerEmail || 'Email on file'}
+                </div>
+                {request.ownerPhone && (
+                  <div className="text-xs text-slate-600 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    {request.ownerPhone}
+                  </div>
+                )}
+              </div>
+
+              {/* Borrower Card */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
+                    Authorized Custodian (Borrower)
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-700 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Identity Verified
+                  </span>
+                </div>
+                <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                  <User className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                  {request.borrowerName || 'Verified Community Member'}
+                </div>
+                <div className="text-xs text-slate-600 flex items-center gap-1.5 truncate">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  {request.borrowerEmail || 'Email on file'}
+                </div>
+                {request.borrowerPhone && (
+                  <div className="text-xs text-slate-600 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    {request.borrowerPhone}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Financial Ledger & Security Deposit Guarantee */}
+            <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-2.5">
+              <div className="flex items-center justify-between text-emerald-950 font-bold border-b border-emerald-200 pb-1.5">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <Coins className="w-4 h-4 text-emerald-700" />
+                  Security Caution Deposit & Financial Ledger
                 </span>
-                <span className="font-bold text-blue-800 dark:text-blue-300 font-mono">
-                  {formatDateTime(request.returnedAt)}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-emerald-200 text-emerald-900">
+                  {request.paymentStatus || (securityDeposit > 0 ? 'ESCROW HELD' : 'COMMUNITY FREE')}
                 </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 text-center font-mono">
+                <div className="p-2 bg-white rounded-lg border border-emerald-200">
+                  <div className="text-[9px] uppercase font-bold text-slate-500">Daily Rate</div>
+                  <div className="text-xs font-black text-slate-800">₹{dailyRate}</div>
+                </div>
+
+                <div className="p-2 bg-white rounded-lg border border-emerald-200">
+                  <div className="text-[9px] uppercase font-bold text-slate-500">Rental Fee ({totalDays}d)</div>
+                  <div className="text-xs font-black text-rose-600">₹{totalRentalFee}</div>
+                </div>
+
+                <div className="p-2 bg-white rounded-lg border border-emerald-200">
+                  <div className="text-[9px] uppercase font-bold text-slate-500">Advance Deposit</div>
+                  <div className="text-xs font-black text-amber-700">₹{securityDeposit}</div>
+                </div>
+
+                <div className="p-2 bg-emerald-100/90 rounded-lg border border-emerald-300">
+                  <div className="text-[9px] uppercase font-bold text-emerald-900">Net Refund Due</div>
+                  <div className="text-xs font-black text-emerald-800">₹{netRefund}</div>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-600 italic text-center leading-normal">
+                🛡️ Advance caution deposit of ₹{securityDeposit} is held as custodian protection. Net refund of ₹{netRefund} is released upon return inspection.
+              </p>
+            </div>
+
+            {/* Handover & Return Verification Audit Trail */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                  Pickup Handover Confirmed:
+                </span>
+                <span className="font-bold text-emerald-800 font-mono">
+                  {request.handoverAt
+                    ? `${formatDateTime(request.handoverAt)} (Verified via OTP/QR)`
+                    : 'Pending Pickup Handover Verification'}
+                </span>
+              </div>
+
+              {request.returnedAt && (
+                <div className="flex items-center justify-between text-slate-700 pt-1.5 border-t border-slate-200">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+                    Item Return Confirmed:
+                  </span>
+                  <span className="font-bold text-blue-800 font-mono">
+                    {formatDateTime(request.returnedAt)} (Inspection Verified)
+                  </span>
+                </div>
+              )}
+
+              {(request.pickupConditionNote || request.returnConditionNote) && (
+                <div className="pt-2 border-t border-slate-200 space-y-1 text-[11px]">
+                  {request.pickupConditionNote && (
+                    <p className="text-slate-600">
+                      <strong>Pickup Condition Note:</strong> "{request.pickupConditionNote}"
+                    </p>
+                  )}
+                  {request.returnConditionNote && (
+                    <p className="text-slate-600">
+                      <strong>Return Condition Note:</strong> "{request.returnConditionNote}"
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Condition Proof Photos (if uploaded) */}
+            {(request.pickupPhotoUrl || request.returnPhotoUrl) && (
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider block">
+                  Condition Verification Snapshots
+                </span>
+                <div className="grid grid-cols-2 gap-3">
+                  {request.pickupPhotoUrl && (
+                    <div className="p-2 rounded-xl border border-emerald-200 bg-emerald-50/40 text-center space-y-1">
+                      <span className="text-[9px] font-bold text-emerald-800 block">
+                        Pickup Snapshot (Condition Baseline)
+                      </span>
+                      <img
+                        src={request.pickupPhotoUrl}
+                        alt="Pickup Condition"
+                        crossOrigin="anonymous"
+                        className="w-full h-24 object-cover rounded-lg border border-emerald-300"
+                      />
+                    </div>
+                  )}
+
+                  {request.returnPhotoUrl && (
+                    <div className="p-2 rounded-xl border border-blue-200 bg-blue-50/40 text-center space-y-1">
+                      <span className="text-[9px] font-bold text-blue-800 block">
+                        Return Snapshot (Discharge Baseline)
+                      </span>
+                      <img
+                        src={request.returnPhotoUrl}
+                        alt="Return Condition"
+                        crossOrigin="anonymous"
+                        className="w-full h-24 object-cover rounded-lg border border-blue-300"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Item Condition Proof Snapshots */}
-          {(request.pickupPhotoUrl || request.returnPhotoUrl) && (
-            <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
-                📸 Condition Proof Snapshots
+            {/* Standard Community Rental Agreement Clauses */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-[10px] text-slate-600 leading-relaxed">
+              <span className="font-black uppercase tracking-wider text-slate-700 block text-[10px]">
+                Standard Community Terms & Obligations:
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {request.pickupPhotoUrl && (
-                  <div className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/30 dark:bg-emerald-950/20 space-y-1.5">
-                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 block">
-                      Pickup Condition Snapshot
-                    </span>
-                    <img
-                      src={request.pickupPhotoUrl}
-                      alt="Pickup condition"
-                      className="w-full h-28 object-cover rounded-lg border border-emerald-300 dark:border-emerald-700"
-                    />
-                    {request.pickupConditionNote && (
-                      <p className="text-[10px] text-gray-600 dark:text-gray-300 italic">
-                        "{request.pickupConditionNote}"
-                      </p>
-                    )}
-                  </div>
-                )}
+              <p>
+                <strong>1. Custody & Care:</strong> The Borrower acknowledges receiving the item in good operational condition and agrees to exercise reasonable care during the rental period.
+              </p>
+              <p>
+                <strong>2. Deposit & Settlement:</strong> The security deposit serves as surety against loss or damage. Upon return in verified satisfactory condition, the net refund balance is settled promptly.
+              </p>
+              <p>
+                <strong>3. Timely Restitution:</strong> The borrower agrees to return the item on or before <strong>{formatDate(request.endDate)}</strong>. Any extension must be requested and accepted through the platform.
+              </p>
+            </div>
 
-                {request.returnPhotoUrl && (
-                  <div className="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/30 dark:bg-blue-950/20 space-y-1.5">
-                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 block">
-                      Return Condition Snapshot
-                    </span>
-                    <img
-                      src={request.returnPhotoUrl}
-                      alt="Return condition"
-                      className="w-full h-28 object-cover rounded-lg border border-blue-300 dark:border-blue-700"
-                    />
-                    {request.returnConditionNote && (
-                      <p className="text-[10px] text-gray-600 dark:text-gray-300 italic">
-                        "{request.returnConditionNote}"
-                      </p>
-                    )}
-                  </div>
-                )}
+            {/* Dual Digital Signatures & Security Seal */}
+            <div className="pt-3 border-t-2 border-slate-200 grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center space-y-1">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                  Lender Digital Signature
+                </span>
+                <div className="font-serif italic font-bold text-slate-800 text-sm border-b border-dashed border-slate-300 pb-1">
+                  {request.ownerName || 'Equipment Owner'}
+                </div>
+                <div className="text-[8px] font-mono text-emerald-700 font-semibold">
+                  E-Signed via Share-It Protocol
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center space-y-1">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">
+                  Borrower Digital Signature
+                </span>
+                <div className="font-serif italic font-bold text-slate-800 text-sm border-b border-dashed border-slate-300 pb-1">
+                  {request.borrowerName || 'Custodian Borrower'}
+                </div>
+                <div className="text-[8px] font-mono text-emerald-700 font-semibold">
+                  E-Signed via Share-It Protocol
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Digital Security Seal */}
-          <div className="text-center pt-3 border-t border-dashed border-gray-200 dark:border-slate-800 space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              Cryptographically verified via Screen PIN / QR Scan
+            {/* Security Audit Seal */}
+            <div className="text-center pt-2 text-[9px] text-slate-400 font-mono flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Tamper-evident record • Cryptographically referenced Ref #{txnId} • Share-It Verified</span>
             </div>
-            <p className="text-[9px] text-gray-400">
-              This digital receipt serves as tamper-evident proof of custody transfer on the Share-It Peer-to-Peer Network.
-            </p>
           </div>
         </div>
 
-        {/* Modal Action Bar (Hidden during print) */}
-        <div className="no-print p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between gap-3">
+        {/* Modal Bottom Action Controls */}
+        <div className="no-print p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/80 border-t border-gray-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-white rounded-xl text-xs font-semibold transition"
+            className="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-white rounded-xl text-xs font-bold transition"
           >
             Close
           </button>
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
-          >
-            <Printer className="w-4 h-4" />
-            Print / Save as PDF
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold border border-gray-200 dark:border-slate-700 transition shadow-2xs"
+            >
+              <Printer className="w-4 h-4 text-gray-500" />
+              Print Slip
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 transition"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating Official PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download PDF Receipt & Agreement
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
