@@ -5,17 +5,87 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#059669" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Share-It" />
     <meta name="description" content="ShareIt - Borrow what you need, lend what you don't. Peer-to-peer community sharing." />
     <title>ShareIt - Community Borrowing &amp; Lending</title>
+    <style>
+      /* Standalone PWA splash screen & smooth startup */
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #0f172a;
+      }
+      #pwa-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        z-index: 99999;
+      }
+      .pwa-logo-box {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 30px -6px rgba(16, 185, 129, 0.45);
+        margin-bottom: 18px;
+      }
+      .pwa-title {
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 24px;
+        letter-spacing: -0.03em;
+      }
+      .pwa-subtitle {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-top: 4px;
+        margin-bottom: 28px;
+        font-weight: 500;
+      }
+      .pwa-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(16, 185, 129, 0.2);
+        border-top-color: #10b981;
+        border-radius: 50%;
+        animation: pwaSpin 0.75s linear infinite;
+      }
+      @keyframes pwaSpin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="pwa-splash" aria-label="Loading Share-It">
+        <div class="pwa-logo-box">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+        </div>
+        <div class="pwa-title">Share-It</div>
+        <div class="pwa-subtitle">Community Sharing Network</div>
+        <div class="pwa-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

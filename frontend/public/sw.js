@@ -1,6 +1,7 @@
-// Share-It Service Worker (PWA Offline & Instant Load)
-const CACHE_NAME = 'shareit-cache-v1';
-const STATIC_ASSETS = [
+// Share-It Service Worker (PWA Offline & Instant Mobile Load)
+const CACHE_NAME = 'shareit-cache-v2';
+
+const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
@@ -9,17 +10,19 @@ const STATIC_ASSETS = [
   '/pwa-512x512.png',
 ];
 
-// Install: Cache essential shell
+// Install: Cache core shell and immediately activate
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return cache.addAll(CORE_ASSETS).catch((err) => {
+        console.warn('PWA core asset precaching notice:', err);
+      });
     })
   );
   self.skipWaiting();
 });
 
-// Activate: Clean up old version caches
+// Activate: Purge any old cache versions and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -30,51 +33,72 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch: Network-first for APIs, Stale-while-revalidate for static assets
+// Skip waiting message listener for instant updates
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Fetch Strategy:
+// 1. API: Network-only (no caching of dynamic backend data)
+// 2. Navigation (HTML): Network-First (ensures latest JS bundle hashes), Offline fallback to cached /index.html
+// 3. Static Assets (CSS, JS, Fonts, Images): Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip caching non-GET requests or browser-extensions
+  // Skip non-GET requests or foreign protocols
   if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
     return;
   }
 
-  // API calls: Network-first to always ensure fresh data
+  // 1. API Requests: Network-first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match(request);
-      })
+      fetch(request).catch(() => caches.match(request))
     );
     return;
   }
 
-  // Static assets & navigation: Stale-While-Revalidate
+  // 2. Navigation requests (Opening the app, switching pages, reloading)
+  // CRITICAL: Always fetch fresh HTML from network so new Vite chunk hashes are loaded.
+  // Fall back to cached index.html only if completely offline.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+
+  // 3. Static Assets: Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return networkResponse;
         })
-        .catch(() => {
-          // If offline and request is HTML navigation, fallback to cached index.html
-          if (request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return null;
-        });
+        .catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })
