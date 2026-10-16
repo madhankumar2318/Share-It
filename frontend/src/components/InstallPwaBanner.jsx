@@ -1,64 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Download, X, Share, Sparkles } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { installPwa, isAppInstalled, getDeferredPrompt } from '../utils/pwaInstaller';
 
 const InstallPwaBanner = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const toast = useToast();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
-    // 1. Check if already installed & running in standalone mode
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-
-    if (isStandalone) {
+    // If already installed, don't show prompt
+    if (isAppInstalled()) {
       return;
     }
 
-    // 2. Check if user dismissed prompt recently
+    // Check if dismissed within last 5 days
     const isDismissed = localStorage.getItem('shareit_pwa_prompt_dismissed');
     if (isDismissed) {
       const dismissedTime = parseInt(isDismissed, 10);
-      // Suppress for 5 days after dismissal
       if (Date.now() - dismissedTime < 5 * 24 * 60 * 60 * 1000) {
         return;
       }
     }
 
-    // 3. Android / Chromium: capture beforeinstallprompt event
-    const handleBeforeInstall = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+    if (getDeferredPrompt()) {
       setShowPrompt(true);
-    };
+    }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    const onPromptAvailable = () => setShowPrompt(true);
+    window.addEventListener('pwa-prompt-available', onPromptAvailable);
 
-    // 4. iOS Safari detection
+    // iOS Safari detection
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     const isSafari =
       /safari/.test(userAgent) && !/chrome|crios|fxios|android/.test(userAgent);
 
-    if (isIosDevice && isSafari && !isStandalone) {
+    if (isIosDevice && isSafari && !isAppInstalled()) {
       setIsIos(true);
       setShowPrompt(true);
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('pwa-prompt-available', onPromptAvailable);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowPrompt(false);
-    }
-    setDeferredPrompt(null);
+    await installPwa(toast);
+    setShowPrompt(false);
   };
 
   const handleDismiss = () => {

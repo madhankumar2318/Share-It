@@ -23,14 +23,18 @@ import {
   Sparkles,
   User,
   Globe2,
-  ShieldCheck
+  ShieldCheck,
+  Smartphone
 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { installPwa } from '../utils/pwaInstaller';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { toggleTheme, isDark } = useTheme();
   const { selectedLocation, setIsModalOpen } = useLocationFilter();
   const { t } = useLanguage();
+  const toast = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -248,6 +252,24 @@ const Navbar = () => {
                             <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             <span>{t('securityOption')}</span>
                           </Link>
+
+                          {/* 📲 Install App Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              installPwa(toast);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-700 dark:hover:text-emerald-300 transition text-left group"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              <span>Install Share-It App</span>
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold text-[9px] uppercase tracking-wide">
+                              App
+                            </span>
+                          </button>
                         </div>
 
                         {/* Sign Out / Log Out Button */}
@@ -450,6 +472,26 @@ const Navbar = () => {
                   </Link>
                 </>
               )}
+            </div>
+
+            {/* Install App Quick Action (Mobile) */}
+            <div className="pt-1 pb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  installPwa(toast);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 transition shadow-2xs"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Install Share-It App</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wide">
+                  1-Tap
+                </span>
+              </button>
             </div>
 
             {/* Mobile Auth Actions */}
