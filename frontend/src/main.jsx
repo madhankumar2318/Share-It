@@ -7,4 +7,16 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>,
-)
+);
+
+// Register Share-It PWA Service Worker for mobile installation & offline speed
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch((err) => {
+        // Non-blocking fallback
+      });
+  });
+}
+

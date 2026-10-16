@@ -6,6 +6,7 @@ import { LocationProvider } from './context/LocationContext';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
+import InstallPwaBanner from './components/InstallPwaBanner';
 
 // Route Lazy Loading for minimal initial JavaScript bundle size
 const Home = lazy(() => import('./pages/Home'));
@@ -81,6 +82,7 @@ function App() {
                     </Routes>
                   </Suspense>
                 </main>
+                <InstallPwaBanner />
               </div>
             </Router>
           </ToastProvider>
