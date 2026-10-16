@@ -70,6 +70,7 @@ const Navbar = () => {
   const isAddItem = location.pathname === '/add-item';
   const isDashboard = location.pathname === '/dashboard';
   const isSettings = location.pathname === '/settings';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <>
@@ -104,29 +105,33 @@ const Navbar = () => {
 
             {/* Desktop Navigation Links & Actions (Hidden on Mobile) */}
             <div className="hidden md:flex items-center gap-2 lg:gap-3">
-              <Link
-                to="/"
-                className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
-                  isBrowse
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                }`}
-              >
-                <Compass className={`w-4 h-4 ${isBrowse ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
-                <span>{t('browse')}</span>
-              </Link>
+              {!isAuthPage && (
+                <>
+                  <Link
+                    to="/"
+                    className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                      isBrowse
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    <Compass className={`w-4 h-4 ${isBrowse ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                    <span>{t('browse')}</span>
+                  </Link>
 
-              <Link
-                to="/wishlist"
-                className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
-                  isWishlist
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                }`}
-              >
-                <Sparkles className={`w-4 h-4 ${isWishlist ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
-                <span>{t('wishlist')}</span>
-              </Link>
+                  <Link
+                    to="/wishlist"
+                    className={`inline-flex items-center gap-1.5 font-medium px-3.5 py-2 rounded-lg transition text-sm ${
+                      isWishlist
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    <Sparkles className={`w-4 h-4 ${isWishlist ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                    <span>{t('wishlist')}</span>
+                  </Link>
+                </>
+              )}
 
               {isAuthenticated ? (
                 <>
@@ -303,31 +308,35 @@ const Navbar = () => {
                     )}
                   </button>
 
-                  <Link
-                    to="/login"
-                    className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium px-3.5 py-2 rounded-lg transition text-sm"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    {t('logIn')}
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg shadow-xs transition text-sm"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    {t('signUp')}
-                  </Link>
+                  {location.pathname !== '/login' && (
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center gap-1.5 text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium px-3.5 py-2 rounded-lg transition text-sm"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      {t('logIn')}
+                    </Link>
+                  )}
+                  {location.pathname !== '/register' && (
+                    <Link
+                      to="/register"
+                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg shadow-xs transition text-sm"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {t('signUp')}
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Mobile Actions: Notifications, Theme Toggle & Hamburger Button (Visible only on mobile) */}
             <div className="flex md:hidden items-center gap-1.5">
-              {/* In-App Live Notification Bell */}
-              <NotificationBell />
+              {/* In-App Live Notification Bell (Hidden on Login & Sign Up pages) */}
+              {!isAuthPage && <NotificationBell />}
 
               {/* User Avatar on Mobile Top Bar when logged in */}
-              {isAuthenticated && (
+              {isAuthenticated && !isAuthPage && (
                 <Link
                   to="/settings?tab=profile"
                   className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-emerald-500/30 flex-shrink-0"
@@ -355,24 +364,27 @@ const Navbar = () => {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Toggle navigation menu"
-                className="p-2 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition focus:outline-none"
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
+              {/* Hamburger Button (Hidden on Login & Sign Up pages) */}
+              {!isAuthPage && (
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label="Toggle navigation menu"
+                  className="p-2 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 border border-gray-200 dark:border-slate-700 transition focus:outline-none"
+                >
+                  {mobileMenuOpen ? (
+                    <X className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <Menu className="w-5 h-5" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Mobile Slide-down Menu Drawer */}
-        {mobileMenuOpen && (
+        {mobileMenuOpen && !isAuthPage && (
           <div className="md:hidden border-t border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl">
             {/* Authenticated User Status Banner on Mobile */}
             {isAuthenticated && (
@@ -450,13 +462,13 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Account & Preferences Section (Always visible on mobile) */}
-            <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex flex-col space-y-1">
-              <div className="px-3.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
-                {isAuthenticated ? 'Account & Preferences' : 'Preferences'}
-              </div>
+            {/* Account & Preferences Section (Visible ONLY when logged in) */}
+            {isAuthenticated && (
+              <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex flex-col space-y-1">
+                <div className="px-3.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                  Account &amp; Preferences
+                </div>
 
-              {isAuthenticated && (
                 <Link
                   to="/settings?tab=profile"
                   onClick={() => setMobileMenuOpen(false)}
@@ -469,23 +481,20 @@ const Navbar = () => {
                   <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{t('yourProfile')}</span>
                 </Link>
-              )}
 
-              {/* App Language & Region is accessible to EVERY mobile user (Guest & Logged In) */}
-              <Link
-                to="/settings?tab=language"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
-                  isSettings && location.search === '?tab=language'
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>{t('appLanguageOption')}</span>
-              </Link>
+                <Link
+                  to="/settings?tab=language"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                    isSettings && location.search === '?tab=language'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Globe2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{t('appLanguageOption')}</span>
+                </Link>
 
-              {isAuthenticated && (
                 <Link
                   to="/settings?tab=security"
                   onClick={() => setMobileMenuOpen(false)}
@@ -498,8 +507,8 @@ const Navbar = () => {
                   <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{t('securityOption')}</span>
                 </Link>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Install App Quick Action (Mobile) */}
             <div className="pt-1 pb-1">
