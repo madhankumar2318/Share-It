@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { LogIn, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [searchParams] = useSearchParams();
+  const registered = searchParams.get('registered') === 'true';
+  const paramEmail = searchParams.get('email') || '';
+
+  const [email, setEmail] = useState(paramEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -12,6 +16,12 @@ const Login = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (paramEmail && !email) {
+      setEmail(paramEmail);
+    }
+  }, [paramEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,6 +54,13 @@ const Login = () => {
             Sign in to start sharing and borrowing items in your community
           </p>
         </div>
+
+        {registered && !error && (
+          <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-2xl text-xs sm:text-sm font-medium shadow-xs">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>Account created successfully! 🎉 Please sign in with your password to access your dashboard.</span>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 rounded-xl text-sm">

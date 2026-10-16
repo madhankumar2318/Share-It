@@ -31,16 +31,19 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (registerData) => {
+  const register = async (registerData, autoLogin = false) => {
     const response = await api.post('/auth/register', registerData);
-    const { token, refreshToken, ...userData } = response.data;
-    localStorage.setItem('token', token);
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
+    if (autoLogin) {
+      const { token, refreshToken, ...userData } = response.data;
+      localStorage.setItem('token', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
     }
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+    return response.data;
   };
 
   const logout = async () => {

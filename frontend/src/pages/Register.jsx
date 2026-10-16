@@ -54,8 +54,8 @@ const Register = () => {
       if (registerPayload.phone && !registerPayload.phone.startsWith('+91')) {
         registerPayload.phone = `+91 ${registerPayload.phone.trim()}`;
       }
-      await register(registerPayload);
-      navigate('/');
+      await register(registerPayload, false);
+      navigate(`/login?registered=true&email=${encodeURIComponent(formData.email.trim())}`);
     } catch (err) {
       let msg = 'Registration failed. Please try again.';
       if (err.response?.data?.details) {
