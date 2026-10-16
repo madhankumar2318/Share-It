@@ -60,6 +60,7 @@ const Settings = () => {
   // ⚠️ Danger Zone Deactivation Modal States
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
   const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [showDeactivatePassword, setShowDeactivatePassword] = useState(false);
   const [deactivateConfirmation, setDeactivateConfirmation] = useState('');
   const [deactivateReason, setDeactivateReason] = useState('');
   const [deactivatingAccount, setDeactivatingAccount] = useState(false);
@@ -1033,14 +1034,25 @@ const Settings = () => {
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Confirm Password <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={deactivatePassword}
-                  onChange={(e) => setDeactivatePassword(e.target.value)}
-                  placeholder="Enter your current password"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type={showDeactivatePassword ? 'text' : 'password'}
+                    required
+                    value={deactivatePassword}
+                    onChange={(e) => setDeactivatePassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeactivatePassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+                    title={showDeactivatePassword ? 'Hide password' : 'Show password'}
+                    aria-label={showDeactivatePassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showDeactivatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* Confirmation Phrase */}
