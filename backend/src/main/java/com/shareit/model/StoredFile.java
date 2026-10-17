@@ -3,6 +3,8 @@ package com.shareit.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -23,7 +25,7 @@ public class StoredFile {
 
     private String contentType;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(name = "data", columnDefinition = "BYTEA")
     private byte[] data;
 

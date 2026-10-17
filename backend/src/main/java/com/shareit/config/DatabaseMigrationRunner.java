@@ -138,6 +138,22 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 log.warn("Notice during refresh_tokens migration: {}", e.getMessage());
             }
 
+            // 5. Stored files table migration (for permanent image storage in PostgreSQL)
+            try {
+                jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS stored_files (" +
+                    "  id VARCHAR(150) PRIMARY KEY," +
+                    "  original_name VARCHAR(255)," +
+                    "  content_type VARCHAR(100)," +
+                    "  data BYTEA," +
+                    "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ");"
+                );
+                log.info("Stored files table schema verified successfully.");
+            } catch (Exception e) {
+                log.warn("Notice during stored_files migration: {}", e.getMessage());
+            }
+
             log.info("All database migration checks completed successfully.");
         } catch (Exception e) {
             log.warn("Migration warning: {}", e.getMessage());
