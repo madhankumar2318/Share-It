@@ -231,7 +231,32 @@ export function getItemCoordinates(item) {
 
   const loc = (item.location || '').toLowerCase();
 
-  // If item already has latitude and longitude, check if it's a stale Bangalore fallback
+  // 1. High-priority specific town/locality overrides
+  // If location specifies Musiri or PIN 621211, anchor directly to Musiri town coordinates
+  if (loc.includes('musiri') || loc.includes('621211')) {
+    const id = Number(item.id) || 1;
+    const angle = (id * 137.5 * Math.PI) / 180;
+    const dist = 0.002 + ((id % 6) * 0.0006); // 200m - 500m neighborhood jitter
+    return {
+      lat: Number((10.9387 + Math.sin(angle) * dist).toFixed(6)),
+      lng: Number((78.4418 + Math.cos(angle) * dist).toFixed(6)),
+    };
+  }
+
+  // 2. High-precision town / taluk overrides (e.g. Srirangam, Lalgudi, Thuraiyur, Manapparai)
+  for (const [key, coords] of Object.entries(KNOWN_COORDINATES)) {
+    if (key !== 'tiruchirappalli' && key !== 'trichy' && key !== 'chennai' && key !== 'bangalore' && loc.includes(key)) {
+      const id = Number(item.id) || 1;
+      const angle = (id * 137.5 * Math.PI) / 180;
+      const dist = 0.002 + ((id % 6) * 0.0006);
+      return {
+        lat: Number((coords.lat + Math.sin(angle) * dist).toFixed(6)),
+        lng: Number((coords.lng + Math.cos(angle) * dist).toFixed(6)),
+      };
+    }
+  }
+
+  // 3. If item already has latitude and longitude, check if it's a stale fallback
   if (item.latitude != null && item.longitude != null) {
     const lat = Number(item.latitude);
     const lng = Number(item.longitude);
@@ -256,11 +281,10 @@ export function getItemCoordinates(item) {
       if (!isStaleBangaloreFallback || !isNonBangaloreLocation) {
         return { lat, lng };
       }
-      // Stale Bangalore fallback detected: fall through to re-resolve from actual location name!
     }
   }
 
-  // Resolve true coordinates from location text with deterministic micro-jitter
+  // 4. Resolve true coordinates from location text with deterministic micro-jitter
   const resolved = resolveLocationCoordinates(item.location);
   if (resolved) {
     const id = Number(item.id) || 1;

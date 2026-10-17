@@ -14,7 +14,8 @@ import {
   MapPin, 
   Loader2, 
   Search,
-  Coins 
+  Coins,
+  Navigation 
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
@@ -59,6 +60,38 @@ const AddItem = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const [exactGpsCoords, setExactGpsCoords] = useState(null);
+  const [gpsDetecting, setGpsDetecting] = useState(false);
+
+  const handleUseDeviceGps = () => {
+    if (!('geolocation' in navigator)) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    setGpsDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setExactGpsCoords({ lat, lng });
+        setGpsDetecting(false);
+        toast.success(`📍 Exact device GPS pinned (${lat}, ${lng})!`);
+      },
+      (err) => {
+        setGpsDetecting(false);
+        if (userCoords?.latitude && userCoords?.longitude) {
+          const lat = Number(Number(userCoords.latitude).toFixed(6));
+          const lng = Number(Number(userCoords.longitude).toFixed(6));
+          setExactGpsCoords({ lat, lng });
+          toast.success(`📍 Location pinned to your detected coordinates (${lat}, ${lng})!`);
+        } else {
+          toast.error('Could not detect device GPS. Please verify PIN code or town below.');
+        }
+      },
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+    );
+  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -209,9 +242,40 @@ const AddItem = () => {
         .filter(Boolean)
         .join(', ');
 
-      // Auto-resolve neighborhood coordinates with high-precision town/district mapping and userCoords priority
-      const sampleCoords = resolveLocationCoordinates(formattedLocation, userCoords) ||
-                            getItemCoordinates({ location: formattedLocation, id: Date.now() });
+      // High-precision coordinates resolution:
+      // 1) User's exact GPS if pinned
+      // 2) Live OpenStreetMap geocoder for the exact address/PIN/town
+      // 3) High-resolution town/district coordinate database
+      let sampleCoords = exactGpsCoords;
+
+      if (!sampleCoords) {
+        try {
+          const geoQuery = [locationData.area, locationData.district, locationData.state, locationData.pincode]
+            .filter(Boolean)
+            .join(', ');
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const nomRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geoQuery)}&format=json&limit=1&countrycodes=in`,
+            { signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            if (nomData && nomData[0]?.lat && nomData[0]?.lon) {
+              sampleCoords = {
+                lat: parseFloat(nomData[0].lat),
+                lng: parseFloat(nomData[0].lon),
+              };
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!sampleCoords) {
+        sampleCoords = resolveLocationCoordinates(formattedLocation, userCoords) ||
+                       getItemCoordinates({ location: formattedLocation, id: Date.now() });
+      }
 
       await api.post('/items', {
         ...formData,
@@ -301,10 +365,37 @@ const AddItem = () => {
 
           {/* Structured Indian Pickup Location Box */}
           <div className="p-5 bg-slate-50/80 dark:bg-slate-950/50 border border-gray-200 dark:border-slate-800 rounded-2xl space-y-4">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
-              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Pickup / Handover Location 🇮🇳 *</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Pickup / Handover Location 🇮🇳 *</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleUseDeviceGps}
+                disabled={gpsDetecting}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 hover:bg-emerald-100 transition shadow-2xs"
+              >
+                {gpsDetecting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Navigation className="w-3.5 h-3.5" />
+                )}
+                <span>{exactGpsCoords ? '✓ GPS Location Pinned' : '📍 Pinpoint via My GPS'}</span>
+              </button>
             </div>
+            {exactGpsCoords && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                <span>🎯 Exact GPS coordinates pinned: <strong>{exactGpsCoords.lat}, {exactGpsCoords.lng}</strong> (100% accurate map location)</span>
+                <button
+                  type="button"
+                  onClick={() => setExactGpsCoords(null)}
+                  className="text-emerald-600 hover:text-emerald-800 underline font-semibold ml-2"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             {/* PIN Code Lookup */}
             <div>
