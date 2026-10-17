@@ -34,6 +34,7 @@ const LocationModal = () => {
     clearLocation,
     detectLocation,
     detectingLocation,
+    detectingStatus,
     locationError,
     setLocationError,
   } = useLocationFilter();
@@ -148,10 +149,10 @@ const LocationModal = () => {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-gray-900 dark:text-white">
-                    {detectingLocation ? 'Detecting your GPS location...' : 'Use My Current Location'}
+                    {detectingLocation ? (detectingStatus || 'Detecting your location...') : 'Use My Current Location'}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Auto-detect via browser GPS (Most accurate)
+                    Auto-detect via GPS or Network (Fast & accurate)
                   </div>
                 </div>
               </div>

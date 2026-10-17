@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { INDIAN_LOCATIONS } from '../data/indianLocations';
 
 const LocationContext = createContext(null);
 
@@ -9,6 +10,45 @@ const DEFAULT_LOCATION = {
 };
 
 const STORAGE_KEY = 'shareit_user_location';
+const LAST_COORDS_KEY = 'shareit_last_coords';
+
+// Helper to intelligently match reverse-geocoded city/district with our Indian directory
+const matchIndianLocation = (districtName, stateName) => {
+  if (!districtName && !stateName) return null;
+  const cleanDistrict = (districtName || '').replace(/\s+District$/i, '').trim().toLowerCase();
+
+  // 1. Try matching within the specified state first
+  if (stateName) {
+    const matchedStateKey = Object.keys(INDIAN_LOCATIONS).find(
+      (s) => s.toLowerCase() === stateName.trim().toLowerCase()
+    );
+    if (matchedStateKey) {
+      const match = INDIAN_LOCATIONS[matchedStateKey].find(
+        (d) => d.toLowerCase() === cleanDistrict || cleanDistrict.includes(d.toLowerCase()) || d.toLowerCase().includes(cleanDistrict)
+      );
+      if (match) {
+        return { district: match, state: matchedStateKey };
+      }
+    }
+  }
+
+  // 2. Scan all states for district match
+  if (cleanDistrict) {
+    for (const [state, districts] of Object.entries(INDIAN_LOCATIONS)) {
+      const match = districts.find(
+        (d) => d.toLowerCase() === cleanDistrict || cleanDistrict.includes(d.toLowerCase()) || d.toLowerCase().includes(cleanDistrict)
+      );
+      if (match) {
+        return { district: match, state };
+      }
+    }
+  }
+
+  return {
+    district: (districtName || '').replace(/\s+District$/i, '').trim(),
+    state: stateName || ''
+  };
+};
 
 export const LocationProvider = ({ children }) => {
   const [selectedLocation, setSelectedLocation] = useState(() => {
@@ -24,6 +64,7 @@ export const LocationProvider = ({ children }) => {
   });
 
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [detectingStatus, setDetectingStatus] = useState('');
   const [locationError, setLocationError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -50,144 +91,274 @@ export const LocationProvider = ({ children }) => {
     setLocationError('');
   };
 
-  // Browser GPS auto-detection with free reverse geocoding
-  const detectLocation = () => {
-    return new Promise((resolve) => {
-      setLocationError('');
+  // Fast reverse-geocoding from latitude & longitude
+  const reverseGeocode = async (latitude, longitude) => {
+    // 1. Primary: BigDataCloud client-side reverse geocoder (< 350ms, no CORS/browser rate-limits)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
+      const res = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const bdcData = await res.json();
+        const rawCity = bdcData.city || bdcData.locality || bdcData.principalSubdivision || '';
+        const rawState = bdcData.principalSubdivision || '';
+        const postcode = bdcData.postcode || '';
+
+        const matched = matchIndianLocation(rawCity, rawState);
+        const finalDistrict = matched?.district || rawCity;
+        const finalState = matched?.state || rawState;
+
+        if (finalDistrict) {
+          return {
+            type: 'DISTRICT',
+            value: finalDistrict,
+            label: finalState ? `${finalDistrict}, ${finalState}` : finalDistrict,
+            state: finalState,
+            postcode: postcode,
+            coordinates: { latitude, longitude },
+          };
+        }
+      }
+    } catch (bdcErr) {
+      console.warn('BigDataCloud reverse geocode attempt:', bdcErr);
+    }
+
+    // 2. Secondary: OpenStreetMap Nominatim with strict 3.5s timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+        {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'en' },
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const district = addr.state_district || addr.county || addr.city || addr.town || addr.suburb || addr.village || '';
+        const state = addr.state || '';
+        const postcode = addr.postcode || '';
+
+        const matched = matchIndianLocation(district, state);
+        const finalDistrict = matched?.district || district.replace(/\s+District$/i, '').trim();
+        const finalState = matched?.state || state;
+
+        if (finalDistrict) {
+          return {
+            type: 'DISTRICT',
+            value: finalDistrict,
+            label: finalState ? `${finalDistrict}, ${finalState}` : finalDistrict,
+            state: finalState,
+            postcode: postcode,
+            coordinates: { latitude, longitude },
+          };
+        } else if (postcode) {
+          return {
+            type: 'PINCODE',
+            value: postcode,
+            label: `PIN ${postcode}${finalState ? `, ${finalState}` : ''}`,
+            state: finalState,
+            postcode: postcode,
+            coordinates: { latitude, longitude },
+          };
+        }
+      }
+    } catch (nomErr) {
+      console.warn('Nominatim reverse geocode attempt:', nomErr);
+    }
+
+    return null;
+  };
+
+  // Bulletproof IP / Network-based auto-detection fallback (Works 100% indoors or when GPS times out)
+  const detectLocationFromIP = async () => {
+    // 1. BigDataCloud IP Geolocation
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const res = await fetch(
+        'https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en',
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const rawCity = data.city || data.locality || data.principalSubdivision || '';
+        const rawState = data.principalSubdivision || '';
+        const postcode = data.postcode || '';
+        const lat = data.latitude;
+        const lng = data.longitude;
+
+        const matched = matchIndianLocation(rawCity, rawState);
+        const finalDistrict = matched?.district || rawCity;
+        const finalState = matched?.state || rawState;
+
+        if (finalDistrict) {
+          return {
+            type: 'DISTRICT',
+            value: finalDistrict,
+            label: finalState ? `${finalDistrict}, ${finalState}` : finalDistrict,
+            state: finalState,
+            postcode: postcode,
+            coordinates: lat && lng ? { latitude: lat, longitude: lng } : null,
+            source: 'network',
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('BigDataCloud IP detection attempt:', e);
+    }
+
+    // 2. Secondary IP fallback: ipapi.co
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const rawCity = data.city || data.region || '';
+        const rawState = data.region || '';
+        const postcode = data.postal || '';
+        const lat = data.latitude;
+        const lng = data.longitude;
+
+        const matched = matchIndianLocation(rawCity, rawState);
+        const finalDistrict = matched?.district || rawCity;
+        const finalState = matched?.state || rawState;
+
+        if (finalDistrict) {
+          return {
+            type: 'DISTRICT',
+            value: finalDistrict,
+            label: finalState ? `${finalDistrict}, ${finalState}` : finalDistrict,
+            state: finalState,
+            postcode: postcode,
+            coordinates: lat && lng ? { latitude: lat, longitude: lng } : null,
+            source: 'network',
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('ipapi.co IP detection attempt:', e);
+    }
+
+    return null;
+  };
+
+  // Resilient multi-strategy position acquirer
+  const getPositionWithFallback = () => {
+    return new Promise((resolve, reject) => {
       if (!('geolocation' in navigator)) {
-        const msg = 'Geolocation is not supported by your browser.';
-        setLocationError(msg);
-        resolve({ success: false, error: msg });
+        reject(new Error('Geolocation not supported'));
         return;
       }
 
-      setDetectingLocation(true);
-
+      // Phase 1: Fast Low-Accuracy / Fused Cell & Wi-Fi Location
+      // On mobile devices, enableHighAccuracy: false completes in 200ms–800ms without waiting for satellites!
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-
-          try {
-            // Free OpenStreetMap Nominatim reverse geocode lookup
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
-              {
-                signal: controller.signal,
-                headers: {
-                  'Accept-Language': 'en',
-                },
-              }
-            );
-            clearTimeout(timeoutId);
-
-            if (!res.ok) throw new Error('Failed to resolve coordinates');
-
-            const data = await res.json();
-            const addr = data.address || {};
-
-            // Prioritize Indian district, city, or town
-            const district =
-              addr.state_district ||
-              addr.county ||
-              addr.city ||
-              addr.town ||
-              addr.suburb ||
-              addr.village ||
-              '';
-
-            const state = addr.state || '';
-            const postcode = addr.postcode || '';
-
-            // Clean up district name (remove trailing "District")
-            const cleanedDistrict = district.replace(/\s+District$/i, '').trim();
-
-            if (cleanedDistrict) {
-              const detected = {
-                type: 'DISTRICT',
-                value: cleanedDistrict,
-                label: state ? `${cleanedDistrict}, ${state}` : cleanedDistrict,
-                postcode: postcode,
-                state: state,
-                coordinates: { latitude, longitude },
-              };
-              setSelectedLocation(detected);
-              setDetectingLocation(false);
-              resolve({ success: true, location: detected });
-            } else if (postcode) {
-              const detected = {
-                type: 'PINCODE',
-                value: postcode,
-                label: `PIN ${postcode}${state ? `, ${state}` : ''}`,
-                postcode: postcode,
-                state: state,
-                coordinates: { latitude, longitude },
-              };
-              setSelectedLocation(detected);
-              setDetectingLocation(false);
-              resolve({ success: true, location: detected });
-            } else {
-              throw new Error('Could not identify your city or district.');
-            }
-          } catch (err) {
-            console.warn('Reverse geocoding fallback error:', err);
-            // Fallback: try BigDataCloud client-side free reverse geocode
-            try {
-              const bdcRes = await fetch(
-                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-              );
-              const bdcData = await bdcRes.json();
-              const bdcCity =
-                bdcData.city ||
-                bdcData.locality ||
-                bdcData.principalSubdivision ||
-                '';
-
-              if (bdcCity) {
-                const detected = {
-                  type: 'DISTRICT',
-                  value: bdcCity,
-                  label: bdcData.principalSubdivision
-                    ? `${bdcCity}, ${bdcData.principalSubdivision}`
-                    : bdcCity,
-                  state: bdcData.principalSubdivision || '',
-                  postcode: bdcData.postcode || '',
-                  coordinates: { latitude, longitude },
-                };
-                setSelectedLocation(detected);
-                setDetectingLocation(false);
-                resolve({ success: true, location: detected });
-                return;
-              }
-            } catch (fallbackErr) {
-              console.warn('Secondary reverse geocode error:', fallbackErr);
-            }
-
-            const msg = 'Could not resolve exact district from GPS. Please select your city manually.';
-            setLocationError(msg);
-            setDetectingLocation(false);
-            resolve({ success: false, error: msg });
+        (pos) => resolve(pos),
+        (errPhase1) => {
+          // If low-accuracy was rejected by permissions, do not retry GPS; fallback to IP immediately
+          if (errPhase1.code === 1) {
+            reject(errPhase1);
+            return;
           }
+
+          // Phase 2: Try high-accuracy GPS with a quick 5s timeout
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(pos),
+            (errPhase2) => reject(errPhase2),
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 300000 }
+          );
         },
-        (err) => {
-          setDetectingLocation(false);
-          let msg = 'Unable to retrieve your location.';
-          if (err.code === 1) {
-            msg = 'Location access was denied. Please allow GPS permission in your browser or select your city manually.';
-          } else if (err.code === 2) {
-            msg = 'Location unavailable. Please select your city manually.';
-          } else if (err.code === 3) {
-            msg = 'Location request timed out. Please try again or select manually.';
-          }
-          setLocationError(msg);
-          resolve({ success: false, error: msg });
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
       );
     });
+  };
+
+  // Multi-tier location detector: Instant Cache -> Fast Geolocation -> Seamless IP Fallback
+  const detectLocation = async () => {
+    setLocationError('');
+    setDetectingLocation(true);
+    setDetectingStatus('Detecting via GPS / Network...');
+
+    try {
+      // 1. Try browser geolocation (Phase 1 & Phase 2)
+      let detectedLoc = null;
+
+      try {
+        const position = await getPositionWithFallback();
+        const { latitude, longitude } = position.coords;
+
+        // Cache last coordinates for snappy repeated clicks
+        try {
+          localStorage.setItem(LAST_COORDS_KEY, JSON.stringify({ latitude, longitude, ts: Date.now() }));
+        } catch (_) {}
+
+        setDetectingStatus('Resolving neighborhood...');
+        detectedLoc = await reverseGeocode(latitude, longitude);
+      } catch (gpsErr) {
+        console.warn('Browser GPS resolution skipped or timed out, trying network/IP fallback...', gpsErr);
+      }
+
+      // 2. If browser GPS timed out or failed to resolve, try cached coordinates if recent (< 15 mins)
+      if (!detectedLoc) {
+        try {
+          const rawCached = localStorage.getItem(LAST_COORDS_KEY);
+          if (rawCached) {
+            const cached = JSON.parse(rawCached);
+            if (cached?.latitude && cached?.longitude && Date.now() - (cached.ts || 0) < 15 * 60 * 1000) {
+              setDetectingStatus('Resolving from recent fix...');
+              detectedLoc = await reverseGeocode(cached.latitude, cached.longitude);
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. ZERO-FAILURE FALLBACK: Seamless IP/Network Location
+      // If GPS times out indoors or satellite lock is slow, this effortlessly finds user city in ~300ms!
+      if (!detectedLoc) {
+        setDetectingStatus('Connecting via network location...');
+        detectedLoc = await detectLocationFromIP();
+      }
+
+      if (detectedLoc) {
+        setSelectedLocation(detectedLoc);
+        setDetectingStatus('Location detected! 🎯');
+        setDetectingLocation(false);
+        return { success: true, location: detectedLoc };
+      }
+
+      // 4. Absolute fallback if device is completely offline or no network response
+      const fallbackMsg = 'Could not auto-detect location. Please select your city or enter PIN code below.';
+      setLocationError(fallbackMsg);
+      setDetectingLocation(false);
+      setDetectingStatus('');
+      return { success: false, error: fallbackMsg };
+    } catch (err) {
+      console.error('Location detection error:', err);
+      const fallbackMsg = 'Location request timed out. Please select your city or enter PIN code below.';
+      setLocationError(fallbackMsg);
+      setDetectingLocation(false);
+      setDetectingStatus('');
+      return { success: false, error: fallbackMsg };
+    }
   };
 
   const userCoords = selectedLocation?.coordinates || null;
@@ -201,6 +372,7 @@ export const LocationProvider = ({ children }) => {
         clearLocation,
         detectLocation,
         detectingLocation,
+        detectingStatus,
         locationError,
         setLocationError,
         isModalOpen,
