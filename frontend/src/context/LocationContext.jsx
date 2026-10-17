@@ -309,7 +309,7 @@ export const LocationProvider = ({ children }) => {
         // Cache last coordinates for snappy repeated clicks
         try {
           localStorage.setItem(LAST_COORDS_KEY, JSON.stringify({ latitude, longitude, ts: Date.now() }));
-        } catch (_) {}
+        } catch {}
 
         setDetectingStatus('Resolving neighborhood...');
         detectedLoc = await reverseGeocode(latitude, longitude);
@@ -328,7 +328,7 @@ export const LocationProvider = ({ children }) => {
               detectedLoc = await reverseGeocode(cached.latitude, cached.longitude);
             }
           }
-        } catch (_) {}
+        } catch {}
       }
 
       // 3. ZERO-FAILURE FALLBACK: Seamless IP/Network Location

@@ -78,7 +78,7 @@ const AddItem = () => {
         setGpsDetecting(false);
         toast.success(`📍 Exact device GPS pinned (${lat}, ${lng})!`);
       },
-      (err) => {
+      () => {
         setGpsDetecting(false);
         if (userCoords?.latitude && userCoords?.longitude) {
           const lat = Number(Number(userCoords.latitude).toFixed(6));
@@ -269,7 +269,7 @@ const AddItem = () => {
               };
             }
           }
-        } catch (_) {}
+        } catch {}
       }
 
       if (!sampleCoords) {

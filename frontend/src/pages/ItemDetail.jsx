@@ -9,7 +9,7 @@ import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
-import { calculateDistanceKm, formatDistance, getItemCoordinates, calculateSmartDistance } from '../utils/geo';
+import { calculateSmartDistance } from '../utils/geo';
 import { ItemDetailSkeleton } from '../components/SkeletonCard';
 
 const ItemDetail = () => {

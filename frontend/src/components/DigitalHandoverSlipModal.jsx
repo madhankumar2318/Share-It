@@ -4,7 +4,6 @@ import {
   Download,
   ShieldCheck,
   CheckCircle2,
-  Calendar,
   User,
   Phone,
   Mail,
@@ -15,7 +14,6 @@ import {
   Loader2,
   X,
   MapPin,
-  QrCode,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -31,7 +29,6 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
 
   const isReturned = request.status === 'RETURNED';
   const isBorrowed = request.status === 'BORROWED' || !!request.handoverAt;
-  const isApproved = request.status === 'APPROVED';
   const txnId = `SI-TXN-${String(request.id).padStart(6, '0')}`;
 
   const formatDateTime = (dateStr) => {

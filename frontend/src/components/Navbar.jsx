@@ -71,7 +71,6 @@ const Navbar = () => {
   const isWishlist = location.pathname === '/wishlist';
   const isAddItem = location.pathname === '/add-item';
   const isDashboard = location.pathname === '/dashboard';
-  const isSettings = location.pathname === '/settings';
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   // 🌟 Unified 4-Option Profile Dropdown Menu (Matches Image 1)

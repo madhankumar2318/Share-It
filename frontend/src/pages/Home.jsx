@@ -20,7 +20,7 @@ import {
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { calculateDistanceKm, formatDistance, getItemCoordinates, calculateSmartDistance } from '../utils/geo';
+import { calculateSmartDistance } from '../utils/geo';
 import { ItemCardSkeleton } from '../components/SkeletonCard';
 import VoiceSearchModal from '../components/VoiceSearchModal';
 
@@ -221,7 +221,7 @@ const Home = () => {
     }
 
     return result;
-  }, [items, availableTodayOnly, distanceRadius, userCoords, sortBy]);
+  }, [items, availableTodayOnly, distanceRadius, userCoords, sortBy, selectedLocation?.label]);
 
   const handleRadiusClick = async (radiusVal) => {
     setDistanceRadius(radiusVal);
