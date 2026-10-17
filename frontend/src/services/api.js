@@ -38,23 +38,27 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Check if error is 401 and not an auth attempt (login/register/refresh)
+    // Check if error is 401 or 403 and not an auth attempt (login/register/refresh)
     if (
       error.response &&
-      error.response.status === 401 &&
+      (error.response.status === 401 || error.response.status === 403) &&
       originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url.includes('/auth/login') &&
-      !originalRequest.url.includes('/auth/register') &&
-      !originalRequest.url.includes('/auth/refresh')
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register') &&
+      !originalRequest.url?.includes('/auth/refresh')
     ) {
       originalRequest._retry = true;
 
       try {
         const fallbackRefreshToken = localStorage.getItem('refreshToken');
+        if (!fallbackRefreshToken) {
+          throw new Error('No refresh token available');
+        }
+
         const refreshResponse = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
-          fallbackRefreshToken ? { refreshToken: fallbackRefreshToken } : {},
+          { refreshToken: fallbackRefreshToken },
           { withCredentials: true }
         );
 
@@ -64,6 +68,7 @@ api.interceptors.response.use(
           if (refreshResponse.data.refreshToken) {
             localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
           }
+          originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
         }
@@ -72,7 +77,7 @@ api.interceptors.response.use(
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);

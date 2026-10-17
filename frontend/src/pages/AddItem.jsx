@@ -223,7 +223,11 @@ const AddItem = () => {
       toast.success('🎉 Your item has been listed to the community catalog!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || err.response?.data?.message || 'Failed to list item.');
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Your session has expired. Please log in again to post your item.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to list item.');
+      }
     } finally {
       setLoading(false);
     }

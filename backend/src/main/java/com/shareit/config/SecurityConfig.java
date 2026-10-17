@@ -3,6 +3,7 @@ package com.shareit.config;
 import com.shareit.security.CustomUserDetailsService;
 import com.shareit.security.IpRateLimitingFilter;
 import com.shareit.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -72,8 +73,8 @@ public class SecurityConfig {
                         // Public endpoints
                         auth.requestMatchers("/", "/api/health").permitAll()
                             .requestMatchers("/api/auth/**").permitAll()
-                            .requestMatchers("/api/items", "/api/items/{id:[0-9]+}", "/api/items/search").permitAll()
-                            .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/items", "/api/items/{id:[0-9]+}", "/api/items/search").permitAll()
+                            .requestMatchers("/api/files/**").permitAll()
                             .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
                             .requestMatchers("/api/reviews/item/**").permitAll()
                             .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll();
@@ -90,6 +91,20 @@ public class SecurityConfig {
                             // Protected endpoints
                             .anyRequest().authenticated();
                 })
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required or session expired. Please log in again.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"You do not have permission to access this resource.\"}");
+                        })
+                )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(ipRateLimitingFilter, SecurityContextHolderFilter.class)
@@ -127,7 +142,7 @@ public class SecurityConfig {
 
         config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
