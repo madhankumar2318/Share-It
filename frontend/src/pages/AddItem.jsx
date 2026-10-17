@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
-import { getItemCoordinates } from '../utils/geo';
+import { getItemCoordinates, resolveLocationCoordinates } from '../utils/geo';
+import { useLocationFilter } from '../context/LocationContext';
 import { 
   PlusCircle, 
   AlertCircle, 
@@ -31,6 +32,7 @@ const CATEGORIES = [
 const AddItem = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { userCoords } = useLocationFilter();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -207,8 +209,9 @@ const AddItem = () => {
         .filter(Boolean)
         .join(', ');
 
-      // Auto-resolve neighborhood coordinates for interactive map
-      const sampleCoords = getItemCoordinates({ location: formattedLocation, id: Date.now() });
+      // Auto-resolve neighborhood coordinates with high-precision town/district mapping and userCoords priority
+      const sampleCoords = resolveLocationCoordinates(formattedLocation, userCoords) ||
+                            getItemCoordinates({ location: formattedLocation, id: Date.now() });
 
       await api.post('/items', {
         ...formData,

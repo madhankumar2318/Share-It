@@ -9,14 +9,14 @@ import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
-import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
+import { calculateDistanceKm, formatDistance, getItemCoordinates, calculateSmartDistance } from '../utils/geo';
 import { ItemDetailSkeleton } from '../components/SkeletonCard';
 
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { userCoords } = useLocationFilter();
+  const { userCoords, selectedLocation } = useLocationFilter();
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -304,20 +304,12 @@ const ItemDetail = () => {
                 {item.location || 'Community Hub'}
               </span>
               {userCoords?.latitude && (() => {
-                const coords = getItemCoordinates(item);
-                if (!coords) return null;
-                const d = calculateDistanceKm(
-                  userCoords.latitude,
-                  userCoords.longitude,
-                  coords.lat,
-                  coords.lng
-                );
-                const distText = formatDistance(d);
-                if (!distText) return null;
+                const smart = calculateSmartDistance(userCoords, item, selectedLocation?.label);
+                if (!smart?.formatted) return null;
                 return (
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
                     <Navigation className="w-3 h-3 rotate-45" />
-                    {distText} from you
+                    {smart.formatted} from you
                   </span>
                 );
               })()}

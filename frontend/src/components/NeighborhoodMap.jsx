@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { getItemCoordinates, calculateDistanceKm, formatDistance } from '../utils/geo';
+import { getItemCoordinates, calculateDistanceKm, formatDistance, calculateSmartDistance } from '../utils/geo';
 import { Navigation, MapPin } from 'lucide-react';
 
 const NeighborhoodMap = ({
@@ -120,8 +120,8 @@ const NeighborhoodMap = ({
 
       let distanceText = '';
       if (userCoords?.latitude && userCoords?.longitude) {
-        const d = calculateDistanceKm(userCoords.latitude, userCoords.longitude, lat, lng);
-        distanceText = formatDistance(d) || '';
+        const smart = calculateSmartDistance(userCoords, item);
+        distanceText = smart?.formatted || '';
       }
 
       const isAvailable = item.status === 'AVAILABLE';

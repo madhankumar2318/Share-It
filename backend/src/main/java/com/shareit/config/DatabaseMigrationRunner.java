@@ -57,6 +57,9 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE items ADD COLUMN IF NOT EXISTS security_deposit DOUBLE PRECISION DEFAULT 0.0;");
                 jdbcTemplate.execute("UPDATE items SET daily_rate = 0.0 WHERE daily_rate IS NULL;");
                 jdbcTemplate.execute("UPDATE items SET security_deposit = 0.0 WHERE security_deposit IS NULL;");
+                // Repair coordinates for any items where location is in Musiri or PIN 621211 but coordinates were set to default Bangalore or null
+                jdbcTemplate.execute("UPDATE items SET latitude = 10.9387, longitude = 78.4418 WHERE (LOWER(location) LIKE '%musiri%' OR location LIKE '%621211%') AND (latitude > 12.0 OR latitude IS NULL);");
+                jdbcTemplate.execute("UPDATE items SET latitude = 10.7905, longitude = 78.7047 WHERE (LOWER(location) LIKE '%tiruchirappalli%' OR LOWER(location) LIKE '%trichy%') AND LOWER(location) NOT LIKE '%musiri%' AND (latitude > 12.0 OR latitude IS NULL);");
                 log.info("Items table schema verified successfully (daily_rate, security_deposit, coordinates).");
             } catch (Exception e) {
                 log.warn("Notice during items migration: {}", e.getMessage());

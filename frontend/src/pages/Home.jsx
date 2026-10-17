@@ -23,7 +23,7 @@ import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { calculateDistanceKm, formatDistance, getItemCoordinates } from '../utils/geo';
+import { calculateDistanceKm, formatDistance, getItemCoordinates, calculateSmartDistance } from '../utils/geo';
 import { ItemCardSkeleton } from '../components/SkeletonCard';
 import VoiceSearchModal from '../components/VoiceSearchModal';
 
@@ -202,14 +202,8 @@ const Home = () => {
     // 2. Distance radius filter from user coords
     if (distanceRadius && userCoords?.latitude && userCoords?.longitude) {
       result = result.filter((item) => {
-        const coords = getItemCoordinates(item);
-        if (!coords) return false;
-        const dist = calculateDistanceKm(
-          userCoords.latitude,
-          userCoords.longitude,
-          coords.lat,
-          coords.lng
-        );
+        const smart = calculateSmartDistance(userCoords, item, selectedLocation?.label);
+        const dist = smart?.distanceKm;
         return dist != null && dist <= distanceRadius;
       });
     }
@@ -217,10 +211,10 @@ const Home = () => {
     // 3. Sorting Options
     if (sortBy === 'nearest' && userCoords?.latitude && userCoords?.longitude) {
       result.sort((a, b) => {
-        const cA = getItemCoordinates(a);
-        const cB = getItemCoordinates(b);
-        const dA = cA ? calculateDistanceKm(userCoords.latitude, userCoords.longitude, cA.lat, cA.lng) : 999999;
-        const dB = cB ? calculateDistanceKm(userCoords.latitude, userCoords.longitude, cB.lat, cB.lng) : 999999;
+        const smartA = calculateSmartDistance(userCoords, a, selectedLocation?.label);
+        const smartB = calculateSmartDistance(userCoords, b, selectedLocation?.label);
+        const dA = smartA ? smartA.distanceKm : 999999;
+        const dB = smartB ? smartB.distanceKm : 999999;
         return (dA || 999999) - (dB || 999999);
       });
     } else if (sortBy === 'rating') {
@@ -745,18 +739,9 @@ const Home = () => {
               // Calculate real-time distance from user if userCoords available
               let distanceBadge = null;
               if (userCoords?.latitude && userCoords?.longitude) {
-                const coords = getItemCoordinates(item);
-                if (coords) {
-                  const d = calculateDistanceKm(
-                    userCoords.latitude,
-                    userCoords.longitude,
-                    coords.lat,
-                    coords.lng
-                  );
-                  const formatted = formatDistance(d);
-                  if (formatted) {
-                    distanceBadge = formatted;
-                  }
+                const smart = calculateSmartDistance(userCoords, item, selectedLocation?.label);
+                if (smart?.formatted) {
+                  distanceBadge = smart.formatted;
                 }
               }
 
