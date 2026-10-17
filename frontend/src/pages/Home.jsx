@@ -10,16 +10,13 @@ import {
   Sparkles, 
   Navigation, 
   X, 
-  LayoutGrid,
-  Map as MapIcon,
-  Compass,
-  LocateFixed,
-  Star,
-  CheckCircle2,
-  Clock,
-  Mic,
+  Compass, 
+  LocateFixed, 
+  Star, 
+  CheckCircle2, 
+  Clock, 
+  Mic, 
 } from 'lucide-react';
-import NeighborhoodMap from '../components/NeighborhoodMap';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -80,8 +77,7 @@ const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   
-  // Interactive Map & Distance Slider States
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map'
+  // Distance Slider / Radius Filter State
   const [distanceRadius, setDistanceRadius] = useState(null); // null = all, or number in km
 
   // New Features: "Available Today" Filter, Instant Autocomplete & Sort
@@ -555,7 +551,7 @@ const Home = () => {
           )}
         </div>
 
-        {/* Right Controls: Sort Dropdown & View Mode Toggle */}
+        {/* Right Controls: Sort Dropdown */}
         <div className="flex items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-slate-800">
           {/* 🔃 Sort Options */}
           <div className="flex items-center gap-1.5 text-xs">
@@ -570,83 +566,16 @@ const Home = () => {
               <option value="rating">⭐ Highest Rated</option>
             </select>
           </div>
-
-          {/* View Mode Toggle: Grid View vs Map View */}
-          <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              {t('grid')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('map')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                viewMode === 'map'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <MapIcon className="w-3.5 h-3.5" />
-              {t('map')}
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Content Area: Map View OR Grid View */}
-      {viewMode === 'map' ? (
-        <div className="space-y-4">
-          <NeighborhoodMap
-            items={displayItems}
-            userCoords={userCoords}
-            distanceRadius={distanceRadius}
-            onSelectRadius={handleRadiusClick}
-          />
-
-          {displayItems.length === 0 && (
-            <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-center space-y-2">
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                No items match your active filters on the map.
-              </p>
-              <div className="flex items-center justify-center gap-3 pt-1">
-                {availableTodayOnly && (
-                  <button
-                    type="button"
-                    onClick={() => setAvailableTodayOnly(false)}
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-                  >
-                    Turn off "Available Today" &rarr;
-                  </button>
-                )}
-                {distanceRadius && (
-                  <button
-                    type="button"
-                    onClick={() => setDistanceRadius(null)}
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-                  >
-                    Reset distance radius &rarr;
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+      {/* Items Grid & Empty States */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <ItemCardSkeleton key={i} />
+          ))}
         </div>
-      ) : (
-        /* Items Grid */
-        loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <ItemCardSkeleton key={i} />
-            ))}
-          </div>
         ) : displayItems.length === 0 ? (
           availableTodayOnly ? (
             <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6 space-y-3">
@@ -824,7 +753,7 @@ const Home = () => {
             })}
           </div>
         )
-      )}
+      }
 
       {/* 🎙️ Multilingual Voice Search Modal */}
       <VoiceSearchModal
