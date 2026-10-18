@@ -53,8 +53,19 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new BadCredentialsException("Invalid refresh token. Please sign in again."));
 
         if (existingToken.isRevoked()) {
-            // Security: If a revoked token is used again, an attacker might be trying to reuse an intercepted token.
-            // Invalidate all tokens for this user for security protection.
+            // Check for concurrent rotation grace window (60 seconds)
+            // Allows concurrent requests from the same user session during page load or network reconnect
+            if (existingToken.getRevokedAt() != null &&
+                    existingToken.getRevokedAt().isAfter(Instant.now().minusSeconds(60))) {
+                java.util.Optional<RefreshToken> activeToken = refreshTokenRepository
+                        .findTopByUserAndRevokedFalseOrderByCreatedAtDesc(existingToken.getUser());
+                if (activeToken.isPresent() && activeToken.get().getExpiryDate().isAfter(Instant.now())) {
+                    log.info("Concurrent refresh token request within 60s grace window handled smoothly for user: {}", existingToken.getUser().getEmail());
+                    return activeToken.get();
+                }
+            }
+
+            // Security: If a revoked token is used AFTER the grace period, an attacker might be trying to reuse an intercepted token.
             log.warn("🚨 Suspicious token reuse attempt detected for user: {}", existingToken.getUser().getEmail());
             refreshTokenRepository.deleteByUser(existingToken.getUser());
             throw new BadCredentialsException("Refresh token was previously revoked. All sessions invalidated for safety.");
@@ -65,8 +76,9 @@ public class RefreshTokenService {
             throw new BadCredentialsException("Refresh token has expired. Please sign in again.");
         }
 
-        // Revoke the old refresh token
+        // Revoke the old refresh token with timestamp
         existingToken.setRevoked(true);
+        existingToken.setRevokedAt(Instant.now());
         refreshTokenRepository.save(existingToken);
 
         // Issue a brand-new rotated refresh token
@@ -79,6 +91,7 @@ public class RefreshTokenService {
             refreshTokenRepository.findByToken(tokenString.trim())
                     .ifPresent(token -> {
                         token.setRevoked(true);
+                        token.setRevokedAt(Instant.now());
                         refreshTokenRepository.save(token);
                     });
         }

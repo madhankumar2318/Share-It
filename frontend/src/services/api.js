@@ -32,30 +32,66 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle unauthorized status with seamless token refresh
+// Concurrency mutex and queue for token refreshing to prevent race conditions
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Response interceptor to handle unauthorized status with seamless queued token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Check if error is 401 or 403 and not an auth attempt (login/register/refresh)
+    // Only intercept 401 Unauthorized for protected endpoints
     if (
       error.response &&
-      (error.response.status === 401 || error.response.status === 403) &&
+      error.response.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/login') &&
       !originalRequest.url?.includes('/auth/register') &&
       !originalRequest.url?.includes('/auth/refresh')
     ) {
+      const fallbackRefreshToken = localStorage.getItem('refreshToken');
+      if (!fallbackRefreshToken) {
+        // Genuine unauthenticated state: clear credentials and redirect
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+
+      // If another request is currently refreshing the token, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        const fallbackRefreshToken = localStorage.getItem('refreshToken');
-        if (!fallbackRefreshToken) {
-          throw new Error('No refresh token available');
-        }
-
         const refreshResponse = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
           { refreshToken: fallbackRefreshToken },
@@ -68,19 +104,38 @@ api.interceptors.response.use(
           if (refreshResponse.data.refreshToken) {
             localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
           }
+
+          processQueue(null, newAccessToken);
+
           originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
+        } else {
+          throw new Error('No new access token provided in refresh response');
         }
       } catch (refreshError) {
-        // Refresh token is expired or revoked: clear credentials and redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-          window.location.href = '/login';
+        processQueue(refreshError, null);
+
+        // CRITICAL DEPLOYMENT GUARD:
+        // Only log out if the backend explicitly rejected the refresh token as invalid/expired (HTTP 401/403).
+        // If the backend is restarting/deploying (HTTP 502/503/504) or temporarily unreachable (network error),
+        // DO NOT log the user out! Keep credentials safe in localStorage so they remain logged in once the server completes deployment.
+        const isDefinitiveAuthRejection =
+          refreshError.response &&
+          (refreshError.response.status === 401 || refreshError.response.status === 403);
+
+        if (isDefinitiveAuthRejection) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+            window.location.href = '/login';
+          }
         }
+
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
