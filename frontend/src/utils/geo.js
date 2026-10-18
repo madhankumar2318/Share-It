@@ -252,11 +252,18 @@ export function resolveLocationCoordinates(locationStr, userCoords = null) {
 
 /**
  * Retrieves valid { lat, lng } for an item.
- * 100% Top Priority: Real Device GPS Coordinates saved on the item.
- * Fallback: High-resolution town/taluk/PIN database only if coordinates are missing.
+ * 100% Verified Coordinates: Protects against ISP router gateway errors (e.g. Coimbatore 10.96 / 76.94 assigned to Musiri items).
  */
 export function getItemCoordinates(item) {
   if (!item) return null;
+
+  const loc = (item.location || '').toLowerCase();
+  const isMusiri = loc.includes('musiri') || loc.includes('621211');
+
+  // If item is in Musiri, anchor with 100% precision to Musiri coordinates
+  if (isMusiri) {
+    return { lat: 10.9387, lng: 78.4418 };
+  }
 
   // PRIORITY 1: Real Device GPS Coordinates saved when lender posted the item
   if (item.latitude != null && item.longitude != null) {
@@ -264,22 +271,22 @@ export function getItemCoordinates(item) {
     const lng = Number(item.longitude);
 
     if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      // Check for ISP router gateway (Coimbatore 10.96 / 76.94) on non-Coimbatore items
+      const isCoimbatoreIsp = Math.abs(lat - 10.9687) < 0.15 && Math.abs(lng - 76.9463) < 0.15;
+      const isTrichyRegion = loc.includes('trichy') || loc.includes('tiruchirappalli') || loc.includes('621');
+
+      if (isCoimbatoreIsp && isTrichyRegion) {
+        return { lat: 10.7905, lng: 78.7047 };
+      }
+
       // Check for legacy default Bangalore fallback (12.9716, 77.5946) on non-Bangalore items
       const isStaleBangaloreFallback = Math.abs(lat - 12.9716) < 0.05 && Math.abs(lng - 77.5946) < 0.05;
-      const loc = (item.location || '').toLowerCase();
       const isNonBangaloreLocation =
-        loc.includes('musiri') ||
-        loc.includes('trichy') ||
-        loc.includes('tiruchirappalli') ||
+        isTrichyRegion ||
         loc.includes('tamil') ||
         loc.includes('chennai') ||
-        loc.includes('coimbatore') ||
         loc.includes('madurai') ||
-        loc.includes('salem') ||
-        loc.includes('621') ||
-        loc.includes('620') ||
-        loc.includes('625') ||
-        loc.includes('641');
+        loc.includes('salem');
 
       if (!isStaleBangaloreFallback || !isNonBangaloreLocation) {
         return { lat, lng };
@@ -288,12 +295,6 @@ export function getItemCoordinates(item) {
   }
 
   // PRIORITY 2: Town / Taluk Centroid Fallback (only when item has no valid GPS)
-  const loc = (item.location || '').toLowerCase();
-
-  if (loc.includes('musiri') || loc.includes('621211')) {
-    return { lat: 10.9387, lng: 78.4418 };
-  }
-
   for (const [key, coords] of Object.entries(KNOWN_COORDINATES)) {
     if (key !== 'tiruchirappalli' && key !== 'trichy' && key !== 'chennai' && key !== 'bangalore' && loc.includes(key)) {
       return { ...coords };
@@ -332,20 +333,20 @@ export function calculateSmartDistance(userCoords, item, userLocationLabel = '')
   const itemLoc = (item.location || '').toLowerCase();
   const userLoc = (userLocationLabel || '').toLowerCase();
 
-  // Check if both user and item share the exact same town/locality
+  // Check if both user and item share the exact same town/locality or PIN code
   const isSameTown =
     (itemLoc.includes('musiri') && userLoc.includes('musiri')) ||
+    (itemLoc.includes('621211') && userLoc.includes('621211')) ||
     (userLoc && itemLoc && (
       (userLoc.includes('trichy') && itemLoc.includes('trichy')) ||
       (userLoc.includes('tiruchirappalli') && itemLoc.includes('tiruchirappalli')) ||
-      (userLoc.includes('srirangam') && itemLoc.includes('srirangam')) ||
-      (userLoc.includes('621211') && itemLoc.includes('621211'))
+      (userLoc.includes('srirangam') && itemLoc.includes('srirangam'))
     ));
 
-  // If both devices are in the same house/street, or in the same town with micro-distance:
+  // If both user and item are in the same town or neighborhood:
   let effectiveDist = rawDist;
-  if (isSameTown && rawDist <= 0.45) {
-    effectiveDist = 0.2; // Snap to Tier 1 (< 300 m)
+  if (isSameTown) {
+    effectiveDist = 0.2; // Snap to Tier 1: 🟢 In Your Neighborhood (< 300 m)
   }
 
   const formatted = formatDistance(effectiveDist, shortLocality);
