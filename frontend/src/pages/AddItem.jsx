@@ -64,12 +64,125 @@ const AddItem = () => {
   const [exactGpsCoords, setExactGpsCoords] = useState(null);
   const [gpsDetecting, setGpsDetecting] = useState(false);
 
-  // Auto-capture high-accuracy GPS immediately when opening Add Item page
+  // Auto-reverse geocode coordinates to fill PIN, Town, District & State
+  const autoFillLocationFromGps = async (lat, lng) => {
+    try {
+      let detectedTown = '';
+      let detectedDistrict = '';
+      let detectedState = '';
+      let detectedPincode = '';
+
+      // 1. Primary: BigDataCloud client-side reverse geocoder (< 350ms, zero rate-limit)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const bdc = await res.json();
+          detectedTown = bdc.locality || bdc.city || '';
+          detectedState = bdc.principalSubdivision || '';
+          detectedPincode = (bdc.postcode || '').replace(/\D/g, '').slice(0, 6);
+          if (bdc.localityInfo?.administrative) {
+            const admin = bdc.localityInfo.administrative;
+            const distObj = admin.find(
+              (a) => a.adminLevel === 6 || a.adminLevel === 5 || a.description?.toLowerCase().includes('district')
+            );
+            if (distObj) {
+              detectedDistrict = distObj.name.replace(/\s+District$/i, '');
+            }
+          }
+          if (!detectedDistrict) {
+            detectedDistrict = bdc.city || detectedTown;
+          }
+        }
+      } catch (err) {
+        console.warn('BigDataCloud reverse geocode attempt:', err);
+      }
+
+      // 2. Secondary: OpenStreetMap Nominatim
+      if (!detectedState || !detectedDistrict) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const nomRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`,
+            { signal: controller.signal, headers: { 'Accept-Language': 'en' } }
+          );
+          clearTimeout(timeoutId);
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            const addr = nomData.address || {};
+            detectedTown = detectedTown || addr.suburb || addr.town || addr.village || addr.city || '';
+            detectedDistrict = detectedDistrict || addr.state_district || addr.county || addr.city || '';
+            detectedState = detectedState || addr.state || '';
+            detectedPincode = detectedPincode || (addr.postcode || '').replace(/\D/g, '').slice(0, 6);
+          }
+        } catch (err) {
+          console.warn('Nominatim reverse geocode attempt:', err);
+        }
+      }
+
+      // 3. Match with Indian Locations directory
+      let matchedState = '';
+      if (detectedState) {
+        matchedState =
+          Object.keys(INDIAN_LOCATIONS).find(
+            (s) => s.toLowerCase() === detectedState.trim().toLowerCase()
+          ) || detectedState;
+      }
+
+      let matchedDistrict = '';
+      if (matchedState && INDIAN_LOCATIONS[matchedState]) {
+        const cleanDist = detectedDistrict.replace(/\s+District$/i, '').trim().toLowerCase();
+        matchedDistrict =
+          INDIAN_LOCATIONS[matchedState].find(
+            (d) => d.toLowerCase() === cleanDist || cleanDist.includes(d.toLowerCase()) || d.toLowerCase().includes(cleanDist)
+          ) || detectedDistrict.replace(/\s+District$/i, '').trim();
+      } else if (detectedDistrict) {
+        matchedDistrict = detectedDistrict.replace(/\s+District$/i, '').trim();
+      }
+
+      // Set auto-filled fields immediately
+      setLocationData((prev) => ({
+        ...prev,
+        pincode: detectedPincode || prev.pincode,
+        state: matchedState || prev.state,
+        district: matchedDistrict || prev.district,
+        area: detectedTown || prev.area,
+      }));
+
+      // Fetch Indian postal sub-offices if PIN code was resolved
+      if (detectedPincode && detectedPincode.length === 6) {
+        try {
+          const pinRes = await fetch(`https://api.postalpincode.in/pincode/${detectedPincode}`);
+          const pinData = await pinRes.json();
+          if (pinData && pinData[0]?.Status === 'Success' && pinData[0]?.PostOffice?.length > 0) {
+            const poNames = pinData[0].PostOffice.map((po) => po.Name);
+            setAvailablePostOffices(poNames);
+            const matchingPO = poNames.find((name) => detectedTown && name.toLowerCase().includes(detectedTown.toLowerCase()));
+            setLocationData((prev) => ({ ...prev, area: matchingPO || detectedTown || poNames[0] }));
+          }
+        } catch {}
+        setPincodeMessage(`✅ Auto-filled from your GPS: ${detectedTown || matchedDistrict}, ${matchedState} (${detectedPincode})`);
+      } else if (matchedDistrict || matchedState) {
+        setPincodeMessage(`✅ Location auto-detected from your GPS: ${detectedTown || matchedDistrict}, ${matchedState}`);
+      }
+    } catch (e) {
+      console.warn('GPS location auto-fill failed:', e);
+    }
+  };
+
+  // Auto-capture high-accuracy GPS immediately when opening Add Item page and auto-fill address
   useEffect(() => {
     if (userCoords?.latitude && userCoords?.longitude) {
       const lat = Number(Number(userCoords.latitude).toFixed(6));
       const lng = Number(Number(userCoords.longitude).toFixed(6));
       setExactGpsCoords({ lat, lng });
+      autoFillLocationFromGps(lat, lng);
     }
 
     if ('geolocation' in navigator) {
@@ -78,6 +191,7 @@ const AddItem = () => {
           const lat = Number(pos.coords.latitude.toFixed(6));
           const lng = Number(pos.coords.longitude.toFixed(6));
           setExactGpsCoords({ lat, lng });
+          autoFillLocationFromGps(lat, lng);
         },
         () => {},
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
@@ -92,20 +206,22 @@ const AddItem = () => {
     }
     setGpsDetecting(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const lat = Number(pos.coords.latitude.toFixed(6));
         const lng = Number(pos.coords.longitude.toFixed(6));
         setExactGpsCoords({ lat, lng });
+        await autoFillLocationFromGps(lat, lng);
         setGpsDetecting(false);
-        toast.success(`🎯 High-accuracy GPS pinned (${lat}, ${lng})!`);
+        toast.success(`🎯 High-accuracy GPS pinned & location auto-filled (${lat}, ${lng})!`);
       },
-      () => {
+      async () => {
         setGpsDetecting(false);
         if (userCoords?.latitude && userCoords?.longitude) {
           const lat = Number(Number(userCoords.latitude).toFixed(6));
           const lng = Number(Number(userCoords.longitude).toFixed(6));
           setExactGpsCoords({ lat, lng });
-          toast.success(`📍 Location pinned to your detected coordinates (${lat}, ${lng})!`);
+          await autoFillLocationFromGps(lat, lng);
+          toast.success(`📍 Location pinned & auto-filled from detected coordinates (${lat}, ${lng})!`);
         } else {
           toast.error('Could not detect device GPS. Please verify PIN code or town below.');
         }
@@ -406,12 +522,29 @@ const AddItem = () => {
               </button>
             </div>
             {exactGpsCoords && (
-              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                <span>🎯 Exact GPS coordinates pinned: <strong>{exactGpsCoords.lat}, {exactGpsCoords.lng}</strong> (100% accurate map location)</span>
+              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-[11px] text-emerald-800 dark:text-emerald-300 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative flex-shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>
+                    🎯 <strong>GPS Location Pinned:</strong> {exactGpsCoords.lat}, {exactGpsCoords.lng}
+                    {locationData.district ? (
+                      <span className="ml-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
+                        • Auto-filled: {locationData.area ? `${locationData.area}, ` : ''}{locationData.district}
+                        {locationData.pincode ? ` (${locationData.pincode})` : ''}
+                      </span>
+                    ) : ''}
+                  </span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setExactGpsCoords(null)}
-                  className="text-emerald-600 hover:text-emerald-800 underline font-semibold ml-2"
+                  onClick={() => {
+                    setExactGpsCoords(null);
+                    setPincodeMessage('');
+                  }}
+                  className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-200 underline font-semibold ml-auto"
                 >
                   Clear
                 </button>
