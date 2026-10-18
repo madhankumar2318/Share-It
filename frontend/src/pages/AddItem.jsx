@@ -64,6 +64,27 @@ const AddItem = () => {
   const [exactGpsCoords, setExactGpsCoords] = useState(null);
   const [gpsDetecting, setGpsDetecting] = useState(false);
 
+  // Auto-capture high-accuracy GPS immediately when opening Add Item page
+  useEffect(() => {
+    if (userCoords?.latitude && userCoords?.longitude) {
+      const lat = Number(Number(userCoords.latitude).toFixed(6));
+      const lng = Number(Number(userCoords.longitude).toFixed(6));
+      setExactGpsCoords({ lat, lng });
+    }
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(6));
+          const lng = Number(pos.coords.longitude.toFixed(6));
+          setExactGpsCoords({ lat, lng });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
+  }, [userCoords]);
+
   const handleUseDeviceGps = () => {
     if (!('geolocation' in navigator)) {
       toast.error('Geolocation is not supported by your browser');
@@ -76,7 +97,7 @@ const AddItem = () => {
         const lng = Number(pos.coords.longitude.toFixed(6));
         setExactGpsCoords({ lat, lng });
         setGpsDetecting(false);
-        toast.success(`📍 Exact device GPS pinned (${lat}, ${lng})!`);
+        toast.success(`🎯 High-accuracy GPS pinned (${lat}, ${lng})!`);
       },
       () => {
         setGpsDetecting(false);
@@ -89,7 +110,7 @@ const AddItem = () => {
           toast.error('Could not detect device GPS. Please verify PIN code or town below.');
         }
       },
-      { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 

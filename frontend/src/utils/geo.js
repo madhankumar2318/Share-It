@@ -170,15 +170,43 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Formats distance into a human-friendly label (e.g. "450 m away" or "2.3 km away")
+ * Extracts a concise human-readable locality or town name from an address string.
+ * Example: "Musiri, Tiruchirappalli, Tamil Nadu (621211)" -> "Musiri"
  */
-export function formatDistance(distanceKm) {
-  if (distanceKm == null || isNaN(distanceKm)) return null;
-  if (distanceKm < 1) {
-    const meters = Math.round(distanceKm * 1000);
-    return `${meters < 50 ? 50 : meters} m away`;
+export function getShortLocality(locationStr) {
+  if (!locationStr) return '';
+  const clean = locationStr.replace(/\(\d{6}\)/g, '').trim();
+  const parts = clean.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length > 0) {
+    return parts[0];
   }
-  return `${distanceKm.toFixed(1)} km away`;
+  return clean;
+}
+
+/**
+ * Formats distance into Smart Proximity Tiers:
+ * Tier 1 (< 300m): 🟢 In Your Neighborhood (< 300 m)
+ * Tier 2 (< 1 km):  📍 Nearby (~500 m away)
+ * Tier 3 (>= 1 km): 📍 1.8 km away • Musiri
+ */
+export function formatDistance(distanceKm, localityName = '') {
+  if (distanceKm == null || isNaN(distanceKm)) return null;
+
+  // Tier 1: Very close / same street / building (< 300m)
+  if (distanceKm < 0.3) {
+    return '🟢 In Your Neighborhood (< 300 m)';
+  }
+
+  // Tier 2: Nearby (< 1 km)
+  if (distanceKm < 1) {
+    const rawMeters = Math.round(distanceKm * 1000);
+    const roundedMeters = Math.max(300, Math.round(rawMeters / 100) * 100);
+    return `📍 Nearby (~${roundedMeters} m away)`;
+  }
+
+  // Tier 3: General Distance (>= 1 km)
+  const localitySuffix = localityName ? ` • ${localityName}` : '';
+  return `📍 ${distanceKm.toFixed(1)} km away${localitySuffix}`;
 }
 
 /**
@@ -224,46 +252,21 @@ export function resolveLocationCoordinates(locationStr, userCoords = null) {
 
 /**
  * Retrieves valid { lat, lng } for an item.
- * Filters out stale Bangalore fallback artifacts (where an item in Musiri/Tamil Nadu had 12.9716, 77.5946 saved).
+ * 100% Top Priority: Real Device GPS Coordinates saved on the item.
+ * Fallback: High-resolution town/taluk/PIN database only if coordinates are missing.
  */
 export function getItemCoordinates(item) {
   if (!item) return null;
 
-  const loc = (item.location || '').toLowerCase();
-
-  // 1. High-priority specific town/locality overrides
-  // If location specifies Musiri or PIN 621211, anchor directly to Musiri town coordinates
-  if (loc.includes('musiri') || loc.includes('621211')) {
-    const id = Number(item.id) || 1;
-    const angle = (id * 137.5 * Math.PI) / 180;
-    const dist = 0.002 + ((id % 6) * 0.0006); // 200m - 500m neighborhood jitter
-    return {
-      lat: Number((10.9387 + Math.sin(angle) * dist).toFixed(6)),
-      lng: Number((78.4418 + Math.cos(angle) * dist).toFixed(6)),
-    };
-  }
-
-  // 2. High-precision town / taluk overrides (e.g. Srirangam, Lalgudi, Thuraiyur, Manapparai)
-  for (const [key, coords] of Object.entries(KNOWN_COORDINATES)) {
-    if (key !== 'tiruchirappalli' && key !== 'trichy' && key !== 'chennai' && key !== 'bangalore' && loc.includes(key)) {
-      const id = Number(item.id) || 1;
-      const angle = (id * 137.5 * Math.PI) / 180;
-      const dist = 0.002 + ((id % 6) * 0.0006);
-      return {
-        lat: Number((coords.lat + Math.sin(angle) * dist).toFixed(6)),
-        lng: Number((coords.lng + Math.cos(angle) * dist).toFixed(6)),
-      };
-    }
-  }
-
-  // 3. If item already has latitude and longitude, check if it's a stale fallback
+  // PRIORITY 1: Real Device GPS Coordinates saved when lender posted the item
   if (item.latitude != null && item.longitude != null) {
     const lat = Number(item.latitude);
     const lng = Number(item.longitude);
 
     if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-      // Check for legacy default Bangalore coordinates (12.9716, 77.5946) on non-Bangalore items
+      // Check for legacy default Bangalore fallback (12.9716, 77.5946) on non-Bangalore items
       const isStaleBangaloreFallback = Math.abs(lat - 12.9716) < 0.05 && Math.abs(lng - 77.5946) < 0.05;
+      const loc = (item.location || '').toLowerCase();
       const isNonBangaloreLocation =
         loc.includes('musiri') ||
         loc.includes('trichy') ||
@@ -284,25 +287,31 @@ export function getItemCoordinates(item) {
     }
   }
 
-  // 4. Resolve true coordinates from location text with deterministic micro-jitter
+  // PRIORITY 2: Town / Taluk Centroid Fallback (only when item has no valid GPS)
+  const loc = (item.location || '').toLowerCase();
+
+  if (loc.includes('musiri') || loc.includes('621211')) {
+    return { lat: 10.9387, lng: 78.4418 };
+  }
+
+  for (const [key, coords] of Object.entries(KNOWN_COORDINATES)) {
+    if (key !== 'tiruchirappalli' && key !== 'trichy' && key !== 'chennai' && key !== 'bangalore' && loc.includes(key)) {
+      return { ...coords };
+    }
+  }
+
+  // PRIORITY 3: Address / PIN resolution
   const resolved = resolveLocationCoordinates(item.location);
   if (resolved) {
-    const id = Number(item.id) || 1;
-    const angle = (id * 137.5 * Math.PI) / 180;
-    const dist = 0.003 + ((id % 8) * 0.0008); // 300m - 900m neighborhood jitter
-    return {
-      lat: Number((resolved.lat + Math.sin(angle) * dist).toFixed(6)),
-      lng: Number((resolved.lng + Math.cos(angle) * dist).toFixed(6)),
-    };
+    return { ...resolved };
   }
 
   return { lat: 10.7905, lng: 78.7047 };
 }
 
 /**
- * Intelligently calculates distance between user and item.
- * If both user and item share the same locality (e.g. Musiri or Tiruchirappalli),
- * guarantees real, accurate neighborhood distance.
+ * Intelligently calculates distance between user and item using Smart Proximity Tiers.
+ * Accurately detects when user and item are in the same house, neighborhood, or town.
  */
 export function calculateSmartDistance(userCoords, item, userLocationLabel = '') {
   if (!userCoords?.latitude || !userCoords?.longitude || !item) return null;
@@ -319,10 +328,11 @@ export function calculateSmartDistance(userCoords, item, userLocationLabel = '')
 
   if (rawDist == null) return null;
 
+  const shortLocality = getShortLocality(item.location);
   const itemLoc = (item.location || '').toLowerCase();
   const userLoc = (userLocationLabel || '').toLowerCase();
 
-  // Check if both user and item are in Musiri or the exact same town
+  // Check if both user and item share the exact same town/locality
   const isSameTown =
     (itemLoc.includes('musiri') && userLoc.includes('musiri')) ||
     (userLoc && itemLoc && (
@@ -332,20 +342,18 @@ export function calculateSmartDistance(userCoords, item, userLocationLabel = '')
       (userLoc.includes('621211') && itemLoc.includes('621211'))
     ));
 
-  // If in the exact same town, ensure distance reflects neighborhood proximity (0.4 km - 1.8 km)
-  if (isSameTown && rawDist > 5) {
-    const id = Number(item.id) || 1;
-    const pseudoDist = Number((0.4 + (id % 12) * 0.1).toFixed(1));
-    return {
-      distanceKm: pseudoDist,
-      formatted: formatDistance(pseudoDist),
-      isSameNeighborhood: true,
-    };
+  // If both devices are in the same house/street, or in the same town with micro-distance:
+  let effectiveDist = rawDist;
+  if (isSameTown && rawDist <= 0.45) {
+    effectiveDist = 0.2; // Snap to Tier 1 (< 300 m)
   }
 
+  const formatted = formatDistance(effectiveDist, shortLocality);
+
   return {
-    distanceKm: rawDist,
-    formatted: formatDistance(rawDist),
-    isSameNeighborhood: rawDist < 2,
+    distanceKm: effectiveDist,
+    rawDistanceKm: rawDist,
+    formatted,
+    isSameNeighborhood: effectiveDist < 1.0,
   };
 }

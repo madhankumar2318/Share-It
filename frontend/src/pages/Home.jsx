@@ -699,8 +699,7 @@ const Home = () => {
 
                     {/* Real-time Distance Overlay Tag */}
                     {distanceBadge && (
-                      <div className="absolute bottom-2.5 left-2.5 bg-emerald-700/90 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs">
-                        <Navigation className="w-3 h-3" />
+                      <div className="absolute bottom-2.5 left-2.5 bg-slate-900/85 backdrop-blur-md text-white px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center shadow-md border border-white/10">
                         <span>{distanceBadge}</span>
                       </div>
                     )}

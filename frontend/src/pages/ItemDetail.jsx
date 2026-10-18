@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
-import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Navigation, Coins } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Coins } from 'lucide-react';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
@@ -307,9 +307,8 @@ const ItemDetail = () => {
                 const smart = calculateSmartDistance(userCoords, item, selectedLocation?.label);
                 if (!smart?.formatted) return null;
                 return (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60">
-                    <Navigation className="w-3 h-3 rotate-45" />
-                    {smart.formatted} from you
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800/60 shadow-2xs">
+                    <span>{smart.formatted}</span>
                   </span>
                 );
               })()}
