@@ -14,8 +14,7 @@ import {
   MapPin, 
   Loader2, 
   Search,
-  Coins,
-  Navigation 
+  Coins
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
@@ -61,22 +60,12 @@ const AddItem = () => {
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const [exactGpsCoords, setExactGpsCoords] = useState(null);
-  const [gpsDetecting, setGpsDetecting] = useState(false);
-
-  // Idea 1: Indian Postal PIN code auto-lookup (6 digits) with 100% verified coordinate locking
+  // Indian Postal PIN code auto-lookup (6 digits)
   const handlePincodeLookup = async (pin) => {
     if (!pin || pin.length !== 6) return;
     setPincodeLoading(true);
     try {
-      // 1. Immediately anchor coordinates from verified Indian PIN table (e.g. 621211 -> Musiri 10.9387, 78.4418)
-      if (PIN_PREFIX_COORDINATES[pin]) {
-        setExactGpsCoords({ ...PIN_PREFIX_COORDINATES[pin] });
-      } else if (PIN_PREFIX_COORDINATES[pin.slice(0, 3)]) {
-        setExactGpsCoords({ ...PIN_PREFIX_COORDINATES[pin.slice(0, 3)] });
-      }
-
-      // 2. Fetch authoritative Indian Post Office data
+      // Fetch authoritative Indian Post Office data
       const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
       const data = await response.json();
 
@@ -109,7 +98,7 @@ const AddItem = () => {
           area: prev.area && poNames.includes(prev.area) ? prev.area : bestPO,
         }));
 
-        setPincodeMessage(`🎯 Verified: ${matchedDistrict}, ${matchedState} • 100% Verified Coordinates Locked`);
+        setPincodeMessage(`✅ Verified: ${matchedDistrict}, ${matchedState}`);
       } else {
         setPincodeMessage('⚠️ Invalid Indian PIN code. Please check.');
       }
@@ -120,7 +109,7 @@ const AddItem = () => {
     }
   };
 
-  // Idea 1: Pre-fill from active header filter without noisy/inaccurate browser ISP auto-grab
+  // Pre-fill from active header filter if available
   useEffect(() => {
     if (selectedLocation && selectedLocation.type !== 'ALL') {
       if (selectedLocation.type === 'PINCODE' && selectedLocation.value) {
@@ -149,50 +138,6 @@ const AddItem = () => {
       }
     }
   }, [selectedLocation]);
-
-  const handleUseDeviceGps = () => {
-    if (!('geolocation' in navigator)) {
-      toast.error('Geolocation is not supported by your browser');
-      return;
-    }
-    setGpsDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        let lat = Number(pos.coords.latitude.toFixed(6));
-        let lng = Number(pos.coords.longitude.toFixed(6));
-
-        // ISP Gateway Guard: If coordinates are around Coimbatore (10.9687, 76.9463) on Musiri / Trichy items
-        const isCoimbatoreIsp = Math.abs(lat - 10.9687) < 0.25 && Math.abs(lng - 76.9463) < 0.25;
-        const isMusiriOrTrichy =
-          locationData.pincode === '621211' ||
-          locationData.district?.toLowerCase().includes('tiruchirappalli') ||
-          locationData.area?.toLowerCase().includes('musiri') ||
-          selectedLocation?.label?.toLowerCase().includes('musiri');
-
-        if (isCoimbatoreIsp && isMusiriOrTrichy) {
-          lat = 10.9387;
-          lng = 78.4418;
-          toast.success('🎯 Corrected ISP tower drift directly to your true Musiri location!');
-        } else {
-          toast.success(`🎯 High-accuracy GPS pinned (${lat}, ${lng})!`);
-        }
-
-        setExactGpsCoords({ lat, lng });
-        setGpsDetecting(false);
-      },
-      () => {
-        setGpsDetecting(false);
-        if (locationData.pincode && PIN_PREFIX_COORDINATES[locationData.pincode]) {
-          const coords = PIN_PREFIX_COORDINATES[locationData.pincode];
-          setExactGpsCoords(coords);
-          toast.success(`🎯 Pinned to verified PIN ${locationData.pincode} coordinates!`);
-        } else {
-          toast.error('Could not detect device GPS. Please verify PIN code or town below.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
-  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -303,11 +248,8 @@ const AddItem = () => {
         .filter(Boolean)
         .join(', ');
 
-      // High-precision coordinates resolution:
-      // 1) User's exact GPS or verified PIN code anchor
-      // 2) Guard against Coimbatore ISP drift for Musiri / Trichy items
-      // 3) Verified PIN database fallback
-      let sampleCoords = exactGpsCoords;
+      // High-precision coordinates resolution from PIN code and town database:
+      let sampleCoords = null;
 
       const locStr = formattedLocation.toLowerCase();
       const isMusiri = locStr.includes('musiri') || locStr.includes('621211') || locationData.pincode === '621211';
@@ -444,54 +386,10 @@ const AddItem = () => {
 
           {/* Structured Indian Pickup Location Box */}
           <div className="p-5 bg-slate-50/80 dark:bg-slate-950/50 border border-gray-200 dark:border-slate-800 rounded-2xl space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Pickup / Handover Location 🇮🇳 *</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleUseDeviceGps}
-                disabled={gpsDetecting}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 hover:bg-emerald-100 transition shadow-2xs"
-              >
-                {gpsDetecting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Navigation className="w-3.5 h-3.5" />
-                )}
-                <span>{exactGpsCoords ? '✓ GPS Location Pinned' : '📍 Pinpoint via My GPS'}</span>
-              </button>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Pickup / Handover Location 🇮🇳 *</span>
             </div>
-            {exactGpsCoords && (
-              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-[11px] text-emerald-800 dark:text-emerald-300 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 relative flex-shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span>
-                    🎯 <strong>Coordinates Locked:</strong> {exactGpsCoords.lat}, {exactGpsCoords.lng}
-                    {locationData.district ? (
-                      <span className="ml-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
-                        • Verified: {locationData.area ? `${locationData.area}, ` : ''}{locationData.district}
-                        {locationData.pincode ? ` (${locationData.pincode})` : ''}
-                      </span>
-                    ) : ''}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExactGpsCoords(null);
-                    setPincodeMessage('');
-                  }}
-                  className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-200 underline font-semibold ml-auto"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
 
             {/* PIN Code Lookup */}
             <div>
