@@ -22,6 +22,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { calculateSmartDistance } from '../utils/geo';
 import { ItemCardSkeleton } from '../components/SkeletonCard';
 import VoiceSearchModal from '../components/VoiceSearchModal';
+import { getDefaultItemImage } from '../utils/imageUtils';
 
 const CATEGORIES = [
   'All',
@@ -384,9 +385,12 @@ const Home = () => {
                         className="flex items-center gap-3 p-3 hover:bg-emerald-50/70 dark:hover:bg-slate-800/70 transition"
                       >
                         <img
-                          src={sug.imageUrl || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'}
+                          src={sug.imageUrl || getDefaultItemImage(sug.category, sug.title)}
                           alt={sug.title}
                           className="w-10 h-10 rounded-xl object-cover flex-shrink-0 bg-slate-100 dark:bg-slate-800"
+                          onError={(e) => {
+                            e.target.src = getDefaultItemImage(sug.category, sug.title);
+                          }}
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
@@ -679,13 +683,12 @@ const Home = () => {
                     <img
                       src={
                         item.imageUrl ||
-                        'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                        getDefaultItemImage(item.category, item.title)
                       }
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       onError={(e) => {
-                        e.target.src =
-                          'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60';
+                        e.target.src = getDefaultItemImage(item.category, item.title);
                       }}
                     />
                     <div className="absolute top-3 right-3">{getStatusBadge(item)}</div>

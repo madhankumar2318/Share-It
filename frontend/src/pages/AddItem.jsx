@@ -14,10 +14,12 @@ import {
   MapPin, 
   Loader2, 
   Search,
-  Coins
+  Coins,
+  Sparkles
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { compressImage } from '../utils/imageCompressor';
+import { getDefaultItemImage, normalizeImageUrl, isLikelyHtmlWebpage } from '../utils/imageUtils';
 
 const CATEGORIES = [
   'Electronics',
@@ -59,6 +61,7 @@ const AddItem = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [urlImageError, setUrlImageError] = useState(false);
 
   // Indian Postal PIN code auto-lookup (6 digits)
   const handlePincodeLookup = async (pin) => {
@@ -168,8 +171,28 @@ const AddItem = () => {
       }
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      setUrlImageError(false);
       setError('');
     }
+  };
+
+  const handleImageUrlChange = (e) => {
+    const rawVal = e.target.value;
+    const normalized = normalizeImageUrl(rawVal);
+    setFormData((prev) => ({ ...prev, imageUrl: normalized }));
+    setUrlImageError(false);
+    if (normalized) {
+      setSelectedFile(null);
+      setPreviewUrl('');
+    }
+  };
+
+  const handleUseSuggestedPhoto = () => {
+    const suggested = getDefaultItemImage(formData.category, formData.title);
+    setFormData((prev) => ({ ...prev, imageUrl: suggested }));
+    setSelectedFile(null);
+    setPreviewUrl('');
+    setUrlImageError(false);
   };
 
   const handleUploadImage = async () => {
@@ -202,7 +225,13 @@ const AddItem = () => {
 
     // Photo is mandatory (file upload OR image URL)
     if (!selectedFile && !formData.imageUrl.trim()) {
-      setError('Item photo is required. Please upload an image from your device or paste an image URL.');
+      setError('Item photo is required. Please upload an image from your device, paste an image URL, or click "Use Suggested Photo".');
+      return;
+    }
+
+    // Prevent submitting with broken URL unless device file is selected
+    if (!selectedFile && formData.imageUrl.trim() && urlImageError) {
+      setError('The image web URL could not be loaded. Please provide a direct image link or click "Use Suggested Photo".');
       return;
     }
 
@@ -301,7 +330,7 @@ const AddItem = () => {
   };
 
   const availableDistricts = INDIAN_LOCATIONS[locationData.state] || [];
-  const hasPhoto = !!selectedFile || !!formData.imageUrl.trim();
+  const hasPhoto = !!selectedFile || (!!formData.imageUrl.trim() && !urlImageError);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
@@ -519,7 +548,13 @@ const AddItem = () => {
                 {previewUrl ? (
                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                 ) : formData.imageUrl ? (
-                  <img src={formData.imageUrl} alt="URL Preview" className="w-full h-full object-cover" />
+                  <img
+                    src={formData.imageUrl}
+                    alt="URL Preview"
+                    className="w-full h-full object-cover"
+                    onLoad={() => setUrlImageError(false)}
+                    onError={() => setUrlImageError(true)}
+                  />
                 ) : (
                   <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                     <ImageIcon className="w-8 h-8 mb-1" />
@@ -530,19 +565,47 @@ const AddItem = () => {
             </div>
 
             {/* URL input */}
-            <div className="mt-3">
-              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Or paste an Image Web URL:</span>
-              <input
-                type="url"
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={(e) => {
-                  handleChange(e);
-                  if (e.target.value) setPreviewUrl('');
-                }}
-                placeholder="https://images.unsplash.com/photo-..."
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
+            <div className="mt-3 space-y-1.5">
+              <span className="text-xs text-gray-500 dark:text-gray-400 block font-medium">Or paste an Image Web URL:</span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="url"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleImageUrlChange}
+                  placeholder="https://images.unsplash.com/... or direct image link"
+                  className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none transition ${
+                    urlImageError ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-slate-700'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={handleUseSuggestedPhoto}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition whitespace-nowrap flex-shrink-0"
+                  title="Auto-pick a relevant, high-resolution photo based on item title & category"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Use Suggested Photo</span>
+                </button>
+              </div>
+
+              {isLikelyHtmlWebpage(formData.imageUrl) && (
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Heads up:</strong> You entered a store/webpage link rather than a direct image file. Right-click the photo on that website and select <em>"Copy image address"</em>, or click <strong>Use Suggested Photo</strong> above!
+                  </span>
+                </div>
+              )}
+
+              {urlImageError && (
+                <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    The link provided cannot be loaded as an image. Please verify the URL, upload a file from your device, or click <strong>Use Suggested Photo</strong>.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

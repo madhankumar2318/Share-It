@@ -11,6 +11,7 @@ import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
 import { calculateSmartDistance } from '../utils/geo';
 import { ItemDetailSkeleton } from '../components/SkeletonCard';
+import { getDefaultItemImage } from '../utils/imageUtils';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -167,10 +168,13 @@ const ItemDetail = () => {
             <img
               src={
                 item.imageUrl ||
-                'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                getDefaultItemImage(item.category, item.title)
               }
               alt={item.title}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = getDefaultItemImage(item.category, item.title);
+              }}
             />
             <div className="absolute top-4 left-4 bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
               {item.category}

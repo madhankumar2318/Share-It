@@ -29,6 +29,10 @@ import {
   Building2,
   PackageCheck,
   Coins,
+  Sparkles,
+  Upload,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import ChatModal from '../components/ChatModal';
 import ReviewModal from '../components/ReviewModal';
@@ -43,6 +47,7 @@ import ContactlessCollectModal from '../components/ContactlessCollectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';
+import { getDefaultItemImage, normalizeImageUrl, isLikelyHtmlWebpage } from '../utils/imageUtils';
 import TrustBadge from '../components/TrustBadge';
 import { DashboardRowSkeleton } from '../components/SkeletonCard';
 import { compressImage } from '../utils/imageCompressor';
@@ -199,6 +204,106 @@ const Dashboard = () => {
   const [dropoffModalData, setDropoffModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
   const [collectModalData, setCollectModalData] = useState({ isOpen: false, request: null, mode: 'pickup' });
   const [settlingRefundId, setSettlingRefundId] = useState(null);
+
+  // Edit Photo Modal State
+  const [editingPhotoItem, setEditingPhotoItem] = useState(null);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const [photoUrlError, setPhotoUrlError] = useState(false);
+
+  const handleOpenPhotoEdit = (item) => {
+    setEditingPhotoItem(item);
+    setNewPhotoUrl(item.imageUrl || '');
+    setPhotoFile(null);
+    setPhotoPreview(item.imageUrl || '');
+    setPhotoUrlError(false);
+  };
+
+  const handleClosePhotoEdit = () => {
+    setEditingPhotoItem(null);
+    setNewPhotoUrl('');
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setPhotoUrlError(false);
+  };
+
+  const handlePhotoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file (PNG, JPG, WEBP)');
+        return;
+      }
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setNewPhotoUrl('');
+      setPhotoUrlError(false);
+    }
+  };
+
+  const handlePhotoUrlChange = (e) => {
+    const rawVal = e.target.value;
+    const normalized = normalizeImageUrl(rawVal);
+    setNewPhotoUrl(normalized);
+    setPhotoFile(null);
+    setPhotoPreview(normalized);
+    setPhotoUrlError(false);
+  };
+
+  const handleApplySuggestedPhoto = () => {
+    if (!editingPhotoItem) return;
+    const suggested = getDefaultItemImage(editingPhotoItem.category, editingPhotoItem.title);
+    setNewPhotoUrl(suggested);
+    setPhotoFile(null);
+    setPhotoPreview(suggested);
+    setPhotoUrlError(false);
+  };
+
+  const handleSavePhoto = async () => {
+    if (!editingPhotoItem) return;
+    if (photoUrlError) {
+      toast.error('The photo URL cannot be loaded. Please provide a direct image link or use the suggested photo.');
+      return;
+    }
+    setSavingPhoto(true);
+    try {
+      let finalUrl = newPhotoUrl.trim();
+      if (photoFile) {
+        const compressedFile = await compressImage(photoFile, { maxWidth: 1280, maxHeight: 1280, quality: 0.75 });
+        const uploadData = new FormData();
+        uploadData.append('file', compressedFile);
+        const res = await api.post('/files/upload', uploadData);
+        finalUrl = res.data.fileUrl;
+      }
+      if (!finalUrl) {
+        toast.error('Please upload an image or provide a valid photo URL.');
+        setSavingPhoto(false);
+        return;
+      }
+      await api.put(`/items/${editingPhotoItem.id}`, {
+        title: editingPhotoItem.title,
+        description: editingPhotoItem.description || '',
+        category: editingPhotoItem.category,
+        imageUrl: finalUrl,
+        location: editingPhotoItem.location,
+        latitude: editingPhotoItem.latitude,
+        longitude: editingPhotoItem.longitude,
+        dailyRate: editingPhotoItem.dailyRate,
+        securityDeposit: editingPhotoItem.securityDeposit,
+      });
+      toast.success('📸 Item photo updated successfully!');
+      setMyItems((prev) =>
+        prev.map((it) => (it.id === editingPhotoItem.id ? { ...it, imageUrl: finalUrl } : it))
+      );
+      handleClosePhotoEdit();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update photo');
+    } finally {
+      setSavingPhoto(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -1155,10 +1260,13 @@ const Dashboard = () => {
                       <img
                         src={
                           item.imageUrl ||
-                          'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                          getDefaultItemImage(item.category, item.title)
                         }
                         alt={item.title}
                         className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0"
+                        onError={(e) => {
+                          e.target.src = getDefaultItemImage(item.category, item.title);
+                        }}
                       />
                       <div className="overflow-hidden">
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.category}</span>
@@ -1176,13 +1284,25 @@ const Dashboard = () => {
                       >
                         View Page
                       </Link>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPhotoEdit(item)}
+                          className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1"
+                          title="Change or fix item photo"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          Edit Photo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1701,10 +1821,13 @@ const Dashboard = () => {
                     <img
                       src={
                         item.imageUrl ||
-                        'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=60'
+                        getDefaultItemImage(item.category, item.title)
                       }
                       alt={item.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = getDefaultItemImage(item.category, item.title);
+                      }}
                     />
                     <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
                       {item.category}
@@ -1850,6 +1973,132 @@ const Dashboard = () => {
         mode={collectModalData.mode}
         onSuccess={fetchDashboardData}
       />
+
+      {/* Edit Item Photo Modal */}
+      {editingPhotoItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  Update Photo for "{editingPhotoItem.title}"
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Category: {editingPhotoItem.category}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePhotoEdit}
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Photo Preview */}
+            <div className="flex flex-col items-center">
+              <div className="w-full h-48 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 overflow-hidden flex items-center justify-center relative">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onLoad={() => setPhotoUrlError(false)}
+                    onError={() => {
+                      if (!photoFile) setPhotoUrlError(true);
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
+                    <Camera className="w-8 h-8 mb-1" />
+                    <span className="text-xs">No image preview</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Choose from device or URL */}
+            <div className="space-y-3">
+              <div>
+                <label className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800 transition bg-slate-50 dark:bg-slate-800/40 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>{photoFile ? photoFile.name : 'Upload New Image from Device (JPG, PNG, WEBP)'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 block font-medium mb-1">Or paste a Direct Image Web Link:</span>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="url"
+                    value={newPhotoUrl}
+                    onChange={handlePhotoUrlChange}
+                    placeholder="https://images.unsplash.com/... or direct image link"
+                    className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-xs focus:ring-2 focus:ring-emerald-500 outline-none transition ${
+                      photoUrlError ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-slate-700'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplySuggestedPhoto}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition whitespace-nowrap flex-shrink-0"
+                    title="Auto-pick a relevant high-res photo for this item"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Use Suggested Photo</span>
+                  </button>
+                </div>
+
+                {isLikelyHtmlWebpage(newPhotoUrl) && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2 mt-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Note:</strong> You pasted a store/webpage link. Direct image addresses (.jpg, .png) work best, or click <strong>Use Suggested Photo</strong> above!
+                    </span>
+                  </div>
+                )}
+
+                {photoUrlError && !photoFile && (
+                  <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 mt-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Unable to load image from this web address. Please check the URL or click <strong>Use Suggested Photo</strong>.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleClosePhotoEdit}
+                disabled={savingPhoto}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePhoto}
+                disabled={savingPhoto || photoUrlError}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition"
+              >
+                {savingPhoto ? 'Saving Photo...' : 'Save Updated Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
