@@ -87,8 +87,7 @@ const AddItem = () => {
         const poNames = poList.map((po) => po.Name);
         setAvailablePostOffices(poNames);
 
-        // Intelligently select Musiri if in post office list, otherwise first PO
-        const bestPO = poNames.find((n) => n.toLowerCase().includes('musiri')) || poNames[0] || '';
+        const bestPO = poNames[0] || '';
 
         setLocationData((prev) => ({
           ...prev,
@@ -119,14 +118,6 @@ const AddItem = () => {
           handlePincodeLookup(pin);
           return;
         }
-      }
-
-      const selLabel = (selectedLocation.label || '').toLowerCase();
-      const selVal = (selectedLocation.value || '').toLowerCase();
-      if (selLabel.includes('musiri') || selVal.includes('musiri')) {
-        setLocationData((prev) => ({ ...prev, pincode: '621211' }));
-        handlePincodeLookup('621211');
-        return;
       }
 
       if (selectedLocation.state) {
@@ -251,22 +242,10 @@ const AddItem = () => {
       // High-precision coordinates resolution from PIN code and town database:
       let sampleCoords = null;
 
-      const locStr = formattedLocation.toLowerCase();
-      const isMusiri = locStr.includes('musiri') || locStr.includes('621211') || locationData.pincode === '621211';
-
-      if (isMusiri) {
-        sampleCoords = { lat: 10.9387, lng: 78.4418 };
-      } else if (sampleCoords) {
-        // Protect against ISP Coimbatore routing mistakes on central TN items
-        const isCoimbatoreIsp = Math.abs(sampleCoords.lat - 10.9687) < 0.25 && Math.abs(sampleCoords.lng - 76.9463) < 0.25;
-        const isTrichyRegion = locStr.includes('trichy') || locStr.includes('tiruchirappalli') || locStr.includes('621');
-        if (isCoimbatoreIsp && isTrichyRegion) {
-          sampleCoords = { lat: 10.7905, lng: 78.7047 };
-        }
-      }
-
-      if (!sampleCoords && locationData.pincode && PIN_PREFIX_COORDINATES[locationData.pincode]) {
+      if (locationData.pincode && PIN_PREFIX_COORDINATES[locationData.pincode]) {
         sampleCoords = { ...PIN_PREFIX_COORDINATES[locationData.pincode] };
+      } else if (locationData.pincode && PIN_PREFIX_COORDINATES[locationData.pincode.slice(0, 3)]) {
+        sampleCoords = { ...PIN_PREFIX_COORDINATES[locationData.pincode.slice(0, 3)] };
       }
 
       if (!sampleCoords) {

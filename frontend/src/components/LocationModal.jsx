@@ -36,7 +36,6 @@ const LocationModal = () => {
   // Comprehensive list of Indian localities & districts for instant search
   const allDistricts = useMemo(() => {
     const list = [
-      { district: 'Musiri', state: 'Tamil Nadu', pincode: '621211' },
       { district: 'Tiruchirappalli', state: 'Tamil Nadu', pincode: '620001' },
       { district: 'Srirangam', state: 'Tamil Nadu', pincode: '620006' },
       { district: 'Lalgudi', state: 'Tamil Nadu', pincode: '621601' },
@@ -91,21 +90,14 @@ const LocationModal = () => {
   };
 
   const handleSelectHub = (hub) => {
-    if (hub.pincode) {
-      handleSelect(hub.city, hub.state, hub.pincode);
-    } else {
-      handleSelect(hub.city, hub.state);
-    }
+    handleSelect(hub.city, hub.state);
   };
 
   const handleSelectPincode = (pin) => {
-    const isMusiri = pin === '621211';
     setLocation({
       type: 'PINCODE',
       value: pin,
-      label: isMusiri ? 'Musiri (621211)' : `PIN ${pin}`,
-      district: isMusiri ? 'Tiruchirappalli' : '',
-      state: isMusiri ? 'Tamil Nadu' : '',
+      label: `PIN ${pin}`,
     });
     setIsModalOpen(false);
     setSearchQuery('');
@@ -155,7 +147,7 @@ const LocationModal = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="E.g. Musiri, 621211, Tiruchirappalli, Madurai..."
+                placeholder="E.g. Tiruchirappalli, Madurai, Chennai, 620001..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition"
                 autoFocus
               />
