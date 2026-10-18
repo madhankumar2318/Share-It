@@ -1,7 +1,6 @@
 /**
  * Image utilities for Share-It:
- * Normalizes image URLs (Unsplash pages, Google Images, etc.),
- * validates image formats, and provides smart category/keyword-aware default images.
+ * Provides smart category and keyword-aware default fallback images.
  */
 
 // Category and title-aware high-resolution default images
@@ -64,62 +63,4 @@ export function getDefaultItemImage(category = '', title = '') {
   }
 
   return CATEGORY_FALLBACK_IMAGES['default'];
-}
-
-/**
- * Automatically normalizes pasted web links into direct renderable image URLs:
- * - Unsplash web pages: https://unsplash.com/photos/abc -> https://images.unsplash.com/photo-abc?...
- * - Google Images redirect URLs: extracts imgurl parameter
- * - Imgur page links: https://imgur.com/abc -> https://i.imgur.com/abc.jpg
- */
-export function normalizeImageUrl(inputUrl) {
-  if (!inputUrl || typeof inputUrl !== 'string') return '';
-  const trimmed = inputUrl.trim();
-
-  try {
-    const url = new URL(trimmed);
-
-    // 1. Google Images redirect: https://www.google.com/imgres?imgurl=...
-    if (url.hostname.includes('google.') && url.searchParams.has('imgurl')) {
-      const actualImgUrl = url.searchParams.get('imgurl');
-      if (actualImgUrl) return actualImgUrl;
-    }
-
-    // 2. Unsplash page link: https://unsplash.com/photos/...
-    if (url.hostname === 'unsplash.com' && url.pathname.startsWith('/photos/')) {
-      const parts = url.pathname.replace('/photos/', '').split('/');
-      const photoSlug = parts[0] || '';
-      const idMatch = photoSlug.match(/([a-zA-Z0-9_-]+)$/);
-      if (idMatch) {
-        return `https://images.unsplash.com/photo-${idMatch[1]}?auto=format&fit=crop&w=800&q=80`;
-      }
-    }
-
-    // 3. Imgur page link: https://imgur.com/abc -> https://i.imgur.com/abc.jpg
-    if (url.hostname === 'imgur.com' && url.pathname.length > 2 && !url.pathname.includes('.')) {
-      return `https://i.imgur.com${url.pathname}.jpg`;
-    }
-
-    return trimmed;
-  } catch {
-    return trimmed;
-  }
-}
-
-/**
- * Checks if a URL looks like an HTML shopping or search page rather than a direct image
- */
-export function isLikelyHtmlWebpage(url) {
-  if (!url || typeof url !== 'string') return false;
-  const lower = url.toLowerCase();
-  return (
-    lower.includes('amazon.in/dp/') ||
-    lower.includes('amazon.com/dp/') ||
-    lower.includes('amazon.in/gp/') ||
-    lower.includes('flipkart.com/') ||
-    lower.includes('ebay.com/itm/') ||
-    lower.includes('google.com/search') ||
-    lower.includes('youtube.com/watch') ||
-    lower.includes('aliexpress.com/item')
-  );
 }
