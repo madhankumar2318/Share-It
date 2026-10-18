@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
+import { PIN_PREFIX_COORDINATES, resolveLocationCoordinates } from '../utils/geo';
 
 const LocationContext = createContext(null);
 
@@ -55,7 +56,13 @@ export const LocationProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Clear erroneous Coimbatore ISP network fallback if stored
+        if (parsed.value === 'Coimbatore' && (parsed.source === 'network' || !parsed.source)) {
+          localStorage.removeItem(STORAGE_KEY);
+          return DEFAULT_LOCATION;
+        }
+        return parsed;
       }
     } catch (e) {
       console.error('Failed to parse saved location', e);
@@ -82,6 +89,30 @@ export const LocationProvider = ({ children }) => {
   }, [selectedLocation]);
 
   const setLocation = (loc) => {
+    if (loc && !loc.coordinates) {
+      if (loc.type === 'PINCODE' && loc.value) {
+        const pin = String(loc.value).replace(/\D/g, '').slice(0, 6);
+        if (PIN_PREFIX_COORDINATES[pin]) {
+          loc.coordinates = {
+            latitude: PIN_PREFIX_COORDINATES[pin].lat,
+            longitude: PIN_PREFIX_COORDINATES[pin].lng,
+          };
+        } else if (PIN_PREFIX_COORDINATES[pin.slice(0, 3)]) {
+          loc.coordinates = {
+            latitude: PIN_PREFIX_COORDINATES[pin.slice(0, 3)].lat,
+            longitude: PIN_PREFIX_COORDINATES[pin.slice(0, 3)].lng,
+          };
+        }
+      } else if (loc.value) {
+        const coords = resolveLocationCoordinates(loc.value);
+        if (coords) {
+          loc.coordinates = {
+            latitude: coords.lat,
+            longitude: coords.lng,
+          };
+        }
+      }
+    }
     setSelectedLocation(loc);
     setLocationError('');
   };
@@ -89,6 +120,10 @@ export const LocationProvider = ({ children }) => {
   const clearLocation = () => {
     setSelectedLocation(DEFAULT_LOCATION);
     setLocationError('');
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LAST_COORDS_KEY);
+    } catch {}
   };
 
   // Fast reverse-geocoding from latitude & longitude
@@ -339,6 +374,18 @@ export const LocationProvider = ({ children }) => {
       }
 
       if (detectedLoc) {
+        // Guard against ISP router gateway (Coimbatore 10.96 / 76.94) falsely overriding central TN users
+        const lat = detectedLoc.coordinates?.latitude;
+        const lng = detectedLoc.coordinates?.longitude;
+        const isCoimbatoreIsp = lat && lng && Math.abs(lat - 10.9687) < 0.25 && Math.abs(lng - 76.9463) < 0.25;
+        if (isCoimbatoreIsp && detectedLoc.value === 'Coimbatore') {
+          const fallbackMsg = 'ISP network detected regional Coimbatore gateway. Please choose your town or enter 6-digit PIN code for local items.';
+          setLocationError(fallbackMsg);
+          setDetectingLocation(false);
+          setDetectingStatus('');
+          return { success: false, error: fallbackMsg };
+        }
+
         setSelectedLocation(detectedLoc);
         setDetectingStatus('Location detected! 🎯');
         setDetectingLocation(false);

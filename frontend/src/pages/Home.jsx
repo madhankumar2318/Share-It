@@ -11,7 +11,6 @@ import {
   Navigation, 
   X, 
   Compass, 
-  LocateFixed, 
   Star, 
   CheckCircle2, 
   Clock, 
@@ -49,9 +48,7 @@ const Home = () => {
     selectedLocation, 
     userCoords, 
     setIsModalOpen, 
-    clearLocation, 
-    detectLocation, 
-    detectingLocation 
+    clearLocation 
   } = useLocationFilter();
 
   const { user } = useAuth();
@@ -223,11 +220,11 @@ const Home = () => {
     return result;
   }, [items, availableTodayOnly, distanceRadius, userCoords, sortBy, selectedLocation?.label]);
 
-  const handleRadiusClick = async (radiusVal) => {
+  const handleRadiusClick = (radiusVal) => {
     setDistanceRadius(radiusVal);
-    // If user clicks a specific radius but hasn't enabled GPS coords, auto-prompt detection
+    // If user clicks a specific radius but hasn't set their town/PIN, prompt location selection modal
     if (radiusVal && (!userCoords?.latitude || !userCoords?.longitude)) {
-      await detectLocation();
+      setIsModalOpen(true);
     }
   };
 
@@ -535,12 +532,11 @@ const Home = () => {
           {!userCoords?.latitude && distanceRadius && (
             <button
               type="button"
-              onClick={detectLocation}
-              disabled={detectingLocation}
+              onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-1"
             >
-              <LocateFixed className="w-3 h-3" />
-              {detectingLocation ? 'Detecting GPS...' : 'Turn on GPS'}
+              <MapPin className="w-3 h-3" />
+              Choose Town / PIN
             </button>
           )}
 
