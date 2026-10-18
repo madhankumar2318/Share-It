@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 
 const POPULAR_HUBS = [
-  { city: 'Musiri', pincode: '621211', state: 'Tamil Nadu', label: 'Musiri (621211)' },
   { city: 'Tiruchirappalli', state: 'Tamil Nadu' },
   { city: 'Chennai', state: 'Tamil Nadu' },
   { city: 'Madurai', state: 'Tamil Nadu' },
@@ -20,6 +19,7 @@ const POPULAR_HUBS = [
   { city: 'Hyderabad', state: 'Telangana' },
   { city: 'Mumbai', state: 'Maharashtra' },
   { city: 'Delhi', state: 'Delhi (NCT)' },
+  { city: 'Kochi', state: 'Kerala' },
 ];
 
 const LocationModal = () => {
