@@ -15,6 +15,8 @@ import {
   CheckCircle2, 
   Clock, 
   Mic, 
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
@@ -71,6 +73,8 @@ const Home = () => {
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isWakingUp, setIsWakingUp] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [favoriteIds, setFavoriteIds] = useState(new Set());
@@ -117,8 +121,11 @@ const Home = () => {
     });
   };
 
-  const fetchItems = async (customQuery = null) => {
-    setLoading(true);
+  const fetchItems = async (customQuery = null, retryAttempt = 0) => {
+    if (retryAttempt === 0) {
+      setLoading(true);
+      setFetchError(null);
+    }
     try {
       const params = {};
       if (selectedCategory && selectedCategory !== 'All') {
@@ -132,11 +139,36 @@ const Home = () => {
         params.location = selectedLocation.value;
       }
       const response = await api.get('/items', { params });
-      setItems(response.data);
+      const itemsData = Array.isArray(response.data)
+        ? response.data
+        : (response.data?.content || []);
+      setItems(itemsData);
+      setIsWakingUp(false);
+      setFetchError(null);
+      setLoading(false);
     } catch (err) {
       console.error('Failed to load items', err);
-    } finally {
+      const isServerDownOrColdStart =
+        !err.response ||
+        [500, 502, 503, 504].includes(err.response?.status) ||
+        err.code === 'ECONNABORTED';
+
+      if (isServerDownOrColdStart && retryAttempt < 4) {
+        setIsWakingUp(true);
+        const delay = (retryAttempt + 1) * 3500;
+        setTimeout(() => {
+          fetchItems(customQuery, retryAttempt + 1);
+        }, delay);
+        return;
+      }
+
+      setIsWakingUp(false);
       setLoading(false);
+      if (isServerDownOrColdStart) {
+        setFetchError('Connecting to the community server took longer than expected. The server may still be waking up after rest.');
+      } else {
+        setFetchError('Unable to load items at this time. Please check your connection.');
+      }
     }
   };
 
@@ -569,6 +601,16 @@ const Home = () => {
         </div>
       </div>
 
+      {/* Cold Start / Server Waking Banner */}
+      {isWakingUp && (
+        <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center gap-3 text-emerald-800 dark:text-emerald-200 shadow-xs animate-pulse">
+          <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <div className="text-xs sm:text-sm">
+            <span className="font-bold">Connecting to community database...</span> Our cloud server sleeps after inactivity to save energy. Waking it up now — your listings will appear in a moment!
+          </div>
+        </div>
+      )}
+
       {/* Items Grid & Empty States */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -576,7 +618,27 @@ const Home = () => {
             <ItemCardSkeleton key={i} />
           ))}
         </div>
-        ) : displayItems.length === 0 ? (
+      ) : fetchError ? (
+        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-amber-300 dark:border-amber-800/60 p-6 space-y-4">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+            Server Connection Paused
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            {fetchError}
+          </p>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => fetchItems()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry Connecting
+            </button>
+          </div>
+        </div>
+      ) : displayItems.length === 0 ? (
           availableTodayOnly ? (
             <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-gray-300 dark:border-slate-800 p-6 space-y-3">
               <Clock className="w-12 h-12 text-emerald-500 mx-auto" />

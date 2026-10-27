@@ -232,7 +232,8 @@ public class ItemService {
         boolean bookedToday = item.getStatus() == ItemStatus.BORROWED ||
                 !borrowRequestRepository.findConflictingAcceptedRequests(item.getId(), LocalDate.now(), LocalDate.now()).isEmpty();
 
-        String rawPhone = item.getOwner().getPhone();
+        User owner = item.getOwner();
+        String rawPhone = owner != null ? owner.getPhone() : null;
         String displayPhone = includeRawPhone ? rawPhone : PiiMasker.maskPhone(rawPhone);
 
         return ItemResponseDto.builder()
@@ -250,9 +251,9 @@ public class ItemService {
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount(reviewCnt != null ? reviewCnt : 0L)
                 .isBookedToday(bookedToday)
-                .ownerId(item.getOwner().getId())
-                .ownerName(item.getOwner().getFullName())
-                .ownerEmail(PiiMasker.maskEmail(item.getOwner().getEmail()))
+                .ownerId(owner != null ? owner.getId() : null)
+                .ownerName(owner != null && owner.getFullName() != null ? owner.getFullName() : "Community Member")
+                .ownerEmail(owner != null && owner.getEmail() != null ? PiiMasker.maskEmail(owner.getEmail()) : null)
                 .ownerPhone(displayPhone)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())

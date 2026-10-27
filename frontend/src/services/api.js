@@ -1,12 +1,14 @@
 import axios from 'axios';
 
+export const DIRECT_BACKEND_URL = 'https://share-it-wmi3.onrender.com/api';
+
 const getBaseUrl = () => {
   // When deployed on Vercel, relative '/api' uses Vercel's server-to-server reverse proxy
   // to connect directly with Render, completely eliminating cross-origin CORS limitations.
   if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
     return '/api';
   }
-  return import.meta.env.VITE_API_URL || 'https://share-it-wmi3.onrender.com/api';
+  return import.meta.env.VITE_API_URL || DIRECT_BACKEND_URL;
 };
 
 const api = axios.create({
@@ -15,6 +17,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Generous timeout to allow Render free-tier cold-start when waking from hibernation
+  timeout: 60000,
 });
 
 // Automatically attach Bearer token to outgoing requests if available
@@ -53,7 +57,27 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Only intercept 401 Unauthorized for protected endpoints
+    // 1. Vercel Edge Proxy Cold-Start Fallback:
+    // When the backend is sleeping on Render free tier, Vercel's edge proxy times out after 10s (504/502).
+    // Automatically failover directly to Render's backend so the browser can wait for the cold-start to finish.
+    const isVercelProxyError =
+      originalRequest &&
+      !originalRequest._retriedDirect &&
+      typeof window !== 'undefined' &&
+      window.location.hostname.includes('vercel.app') &&
+      (!error.response || [502, 503, 504].includes(error.response?.status) || error.code === 'ECONNABORTED');
+
+    if (isVercelProxyError) {
+      originalRequest._retriedDirect = true;
+      delete originalRequest.baseURL;
+      const cleanPath = originalRequest.url
+        ? (originalRequest.url.startsWith('/') ? originalRequest.url : `/${originalRequest.url}`)
+        : '';
+      originalRequest.url = `${DIRECT_BACKEND_URL}${cleanPath}`;
+      return api(originalRequest);
+    }
+
+    // 2. Only intercept 401 Unauthorized for protected endpoints
     if (
       error.response &&
       error.response.status === 401 &&
@@ -92,8 +116,12 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        const refreshEndpoint = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+          ? `${DIRECT_BACKEND_URL}/auth/refresh`
+          : `${api.defaults.baseURL}/auth/refresh`;
+
         const refreshResponse = await axios.post(
-          `${api.defaults.baseURL}/auth/refresh`,
+          refreshEndpoint,
           { refreshToken: fallbackRefreshToken },
           { withCredentials: true }
         );

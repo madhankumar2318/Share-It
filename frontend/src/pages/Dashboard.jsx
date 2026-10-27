@@ -270,8 +270,8 @@ const Dashboard = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (retryAttempt = 0) => {
+    if (retryAttempt === 0) setLoading(true);
     try {
       const [itemsRes, receivedRes, borrowedRes, savedRes] = await Promise.all([
         api.get('/items/my-items'),
@@ -279,13 +279,22 @@ const Dashboard = () => {
         api.get('/requests/borrowed'),
         api.get('/favorites'),
       ]);
-      setMyItems(itemsRes.data);
-      setReceivedRequests(receivedRes.data);
-      setMyBorrowRequests(borrowedRes.data);
-      setSavedItems(savedRes.data || []);
+      setMyItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
+      setReceivedRequests(Array.isArray(receivedRes.data) ? receivedRes.data : []);
+      setMyBorrowRequests(Array.isArray(borrowedRes.data) ? borrowedRes.data : []);
+      setSavedItems(Array.isArray(savedRes.data) ? savedRes.data : []);
+      setLoading(false);
     } catch (err) {
       console.error('Failed to load dashboard data', err);
-    } finally {
+      const isServerColdStart =
+        !err.response ||
+        [500, 502, 503, 504].includes(err.response?.status) ||
+        err.code === 'ECONNABORTED';
+
+      if (isServerColdStart && retryAttempt < 3) {
+        setTimeout(() => fetchDashboardData(retryAttempt + 1), (retryAttempt + 1) * 3500);
+        return;
+      }
       setLoading(false);
     }
   };
