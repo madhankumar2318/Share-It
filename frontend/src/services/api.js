@@ -1,17 +1,12 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
-  // When deployed on Vercel, relative '/api' uses Vercel's server-to-server reverse proxy
-  // to connect directly with Render, completely eliminating cross-origin CORS limitations.
-  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-    return '/api';
-  }
   return import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
 };
 
 const api = axios.create({
   baseURL: getBaseUrl(),
-  timeout: 30000,
+  timeout: 45000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -53,6 +48,28 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Automatic cold-start retry: If Render backend is waking up (502, 503, 504, or network timeout)
+    const status = error.response?.status;
+    const isColdStartError =
+      status === 502 ||
+      status === 503 ||
+      status === 504 ||
+      error.code === 'ECONNABORTED' ||
+      (!error.response && error.message?.includes('Network Error'));
+
+    if (
+      isColdStartError &&
+      originalRequest &&
+      !originalRequest._coldStartRetryDone &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register')
+    ) {
+      originalRequest._coldStartRetryDone = true;
+      console.warn('Backend server standby/cold-start detected (HTTP ' + (status || 'Timeout') + '). Retrying request in 3 seconds...', originalRequest.url);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      return api(originalRequest);
+    }
 
     // Only intercept 401 Unauthorized for protected endpoints
     if (

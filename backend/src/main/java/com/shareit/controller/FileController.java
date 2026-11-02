@@ -32,7 +32,7 @@ public class FileController {
             fileName = result.substring(result.lastIndexOf('/') + 1);
         } else {
             fileName = result != null ? result : "";
-            fileDownloadUri = "/api/files/" + fileName;
+            fileDownloadUri = "https://share-it-xd01.onrender.com/api/files/" + fileName;
         }
 
         return new ResponseEntity<>(

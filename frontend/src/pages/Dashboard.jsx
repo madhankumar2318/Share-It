@@ -245,17 +245,7 @@ const Dashboard = () => {
       const compressedFile = await compressImage(photoFile, { maxWidth: 1280, maxHeight: 1280, quality: 0.75 });
       const uploadData = new FormData();
       uploadData.append('file', compressedFile);
-      let res;
-      try {
-        res = await api.post('/files/upload', uploadData, { timeout: 20000 });
-      } catch (proxyErr) {
-        const directUrl = 'https://share-it-xd01.onrender.com/api/files/upload';
-        const token = localStorage.getItem('token');
-        res = await axios.post(directUrl, uploadData, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          timeout: 25000,
-        });
-      }
+      const res = await api.post('/files/upload', uploadData, { timeout: 45000 });
       const finalUrl = res.data.fileUrl;
 
       await api.put(`/items/${editingPhotoItem.id}`, {

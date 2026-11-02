@@ -180,21 +180,12 @@ const AddItem = () => {
       const uploadData = new FormData();
       uploadData.append('file', compressedFile);
 
-      let response;
-      try {
-        response = await api.post('/files/upload', uploadData, { timeout: 20000 });
-      } catch (proxyErr) {
-        // Direct backend fallback if Vercel serverless proxy times out or fails
-        const directUrl = 'https://share-it-xd01.onrender.com/api/files/upload';
-        console.warn('Vercel proxy upload encountered an issue, attempting direct upload to Render...', proxyErr.message);
-        const token = localStorage.getItem('token');
-        response = await axios.post(directUrl, uploadData, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          timeout: 25000,
-        });
-      }
+      const response = await api.post('/files/upload', uploadData, { timeout: 45000 });
       return response.data.fileUrl;
     } catch (err) {
+      if (err.response?.status === 502 || err.response?.status === 503 || err.response?.status === 504) {
+        throw new Error('Server was in standby and is now waking up. Please click "Post Item for Lending" again now.');
+      }
       const msg = err.response?.data?.message || err.message || 'Failed to upload photo';
       throw new Error(msg);
     } finally {
@@ -300,6 +291,8 @@ const AddItem = () => {
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         setError('Your session has expired. Please log in again to post your item.');
+      } else if (err.response?.status === 502 || err.response?.status === 503 || err.response?.status === 504) {
+        setError('The server was in standby and is now waking up. Please click "Post Item for Lending" again now.');
       } else {
         setError(err.response?.data?.message || err.message || 'Failed to list item.');
       }
