@@ -69,20 +69,18 @@ public class FileStorageService {
         }
 
         // ── Magic Bytes Binary Inspection ────────────────────────────────────
-        // Reads the actual binary header of the uploaded file to confirm it is
-        // a genuine image. This blocks renamed executables, scripts, or ZIP files
-        // disguised with a .jpg/.png extension from reaching the database.
+        // Reads the leading magic bytes of the uploaded file to verify it is
+        // a genuine JPEG, PNG, or WEBP image without relying on Java ImageIO
+        // (which fails on webp or standard mobile camera profiles).
         try {
             byte[] fileBytes = file.getBytes();
-            try (InputStream magicStream = new ByteArrayInputStream(fileBytes)) {
-                if (ImageIO.read(magicStream) == null) {
-                    throw new IllegalArgumentException(
-                            "File validation failed: The uploaded file is not a valid or readable image. Disguised files are rejected.");
-                }
+            if (!isValidImageHeader(fileBytes)) {
+                throw new IllegalArgumentException(
+                        "File validation failed: The uploaded file is not a valid or readable image. Disguised files are rejected.");
             }
         } catch (IllegalArgumentException ex) {
             throw ex;
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             throw new IllegalArgumentException("File validation error: Could not read the uploaded file for safety inspection.");
         }
         // ─────────────────────────────────────────────────────────────────────
@@ -169,6 +167,30 @@ public class FileStorageService {
             }
         } catch (MalformedURLException ex) {
             throw new IllegalArgumentException("File not found: " + fileName, ex);
+        }
+    }
+    private boolean isValidImageHeader(byte[] data) {
+        if (data == null || data.length < 12) {
+            return false;
+        }
+        // 1. JPEG: starts with FF D8 FF
+        if ((data[0] & 0xFF) == 0xFF && (data[1] & 0xFF) == 0xD8 && (data[2] & 0xFF) == 0xFF) {
+            return true;
+        }
+        // 2. PNG: starts with 89 50 4E 47 0D 0A 1A 0A
+        if ((data[0] & 0xFF) == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) {
+            return true;
+        }
+        // 3. WEBP: starts with "RIFF" and has "WEBP" at offset 8
+        if (data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
+            data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
+            return true;
+        }
+        // Fallback: check ImageIO
+        try {
+            return javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(data)) != null;
+        } catch (Exception e) {
+            return false;
         }
     }
 }
