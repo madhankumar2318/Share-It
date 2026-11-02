@@ -15,7 +15,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping({"/api/files", "/files"})
 @RequiredArgsConstructor
 public class FileController {
 
