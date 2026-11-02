@@ -53,5 +53,8 @@
       "source": "/((?!assets/|pwa-|manifest.json|favicon.svg|sw.js).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "buildCommand": "npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm --prefix frontend install"
 }
