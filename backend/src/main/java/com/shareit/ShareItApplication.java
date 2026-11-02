@@ -11,6 +11,12 @@ import java.net.URI;
 @EnableScheduling
 public class ShareItApplication {
 
+    @jakarta.annotation.PostConstruct
+    public void initTimeZone() {
+        // Enforce Indian Standard Time (IST / Asia/Kolkata) across the entire JVM & database queries
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Kolkata"));
+    }
+
     public static void main(String[] args) {
         // 1. Load .env variables into System properties if .env exists
         try {
