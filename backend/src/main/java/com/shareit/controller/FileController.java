@@ -32,10 +32,7 @@ public class FileController {
             fileName = result.substring(result.lastIndexOf('/') + 1);
         } else {
             fileName = result != null ? result : "";
-            fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/api/files/")
-                    .path(fileName)
-                    .toUriString();
+            fileDownloadUri = "/api/files/" + fileName;
         }
 
         return new ResponseEntity<>(

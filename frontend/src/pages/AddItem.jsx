@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import api from '../services/api';
 import { INDIAN_LOCATIONS } from '../data/indianLocations';
 import { getItemCoordinates, resolveLocationCoordinates, PIN_PREFIX_COORDINATES } from '../utils/geo';
@@ -179,7 +180,19 @@ const AddItem = () => {
       const uploadData = new FormData();
       uploadData.append('file', compressedFile);
 
-      const response = await api.post('/files/upload', uploadData);
+      let response;
+      try {
+        response = await api.post('/files/upload', uploadData, { timeout: 20000 });
+      } catch (proxyErr) {
+        // Direct backend fallback if Vercel serverless proxy times out or fails
+        const directUrl = 'https://share-it-xd01.onrender.com/api/files/upload';
+        console.warn('Vercel proxy upload encountered an issue, attempting direct upload to Render...', proxyErr.message);
+        const token = localStorage.getItem('token');
+        response = await axios.post(directUrl, uploadData, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          timeout: 25000,
+        });
+      }
       return response.data.fileUrl;
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to upload photo';
@@ -292,6 +305,7 @@ const AddItem = () => {
       }
     } finally {
       setLoading(false);
+      setUploadingImage(false);
     }
   };
 

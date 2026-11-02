@@ -4,6 +4,8 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.shareit.model.StoredFile;
 import com.shareit.repository.StoredFileRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -32,6 +34,7 @@ import javax.imageio.ImageIO;
 @Service
 public class FileStorageService {
 
+    private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
     private final Path fileStorageLocation;
     private final StoredFileRepository storedFileRepository;
     private final Cloudinary cloudinary;
@@ -72,8 +75,9 @@ public class FileStorageService {
         // Reads the leading magic bytes of the uploaded file to verify it is
         // a genuine JPEG, PNG, or WEBP image without relying on Java ImageIO
         // (which fails on webp or standard mobile camera profiles).
+        byte[] fileBytes;
         try {
-            byte[] fileBytes = file.getBytes();
+            fileBytes = file.getBytes();
             if (!isValidImageHeader(fileBytes)) {
                 throw new IllegalArgumentException(
                         "File validation failed: The uploaded file is not a valid or readable image. Disguised files are rejected.");
@@ -85,26 +89,41 @@ public class FileStorageService {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        // ── Cloudinary Cloud Storage Upload ─────────────────────────────────
-        // When Cloudinary credentials are provided, images are uploaded directly
-        // to Cloudinary CDN so the Neon PostgreSQL database never exhausts its
-        // free storage quota.
+        // ── Cloudinary Cloud Storage Upload (with Strict Timeout & Graceful DB Fallback) ──
+        // When Cloudinary credentials are provided, attempts upload to Cloudinary CDN.
+        // Protected by a strict 6-second timeout: if Cloudinary hangs, is rate-limited,
+        // or credentials fail, we immediately fall back to Neon PostgreSQL database storage
+        // so the user's item listing is NEVER blocked or hung.
         if (this.cloudinary != null) {
             try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> uploadResult = (Map<String, Object>) this.cloudinary.uploader().upload(
-                        file.getBytes(),
-                        ObjectUtils.asMap(
-                                "folder", "shareit_items",
-                                "resource_type", "image"
-                        )
-                );
-                String secureUrl = (String) uploadResult.get("secure_url");
+                java.util.concurrent.CompletableFuture<String> cloudUploadFuture =
+                        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                            try {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> uploadResult = (Map<String, Object>) this.cloudinary.uploader().upload(
+                                        fileBytes,
+                                        ObjectUtils.asMap(
+                                                "folder", "shareit_items",
+                                                "resource_type", "image"
+                                        )
+                                );
+                                String secureUrl = (String) uploadResult.get("secure_url");
+                                return StringUtils.hasText(secureUrl) ? secureUrl : null;
+                            } catch (Exception ex) {
+                                log.warn("⚠️ Cloudinary upload call failed: {}", ex.getMessage());
+                                return null;
+                            }
+                        });
+
+                String secureUrl = cloudUploadFuture.get(6, java.util.concurrent.TimeUnit.SECONDS);
                 if (StringUtils.hasText(secureUrl)) {
+                    log.info("☁️ Image uploaded to Cloudinary CDN successfully: {}", secureUrl);
                     return secureUrl;
                 }
-            } catch (IOException ex) {
-                throw new RuntimeException("Failed to upload image to Cloudinary: " + ex.getMessage(), ex);
+            } catch (java.util.concurrent.TimeoutException te) {
+                log.warn("⏱️ Cloudinary upload timed out after 6 seconds. Seamlessly falling back to Neon PostgreSQL storage.");
+            } catch (Exception ex) {
+                log.warn("⚠️ Cloudinary upload encountered error ({}). Seamlessly falling back to Neon PostgreSQL storage.", ex.getMessage());
             }
         }
         // ─────────────────────────────────────────────────────────────────────
@@ -118,19 +137,21 @@ public class FileStorageService {
                     .id(fileName)
                     .originalName(originalFilename)
                     .contentType(file.getContentType())
-                    .data(file.getBytes())
+                    .data(fileBytes)
                     .build();
             storedFileRepository.save(storedFile);
 
             // 2. Also keep a local copy if writable
             try {
                 Path targetLocation = this.fileStorageLocation.resolve(fileName);
-                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(new ByteArrayInputStream(fileBytes), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception ignored) {
             }
 
+            log.info("💾 Image saved directly to Neon database storage with filename: {}", fileName);
             return fileName;
-        } catch (IOException ex) {
+        } catch (Exception ex) {
+            log.error("❌ Failed to store file: {}", ex.getMessage(), ex);
             throw new RuntimeException("Could not store file " + fileName + ". Please try again!", ex);
         }
     }
@@ -173,8 +194,8 @@ public class FileStorageService {
         if (data == null || data.length < 12) {
             return false;
         }
-        // 1. JPEG: starts with FF D8 FF
-        if ((data[0] & 0xFF) == 0xFF && (data[1] & 0xFF) == 0xD8 && (data[2] & 0xFF) == 0xFF) {
+        // 1. JPEG: starts with SOI marker FF D8
+        if ((data[0] & 0xFF) == 0xFF && (data[1] & 0xFF) == 0xD8) {
             return true;
         }
         // 2. PNG: starts with 89 50 4E 47 0D 0A 1A 0A
