@@ -47,7 +47,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://share-it-wmi3.onrender.com/api/:path*"
+      "destination": "https://share-it-xd01.onrender.com/api/:path*"
     },
     {
       "source": "/((?!assets/|pwa-|manifest.json|favicon.svg|sw.js).*)",

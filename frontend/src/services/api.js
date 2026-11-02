@@ -6,7 +6,7 @@ const getBaseUrl = () => {
   if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
     return '/api';
   }
-  return import.meta.env.VITE_API_URL || 'https://share-it-wmi3.onrender.com/api';
+  return import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
 };
 
 const api = axios.create({
