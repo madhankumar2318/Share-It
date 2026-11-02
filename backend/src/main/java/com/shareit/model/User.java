@@ -56,10 +56,20 @@ public class User {
     @Builder.Default
     private boolean active = true;
 
-    @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        java.time.ZonedDateTime nowIst = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+        this.createdAt = nowIst.toLocalDateTime();
+        this.updatedAt = nowIst.toLocalDateTime();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).toLocalDateTime();
+    }
 }
