@@ -73,11 +73,11 @@ public class SecurityConfig {
                         // Public endpoints
                         auth.requestMatchers("/", "/api/health", "/health").permitAll()
                             .requestMatchers("/api/auth/**", "/auth/**").permitAll()
-                            .requestMatchers(HttpMethod.GET, "/api/items", "/api/items/{id:[0-9]+}", "/api/items/search", "/items/**").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/items", "/api/items/{id:[0-9]+}", "/api/items/search", "/items/**", "/items").permitAll()
                             .requestMatchers("/api/files/**", "/files/**").permitAll()
-                            .requestMatchers("/api/requests/item/*/booked-ranges").permitAll()
-                            .requestMatchers("/api/reviews/item/**").permitAll()
-                            .requestMatchers("/api/users/*/trust-score", "/api/users/*/public-profile").permitAll();
+                            .requestMatchers("/api/requests/item/*/booked-ranges", "/requests/item/*/booked-ranges").permitAll()
+                            .requestMatchers("/api/reviews/item/**", "/reviews/item/**").permitAll()
+                            .requestMatchers("/api/users/*/trust-score", "/users/*/trust-score", "/api/users/*/public-profile", "/users/*/public-profile").permitAll();
 
                         // Swagger UI / OpenAPI Documentation: Public in dev, strictly ADMIN-only in production
                         if (swaggerPublicAccess) {
@@ -87,7 +87,7 @@ public class SecurityConfig {
                         }
 
                         // Admin-only endpoints
-                        auth.requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
+                        auth.requestMatchers("/api/audit-logs/**", "/audit-logs/**").hasRole("ADMIN")
                             // Protected endpoints
                             .anyRequest().authenticated();
                 })

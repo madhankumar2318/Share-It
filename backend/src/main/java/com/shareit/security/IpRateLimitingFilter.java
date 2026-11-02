@@ -64,7 +64,7 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
 
         // 2. Bypass internal Render container health checks
         String path = request.getRequestURI();
-        if ("/api/health".equals(path) || "/".equals(path)) {
+        if ("/api/health".equals(path) || "/health".equals(path) || "/".equals(path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -73,7 +73,7 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
         long now = System.currentTimeMillis();
 
         // 3. Stricter Sub-Bucket: Account Registration Abuse & Sybil/Bot Attack Prevention
-        if ("POST".equalsIgnoreCase(request.getMethod()) && "/api/auth/register".equals(path)) {
+        if ("POST".equalsIgnoreCase(request.getMethod()) && ("/api/auth/register".equals(path) || "/auth/register".equals(path))) {
             IpRequestTracker regTracker = registerTrackerCache.compute(clientIp, (ip, existing) -> {
                 if (existing == null || (now - existing.windowStartMs) >= REGISTER_WINDOW_MS) {
                     return new IpRequestTracker(now);
