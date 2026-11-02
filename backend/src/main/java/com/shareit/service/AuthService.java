@@ -31,15 +31,21 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail().toLowerCase().trim())) {
-            throw new IllegalArgumentException("Email is already registered");
+        String cleanEmail = request.getEmail().toLowerCase().trim();
+        if (userRepository.existsByEmail(cleanEmail)) {
+            throw new IllegalArgumentException("Email is already registered. Please log in or use another email.");
+        }
+
+        String rawPhone = request.getPhone() != null ? request.getPhone().replaceAll("\\s+", "").trim() : null;
+        if (rawPhone != null && !rawPhone.isEmpty() && userRepository.existsByPhone(rawPhone)) {
+            throw new IllegalArgumentException("Mobile number is already registered with another account. Please use a different number.");
         }
 
         User user = User.builder()
                 .fullName(HtmlSanitizer.sanitize(request.getFullName()))
-                .email(request.getEmail().toLowerCase().trim())
+                .email(cleanEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .phone(request.getPhone())
+                .phone(rawPhone != null ? rawPhone : request.getPhone())
                 .role(Role.USER)
                 .build();
 

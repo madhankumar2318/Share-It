@@ -35,6 +35,9 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS city;");
                 jdbcTemplate.execute("ALTER TABLE users DROP COLUMN IF EXISTS pincode;");
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);");
+                try {
+                    jdbcTemplate.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users (phone) WHERE phone IS NOT NULL;");
+                } catch (Exception ignored) {}
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS neighborhood VARCHAR(150);");
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(1000);");
                 jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);");
