@@ -16,3 +16,15 @@ html.dark body {
   background-color: #090d16;
   color: #f8fafc;
 }
+
+/* Hide default browser up/down arrow buttons on number inputs across all browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
