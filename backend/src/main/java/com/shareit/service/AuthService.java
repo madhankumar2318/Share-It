@@ -36,16 +36,24 @@ public class AuthService {
             throw new IllegalArgumentException("Email is already registered. Please log in or use another email.");
         }
 
-        String rawPhone = request.getPhone() != null ? request.getPhone().replaceAll("\\s+", "").trim() : null;
-        if (rawPhone != null && !rawPhone.isEmpty() && userRepository.existsByPhone(rawPhone)) {
-            throw new IllegalArgumentException("Mobile number is already registered with another account. Please use a different number.");
+        // Extract exact last 10 digits regardless of spaces, dashes, or +91 prefix
+        String rawPhone = request.getPhone() != null ? request.getPhone().replaceAll("[^0-9]", "") : "";
+        String tenDigitPhone = rawPhone.length() >= 10 ? rawPhone.substring(rawPhone.length() - 10) : rawPhone;
+
+        if (!tenDigitPhone.isEmpty()) {
+            if (userRepository.existsByNormalizedPhone(tenDigitPhone)) {
+                throw new IllegalArgumentException("Mobile number is already registered with another account. Please use a different number.");
+            }
         }
+
+        // Canonical format stored in DB: +91 XXXXXXXXXX
+        String formattedPhone = !tenDigitPhone.isEmpty() ? ("+91 " + tenDigitPhone) : null;
 
         User user = User.builder()
                 .fullName(HtmlSanitizer.sanitize(request.getFullName()))
                 .email(cleanEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .phone(rawPhone != null ? rawPhone : request.getPhone())
+                .phone(formattedPhone)
                 .role(Role.USER)
                 .build();
 
