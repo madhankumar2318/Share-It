@@ -11,7 +11,7 @@ import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
 import { calculateSmartDistance } from '../utils/geo';
 import { ItemDetailSkeleton } from '../components/SkeletonCard';
-import { getDefaultItemImage } from '../utils/imageUtils';
+import { getDefaultItemImage, resolveItemImageUrl, handleImageError } from '../utils/imageUtils';
 
 const ItemDetail = () => {
   const { id } = useParams();
@@ -166,15 +166,10 @@ const ItemDetail = () => {
         <div className="space-y-4">
           <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-square border border-gray-100 dark:border-slate-800">
             <img
-              src={
-                item.imageUrl ||
-                getDefaultItemImage(item.category, item.title)
-              }
+              src={resolveItemImageUrl(item.imageUrl, item.category, item.title)}
               alt={item.title}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.src = getDefaultItemImage(item.category, item.title);
-              }}
+              onError={(e) => handleImageError(e, item.category, item.title)}
             />
             <div className="absolute top-4 left-4 bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
               {item.category}

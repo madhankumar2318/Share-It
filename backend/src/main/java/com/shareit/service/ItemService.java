@@ -38,7 +38,7 @@ public class ItemService {
                 .title(HtmlSanitizer.sanitize(dto.getTitle()))
                 .description(HtmlSanitizer.sanitize(dto.getDescription()))
                 .category(HtmlSanitizer.sanitize(dto.getCategory()))
-                .imageUrl(dto.getImageUrl())
+                .imageUrl(normalizeImageUrl(dto.getImageUrl()))
                 .location(dto.getLocation() != null && !dto.getLocation().trim().isEmpty() ? HtmlSanitizer.sanitize(dto.getLocation()) : "Local Community")
                 .latitude(dto.getLatitude())
                 .longitude(dto.getLongitude())
@@ -185,7 +185,7 @@ public class ItemService {
             item.setCategory(HtmlSanitizer.sanitize(dto.getCategory()));
         }
         if (dto.getImageUrl() != null) {
-            item.setImageUrl(dto.getImageUrl());
+            item.setImageUrl(normalizeImageUrl(dto.getImageUrl()));
         }
         if (dto.getLocation() != null) {
             item.setLocation(HtmlSanitizer.sanitize(dto.getLocation()));
@@ -240,7 +240,7 @@ public class ItemService {
                 .title(item.getTitle())
                 .description(item.getDescription())
                 .category(item.getCategory())
-                .imageUrl(item.getImageUrl())
+                .imageUrl(normalizeImageUrl(item.getImageUrl()))
                 .location(item.getLocation())
                 .latitude(item.getLatitude())
                 .longitude(item.getLongitude())
@@ -257,5 +257,23 @@ public class ItemService {
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();
+    }
+
+    private String normalizeImageUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        String clean = url.trim();
+        // If it was saved with old dead Render service, rewrite to active service
+        if (clean.contains("share-it-wmi3.onrender.com") || clean.contains("localhost:") || clean.contains("127.0.0.1:")) {
+            String fileName = clean.substring(clean.lastIndexOf('/') + 1);
+            return "https://share-it-xd01.onrender.com/api/files/" + fileName;
+        }
+        // If it was saved as relative /api/files/... or /files/...
+        if (clean.startsWith("/api/files/") || clean.startsWith("/files/")) {
+            String fileName = clean.substring(clean.lastIndexOf('/') + 1);
+            return "https://share-it-xd01.onrender.com/api/files/" + fileName;
+        }
+        return clean;
     }
 }

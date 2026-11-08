@@ -46,7 +46,7 @@ import ContactlessCollectModal from '../components/ContactlessCollectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import WhatsAppButton from '../components/WhatsAppButton';
-import { getDefaultItemImage } from '../utils/imageUtils';
+import { getDefaultItemImage, resolveItemImageUrl, handleImageError } from '../utils/imageUtils';
 import TrustBadge from '../components/TrustBadge';
 import { DashboardRowSkeleton } from '../components/SkeletonCard';
 import { compressImage } from '../utils/imageCompressor';
@@ -1224,15 +1224,10 @@ const Dashboard = () => {
                   >
                     <div className="flex gap-4">
                       <img
-                        src={
-                          item.imageUrl ||
-                          getDefaultItemImage(item.category, item.title)
-                        }
+                        src={resolveItemImageUrl(item.imageUrl, item.category, item.title)}
                         alt={item.title}
                         className="w-20 h-20 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0"
-                        onError={(e) => {
-                          e.target.src = getDefaultItemImage(item.category, item.title);
-                        }}
+                        onError={(e) => handleImageError(e, item.category, item.title)}
                       />
                       <div className="overflow-hidden">
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.category}</span>
@@ -1785,15 +1780,10 @@ const Dashboard = () => {
                 >
                   <div className="relative h-44 bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <img
-                      src={
-                        item.imageUrl ||
-                        getDefaultItemImage(item.category, item.title)
-                      }
+                      src={resolveItemImageUrl(item.imageUrl, item.category, item.title)}
                       alt={item.title}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = getDefaultItemImage(item.category, item.title);
-                      }}
+                      onError={(e) => handleImageError(e, item.category, item.title)}
                     />
                     <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
                       {item.category}
@@ -1971,9 +1961,7 @@ const Dashboard = () => {
                     src={photoPreview}
                     alt="Preview"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.src = getDefaultItemImage(editingPhotoItem?.category, editingPhotoItem?.title);
-                    }}
+                    onError={(e) => handleImageError(e, editingPhotoItem?.category, editingPhotoItem?.title)}
                   />
                 ) : (
                   <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
