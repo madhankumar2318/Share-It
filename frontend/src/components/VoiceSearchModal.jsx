@@ -16,6 +16,17 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
 
   const selectedLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLang) || SUPPORTED_LANGUAGES[0];
 
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+  };
+
   const setupRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -64,17 +75,17 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
       };
 
       recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
+        console.warn('Speech recognition error event:', event.error);
         if (event.error === 'not-allowed') {
           setErrorMessage(
-            'Microphone permission was updated in browser settings. Please click "Refresh Page" below to activate it.'
+            'Speech recognition was not allowed by the browser. If on Windows, check Settings ➔ Privacy & security ➔ Speech and turn ON "Online speech recognition", or refresh the page.'
           );
         } else if (event.error === 'audio-capture') {
           setErrorMessage(
-            'Audio capture failed. If using Bluetooth earbuds/headset, make sure they are connected and active, or switch to your laptop internal microphone.'
+            'Audio capture failed. If using a Bluetooth headset (like Boult Audio), ensure it is connected and active, or switch to your PC internal microphone.'
           );
         } else if (event.error === 'no-speech') {
-          // Normal timeout, keep listening
+          // Normal pause, keep listening or allow user to speak
         } else {
           setErrorMessage(`Speech recognition notice: ${event.error}`);
         }
@@ -93,47 +104,55 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
     }
   };
 
-  const startListening = () => {
+  // Direct user-gesture click handler to start/stop listening
+  const handleToggleListening = async () => {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+
     setErrorMessage('');
+
+    // Step 1: Prime microphone permissions using standard Web Media API
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately release test stream
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (mediaErr) {
+        console.warn('getUserMedia check error:', mediaErr);
+        if (mediaErr.name === 'NotAllowedError' || mediaErr.name === 'PermissionDeniedError') {
+          setErrorMessage(
+            'Microphone access is blocked in your browser. Click the lock/settings icon (🔒) next to the URL, set Microphone to "Allow", then click "Refresh Page".'
+          );
+          return;
+        } else if (mediaErr.name === 'NotFoundError' || mediaErr.name === 'DevicesNotFoundError') {
+          setErrorMessage(
+            'No microphone device detected. If using a Bluetooth headset, please ensure it is turned on and connected.'
+          );
+          return;
+        } else if (mediaErr.name === 'NotReadableError' || mediaErr.name === 'TrackStartError') {
+          setErrorMessage(
+            'Microphone is currently in use by another app (e.g. Zoom, Teams, or Recorder). Please close other apps and try again.'
+          );
+          return;
+        }
+      }
+    }
+
+    // Step 2: Start speech recognition
     const rec = setupRecognition();
     if (rec) {
       try {
         rec.start();
         setIsListening(true);
       } catch (err) {
-        console.warn('Recognition start error:', err);
+        console.warn('Recognition start exception:', err);
       }
     }
   };
 
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // Ignore
-      }
-      setIsListening(false);
-    }
-  };
-
-  const requestMicrophonePermission = async () => {
-    setErrorMessage('');
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      }
-      startListening();
-    } catch (err) {
-      console.warn('Microphone permission request failed:', err);
-      setErrorMessage(
-        'Browser requires a page refresh to apply the newly allowed microphone permission. Please click "Refresh Page" below.'
-      );
-    }
-  };
-
-  // Initialize SpeechRecognition instance on open or language switch
+  // On open or close, reset state cleanly without auto-invoking mic
   useEffect(() => {
     if (!isOpen) {
       if (recognitionRef.current) {
@@ -143,10 +162,14 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
           // Ignore
         }
       }
+      setIsListening(false);
+      setErrorMessage('');
       return;
     }
 
-    startListening();
+    // Clean initial state when modal opens
+    setErrorMessage('');
+    setIsListening(false);
 
     return () => {
       if (recognitionRef.current) {
@@ -157,7 +180,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
         }
       }
     };
-  }, [isOpen, selectedLang]);
+  }, [isOpen]);
 
   const handleLanguageChange = (langCode) => {
     setSelectedLang(langCode);
@@ -170,7 +193,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
   const handleApplySearch = (customQuery = null) => {
     const rawText = customQuery || transcript || interimTranscript;
     if (!rawText.trim()) {
-      toast.warning('No speech detected. Please speak into the microphone.');
+      toast.warning('No speech detected. Please speak into the microphone or type your search.');
       return;
     }
 
@@ -183,7 +206,6 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
         : `🎙️ Searching for "${mapped.original}"`
     );
 
-    // Pass the combined or mapped search query to parent
     onSearchSubmit(mapped);
     onClose();
   };
@@ -198,7 +220,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
       role="dialog"
       aria-modal="true"
       aria-label="Multilingual Voice Search"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px] animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in"
       onClick={onClose}
     >
       <div
@@ -261,9 +283,48 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
           </div>
         </div>
 
-        {/* Central Audio Waves & Mic Animation */}
+        {/* Central Audio Waves & Mic Animation - ALWAYS VISIBLE */}
         <div className="p-6 text-center space-y-5">
-          {errorMessage ? (
+          <div className="relative flex flex-col items-center justify-center py-2">
+            {/* Concentric Pulsing Waves */}
+            <div className="relative flex items-center justify-center">
+              {isListening && (
+                <>
+                  <div className="absolute w-28 h-28 rounded-full bg-emerald-500/10 animate-ping" />
+                  <div className="absolute w-20 h-20 rounded-full bg-emerald-500/20 animate-pulse" />
+                </>
+              )}
+              <button
+                type="button"
+                onClick={handleToggleListening}
+                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 cursor-pointer ${
+                  isListening
+                    ? 'bg-emerald-600 hover:bg-emerald-700 scale-105 ring-8 ring-emerald-400/30 animate-pulse'
+                    : 'bg-emerald-600 hover:bg-emerald-700 hover:scale-105 shadow-emerald-600/30 ring-4 ring-emerald-500/20'
+                }`}
+                title={isListening ? 'Tap to pause' : 'Tap to start speaking'}
+              >
+                {isListening ? <Mic className="w-9 h-9 animate-bounce" /> : <Mic className="w-9 h-9" />}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-1">
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center justify-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-emerald-500 animate-ping' : 'bg-emerald-600'}`} />
+                {isListening
+                  ? `Listening in ${selectedLangObj.nativeName} (${selectedLangObj.name})...`
+                  : 'Tap the green microphone to speak'}
+              </span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {isListening
+                  ? 'Speak clearly into your microphone now'
+                  : 'Click the button above whenever you are ready'}
+              </p>
+            </div>
+          </div>
+
+          {/* Error / Permission Diagnostic Banner */}
+          {errorMessage && (
             <div className="p-4 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-2xl space-y-3 text-left">
               <div className="flex items-start gap-2.5 text-xs text-rose-700 dark:text-rose-300">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" />
@@ -277,67 +338,41 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
                   onClick={() => window.location.reload()}
                   className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Refresh Page to Apply
+                  <RotateCcw className="w-3.5 h-3.5" /> Refresh Page
                 </button>
                 <button
                   type="button"
-                  onClick={requestMicrophonePermission}
-                  className="py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5"
+                  onClick={handleToggleListening}
+                  className="py-2 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Try Microphone Again
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="relative flex flex-col items-center justify-center py-2">
-              {/* Concentric Pulsing Audio Waves */}
-              <div className="relative flex items-center justify-center">
-                {isListening && (
-                  <>
-                    <div className="absolute w-28 h-28 rounded-full bg-emerald-500/10 animate-ping" />
-                    <div className="absolute w-20 h-20 rounded-full bg-emerald-500/20 animate-pulse" />
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={isListening ? stopListening : startListening}
-                  className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
-                    isListening
-                      ? 'bg-emerald-600 hover:bg-emerald-700 scale-105 ring-4 ring-emerald-400/30'
-                      : 'bg-slate-500 hover:bg-slate-600'
-                  }`}
-                  title={isListening ? 'Tap to pause' : 'Tap to start recording'}
-                >
-                  {isListening ? <Mic className="w-8 h-8 animate-pulse" /> : <MicOff className="w-8 h-8" />}
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-1">
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
-                  {isListening
-                    ? `Listening in ${selectedLangObj.nativeName} (${selectedLangObj.name})...`
-                    : 'Tap microphone to start speaking'}
-                </span>
-                <p className="text-[11px] text-gray-400">
-                  Speak clearly into your phone or PC microphone
-                </p>
-              </div>
-            </div>
           )}
 
-          {/* Real-Time Live Transcript Preview */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-800 text-left space-y-2 min-h-[85px] flex flex-col justify-center">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-              Live Speech Transcript:
-            </span>
-            <div className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white break-words">
-              {currentDisplaySpeech || (
-                <span className="text-gray-400 italic font-normal text-xs">
-                  "Listening... speak into your microphone..."
+          {/* Real-Time Live Transcript Preview or Manual Edit */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-800 text-left space-y-2 min-h-[90px] flex flex-col justify-center">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                Live Speech Transcript / Search Text:
+              </span>
+              {currentDisplaySpeech && (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  ✓ Speech captured
                 </span>
               )}
             </div>
+            <input
+              type="text"
+              value={currentDisplaySpeech}
+              onChange={(e) => {
+                setTranscript(e.target.value);
+                setInterimTranscript('');
+              }}
+              placeholder={isListening ? 'Listening... speak now...' : 'Your spoken words will appear here (or type manually)...'}
+              className="w-full bg-transparent text-sm sm:text-base font-semibold text-gray-900 dark:text-white outline-none placeholder-gray-400"
+            />
 
             {/* Smart Dialect Mapping Badge */}
             {mappedPreview && mappedPreview.matchedTerm && (
@@ -359,8 +394,9 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
             onClick={() => {
               setTranscript('');
               setInterimTranscript('');
+              setErrorMessage('');
             }}
-            disabled={!currentDisplaySpeech}
+            disabled={!currentDisplaySpeech && !errorMessage}
             className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 transition"
           >
             Clear Text
