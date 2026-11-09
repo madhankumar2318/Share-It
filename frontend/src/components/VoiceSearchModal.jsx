@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, X, Sparkles, Globe2, AlertCircle, ArrowRight, Check } from 'lucide-react';
+import { Mic, MicOff, X, Sparkles, Globe2, AlertCircle, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, mapRegionalVoiceToKeywords } from '../utils/regionalKeywords';
 import { useToast } from '../context/ToastContext';
 
@@ -37,6 +37,22 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
         // Ignore
       }
       setIsListening(false);
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    setErrorMessage('');
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      startListening();
+    } catch (err) {
+      console.warn('Microphone permission request failed:', err);
+      setErrorMessage(
+        'Microphone access is blocked in your browser. Please follow the quick steps below to allow it.'
+      );
     }
   };
 
@@ -233,9 +249,23 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
         {/* Central Audio Waves & Mic Animation */}
         <div className="p-6 text-center space-y-5">
           {errorMessage ? (
-            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-2xl flex items-center gap-2.5 text-xs text-rose-700 dark:text-rose-300 text-left">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500" />
-              <span>{errorMessage}</span>
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-2xl space-y-3 text-left">
+              <div className="flex items-start gap-2.5 text-xs text-rose-700 dark:text-rose-300">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold">{errorMessage}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
+                    💡 <strong>To enable:</strong> In your browser's address bar (top left next to the URL), click the <strong>lock / site settings icon (🔒 or 🎛️)</strong>, set <strong>Microphone</strong> to <strong>Allow</strong>, then tap the button below.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={requestMicrophonePermission}
+                className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Request Permission & Try Again
+              </button>
             </div>
           ) : (
             <div className="relative flex flex-col items-center justify-center py-2">

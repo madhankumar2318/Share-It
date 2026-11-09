@@ -66,7 +66,7 @@ public class SecurityConfig {
                                         .policyDirectives("default-src 'self'; script-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;")
                                 );
                         headers.permissionsPolicy(permissions -> permissions
-                                .policy("camera=(), microphone=(), geolocation=(self)")
+                                .policy("camera=(), microphone=(self), geolocation=(self)")
                         );
                 })
                 .authorizeHttpRequests(auth -> {
