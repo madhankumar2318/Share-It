@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, X, Sparkles, Globe2, AlertCircle, ArrowRight, Check, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, X, Sparkles, Globe2, AlertCircle, ArrowRight, Check, RefreshCw, RotateCcw } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, mapRegionalVoiceToKeywords } from '../utils/regionalKeywords';
 import { useToast } from '../context/ToastContext';
 
@@ -16,65 +16,21 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
 
   const selectedLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLang) || SUPPORTED_LANGUAGES[0];
 
-  const startListening = () => {
-    if (recognitionRef.current) {
-      try {
-        setErrorMessage('');
-        recognitionRef.current.lang = selectedLang;
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch {
-        // Already started or busy
-      }
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // Ignore
-      }
-      setIsListening(false);
-    }
-  };
-
-  const requestMicrophonePermission = async () => {
-    setErrorMessage('');
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      }
-      startListening();
-    } catch (err) {
-      console.warn('Microphone permission request failed:', err);
-      setErrorMessage(
-        'Microphone access is blocked in your browser. Please follow the quick steps below to allow it.'
-      );
-    }
-  };
-
-  // Initialize SpeechRecognition instance
-  useEffect(() => {
-    if (!isOpen) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // Ignore
-        }
-      }
-      return;
-    }
-
+  const setupRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setErrorMessage(
         'Speech recognition is not supported in this browser. Please use Chrome, Edge, or Android Browser.'
       );
-      return;
+      return null;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // Ignore
+      }
     }
 
     try {
@@ -110,11 +66,17 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
       recognition.onerror = (event) => {
         console.warn('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setErrorMessage('Microphone access denied. Please allow microphone permissions in your browser.');
+          setErrorMessage(
+            'Microphone permission was updated in browser settings. Please click "Refresh Page" below to activate it.'
+          );
+        } else if (event.error === 'audio-capture') {
+          setErrorMessage(
+            'Audio capture failed. If using Bluetooth earbuds/headset, make sure they are connected and active, or switch to your laptop internal microphone.'
+          );
         } else if (event.error === 'no-speech') {
           // Normal timeout, keep listening
         } else {
-          setErrorMessage(`Speech recognition error: ${event.error}`);
+          setErrorMessage(`Speech recognition notice: ${event.error}`);
         }
         setIsListening(false);
       };
@@ -124,19 +86,72 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
       };
 
       recognitionRef.current = recognition;
-      try {
-        recognition.start();
-      } catch {
-        // Ignore start error
-      }
+      return recognition;
     } catch {
       setErrorMessage('Could not initialize microphone. Please check browser settings.');
+      return null;
     }
+  };
+
+  const startListening = () => {
+    setErrorMessage('');
+    const rec = setupRecognition();
+    if (rec) {
+      try {
+        rec.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn('Recognition start error:', err);
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    setErrorMessage('');
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      startListening();
+    } catch (err) {
+      console.warn('Microphone permission request failed:', err);
+      setErrorMessage(
+        'Browser requires a page refresh to apply the newly allowed microphone permission. Please click "Refresh Page" below.'
+      );
+    }
+  };
+
+  // Initialize SpeechRecognition instance on open or language switch
+  useEffect(() => {
+    if (!isOpen) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Ignore
+        }
+      }
+      return;
+    }
+
+    startListening();
 
     return () => {
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.stop();
+          recognitionRef.current.abort();
         } catch {
           // Ignore
         }
@@ -253,19 +268,25 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
               <div className="flex items-start gap-2.5 text-xs text-rose-700 dark:text-rose-300">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-semibold">{errorMessage}</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
-                    💡 <strong>To enable:</strong> In your browser's address bar (top left next to the URL), click the <strong>lock / site settings icon (🔒 or 🎛️)</strong>, set <strong>Microphone</strong> to <strong>Allow</strong>, then tap the button below.
-                  </p>
+                  <p className="font-semibold leading-relaxed">{errorMessage}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={requestMicrophonePermission}
-                className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Request Permission & Try Again
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Refresh Page to Apply
+                </button>
+                <button
+                  type="button"
+                  onClick={requestMicrophonePermission}
+                  className="py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Try Microphone Again
+                </button>
+              </div>
             </div>
           ) : (
             <div className="relative flex flex-col items-center justify-center py-2">
