@@ -1,5 +1,5 @@
 // Share-It Service Worker (PWA Offline & Instant Mobile Load)
-const CACHE_NAME = 'shareit-cache-v3';
+const CACHE_NAME = 'shareit-cache-v4';
 
 const CORE_ASSETS = [
   '/',

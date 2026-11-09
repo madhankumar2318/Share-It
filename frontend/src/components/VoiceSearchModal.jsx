@@ -113,34 +113,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
 
     setErrorMessage('');
 
-    // Step 1: Prime microphone permissions using standard Web Media API
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Immediately release test stream
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (mediaErr) {
-        console.warn('getUserMedia check error:', mediaErr);
-        if (mediaErr.name === 'NotAllowedError' || mediaErr.name === 'PermissionDeniedError') {
-          setErrorMessage(
-            'Microphone access is blocked in your browser. Click the lock/settings icon (🔒) next to the URL, set Microphone to "Allow", then click "Refresh Page".'
-          );
-          return;
-        } else if (mediaErr.name === 'NotFoundError' || mediaErr.name === 'DevicesNotFoundError') {
-          setErrorMessage(
-            'No microphone device detected. If using a Bluetooth headset, please ensure it is turned on and connected.'
-          );
-          return;
-        } else if (mediaErr.name === 'NotReadableError' || mediaErr.name === 'TrackStartError') {
-          setErrorMessage(
-            'Microphone is currently in use by another app (e.g. Zoom, Teams, or Recorder). Please close other apps and try again.'
-          );
-          return;
-        }
-      }
-    }
-
-    // Step 2: Start speech recognition
+    // Start speech recognition directly without audio device lock contention
     const rec = setupRecognition();
     if (rec) {
       try {
