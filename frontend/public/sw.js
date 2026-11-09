@@ -1,5 +1,5 @@
 // Share-It Service Worker (PWA Offline & Instant Mobile Load)
-const CACHE_NAME = 'shareit-cache-v2';
+const CACHE_NAME = 'shareit-cache-v3';
 
 const CORE_ASSETS = [
   '/',
@@ -22,13 +22,14 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: Purge any old cache versions and claim clients
+// Activate: Purge any old cache versions and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('🧹 Purging outdated PWA cache:', key);
             return caches.delete(key);
           }
         })
@@ -45,9 +46,6 @@ self.addEventListener('message', (event) => {
 });
 
 // Fetch Strategy:
-// 1. API: Network-only (no caching of dynamic backend data)
-// 2. Navigation (HTML): Network-First (ensures latest JS bundle hashes), Offline fallback to cached /index.html
-// 3. Static Assets (CSS, JS, Fonts, Images): Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -57,7 +55,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. API Requests: Network-first
+  // 1. CRITICAL: Never intercept cross-origin requests (Render backend, Cloudinary CDN, Unsplash)
+  // Let the mobile browser's native network engine handle external API and image requests directly.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // 2. Same-origin API requests (if any relative): Network-first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request))
@@ -65,8 +69,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation requests (Opening the app, switching pages, reloading)
-  // CRITICAL: Always fetch fresh HTML from network so new Vite chunk hashes are loaded.
+  // 3. Navigation requests (Opening the app, switching pages, reloading)
+  // Always fetch fresh HTML from network so new Vite chunk hashes are loaded.
   // Fall back to cached index.html only if completely offline.
   if (request.mode === 'navigate') {
     event.respondWith(
@@ -87,7 +91,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Static Assets: Stale-While-Revalidate
+  // 4. Same-origin Static Assets (CSS, JS, Fonts): Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request)

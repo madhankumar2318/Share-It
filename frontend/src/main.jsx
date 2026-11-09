@@ -28,6 +28,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
+        // Force immediate check for sw.js update on app launch
+        registration.update().catch(() => {});
+
         // Automatically check for service worker updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;

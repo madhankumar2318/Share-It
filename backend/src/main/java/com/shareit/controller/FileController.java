@@ -16,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/files", "/files"})
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequiredArgsConstructor
 public class FileController {
 
@@ -70,8 +71,11 @@ public class FileController {
                     };
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(finalContentType))
+                    .contentLength(storedFile.getData().length)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + storedFile.getId() + "\"")
                     .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                     .header("X-Content-Type-Options", "nosniff")
                     .body(resource);
         }
@@ -82,6 +86,7 @@ public class FileController {
                 .contentType(MediaType.parseMediaType(safeContentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                 .header("X-Content-Type-Options", "nosniff")
                 .body(resource);
     }
