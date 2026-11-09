@@ -6,7 +6,7 @@ const getBaseUrl = () => {
 
 const api = axios.create({
   baseURL: getBaseUrl(),
-  timeout: 45000,
+  timeout: 60000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -56,18 +56,20 @@ api.interceptors.response.use(
       status === 503 ||
       status === 504 ||
       error.code === 'ECONNABORTED' ||
-      (!error.response && error.message?.includes('Network Error'));
+      (!error.response && (error.message?.includes('Network Error') || error.message?.includes('timeout')));
 
     if (
       isColdStartError &&
       originalRequest &&
-      !originalRequest._coldStartRetryDone &&
-      !originalRequest.url?.includes('/auth/login') &&
-      !originalRequest.url?.includes('/auth/register')
+      (originalRequest._coldStartRetryCount || 0) < 2
     ) {
-      originalRequest._coldStartRetryDone = true;
-      console.warn('Backend server standby/cold-start detected (HTTP ' + (status || 'Timeout') + '). Retrying request in 3 seconds...', originalRequest.url);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      originalRequest._coldStartRetryCount = (originalRequest._coldStartRetryCount || 0) + 1;
+      const delayMs = originalRequest._coldStartRetryCount === 1 ? 2500 : 4000;
+      console.warn(
+        `Backend standby/cold-start detected (${status ? 'HTTP ' + status : error.code || 'Network Error'}). Retrying attempt #${originalRequest._coldStartRetryCount} in ${delayMs / 1000}s...`,
+        originalRequest.url
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
       return api(originalRequest);
     }
 

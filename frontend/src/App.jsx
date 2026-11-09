@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -34,6 +34,38 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  // Proactive Backend Pre-Warm & Keep-Alive Ping (Render free tier standby shield)
+  useEffect(() => {
+    const pingBackend = () => {
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
+      fetch(`${backendUrl}/health`, { method: 'GET', keepalive: true }).catch(() => {});
+    };
+
+    // 1. Initial wake-up ping immediately when app opens
+    pingBackend();
+
+    // 2. Keep-alive heartbeat every 10 minutes while app/tab is active
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        pingBackend();
+      }
+    }, 10 * 60 * 1000);
+
+    // 3. Re-ping whenever user switches back to the tab/app
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        pingBackend();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
