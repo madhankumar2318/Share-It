@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, X, Sparkles, Globe2, AlertCircle, ArrowRight, Check, RefreshCw, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, X, Sparkles, Globe2, ArrowRight, Check } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, mapRegionalVoiceToKeywords } from '../utils/regionalKeywords';
 import { useToast } from '../context/ToastContext';
 
@@ -11,166 +11,113 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [notice, setNotice] = useState('');
   const recognitionRef = useRef(null);
 
   const selectedLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLang) || SUPPORTED_LANGUAGES[0];
 
-  const stopListening = () => {
+  // Battle-tested startVoice pattern (identical to working ai-grievance-system)
+  const startVoice = () => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      toast.warning('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Ignore
+        }
+      }
+
+      const rec = new SpeechRec();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = selectedLang || 'en-IN';
+
+      let finalAccumulated = transcript;
+
+      rec.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalAccumulated += event.results[i][0].transcript + ' ';
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        setTranscript(finalAccumulated);
+        setInterimTranscript(interim);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.onerror = (event) => {
+        console.warn('Speech recognition notice:', event);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setNotice('Microphone access was not granted. Please check your browser microphone permission.');
+        } else if (event.error === 'no-speech') {
+          // Normal timeout on pause
+        } else {
+          setNotice('');
+        }
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+      setIsListening(true);
+      setNotice('');
+    } catch (err) {
+      console.warn('Speech recognition start failed:', err);
+      setIsListening(false);
+    }
+  };
+
+  const stopVoice = () => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch {
         // Ignore
       }
-      setIsListening(false);
     }
+    setIsListening(false);
   };
 
-  const setupRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setErrorMessage(
-        'Speech recognition is not supported in this browser. Please use Chrome, Edge, or Android Browser.'
-      );
-      return null;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {
-        // Ignore
-      }
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = selectedLang;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setErrorMessage('');
-      };
-
-      recognition.onresult = (event) => {
-        let currentInterim = '';
-        let currentFinal = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            currentFinal += result[0].transcript + ' ';
-          } else {
-            currentInterim += result[0].transcript;
-          }
-        }
-
-        if (currentFinal) {
-          setTranscript((prev) => (prev ? `${prev} ${currentFinal}` : currentFinal).trim());
-        }
-        setInterimTranscript(currentInterim);
-      };
-
-      recognition.onerror = (event) => {
-        console.warn('Speech recognition error event:', event.error);
-        if (event.error === 'not-allowed') {
-          setErrorMessage(
-            'Speech recognition was not allowed by the browser. If on Windows, check Settings ➔ Privacy & security ➔ Speech and turn ON "Online speech recognition", or refresh the page.'
-          );
-        } else if (event.error === 'audio-capture') {
-          setErrorMessage(
-            'Audio capture failed. If using a Bluetooth headset (like Boult Audio), ensure it is connected and active, or switch to your PC internal microphone.'
-          );
-        } else if (event.error === 'no-speech') {
-          // Normal pause, keep listening or allow user to speak
-        } else {
-          setErrorMessage(`Speech recognition notice: ${event.error}`);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      return recognition;
-    } catch {
-      setErrorMessage('Could not initialize microphone. Please check browser settings.');
-      return null;
-    }
-  };
-
-  // Direct user-gesture click handler to start/stop listening
-  const handleToggleListening = async () => {
-    if (isListening) {
-      stopListening();
-      return;
-    }
-
-    setErrorMessage('');
-
-    // Start speech recognition directly without audio device lock contention
-    const rec = setupRecognition();
-    if (rec) {
-      try {
-        rec.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn('Recognition start exception:', err);
-      }
-    }
-  };
-
-  // On open or close, reset state cleanly without auto-invoking mic
+  // Clean cleanup on modal open / close
   useEffect(() => {
     if (!isOpen) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // Ignore
-        }
-      }
-      setIsListening(false);
-      setErrorMessage('');
-      return;
+      stopVoice();
+      setNotice('');
     }
-
-    // Clean initial state when modal opens
-    setErrorMessage('');
-    setIsListening(false);
-
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // Ignore
-        }
-      }
+      stopVoice();
     };
   }, [isOpen]);
 
   const handleLanguageChange = (langCode) => {
     setSelectedLang(langCode);
     localStorage.setItem('shareit_voice_lang', langCode);
-    stopListening();
+    stopVoice();
     setTranscript('');
     setInterimTranscript('');
+    setNotice('');
   };
 
   const handleApplySearch = (customQuery = null) => {
     const rawText = customQuery || transcript || interimTranscript;
     if (!rawText.trim()) {
-      toast.warning('No speech detected. Please speak into the microphone or type your search.');
+      toast.warning('Please speak into the microphone or type your search.');
       return;
     }
 
-    stopListening();
+    stopVoice();
     const mapped = mapRegionalVoiceToKeywords(rawText.trim());
 
     toast.success(
@@ -256,7 +203,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
           </div>
         </div>
 
-        {/* Central Audio Waves & Mic Animation - ALWAYS VISIBLE */}
+        {/* Central Audio Waves & Mic Animation */}
         <div className="p-6 text-center space-y-5">
           <div className="relative flex flex-col items-center justify-center py-2">
             {/* Concentric Pulsing Waves */}
@@ -269,70 +216,47 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
               )}
               <button
                 type="button"
-                onClick={handleToggleListening}
+                onClick={isListening ? stopVoice : startVoice}
                 className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 cursor-pointer ${
                   isListening
-                    ? 'bg-emerald-600 hover:bg-emerald-700 scale-105 ring-8 ring-emerald-400/30 animate-pulse'
+                    ? 'bg-red-500 hover:bg-red-600 scale-105 ring-8 ring-red-400/30 animate-pulse'
                     : 'bg-emerald-600 hover:bg-emerald-700 hover:scale-105 shadow-emerald-600/30 ring-4 ring-emerald-500/20'
                 }`}
                 title={isListening ? 'Tap to pause' : 'Tap to start speaking'}
               >
-                {isListening ? <Mic className="w-9 h-9 animate-bounce" /> : <Mic className="w-9 h-9" />}
+                {isListening ? <MicOff className="w-9 h-9" /> : <Mic className="w-9 h-9" />}
               </button>
             </div>
 
             <div className="mt-4 space-y-1">
               <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center justify-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-emerald-500 animate-ping' : 'bg-emerald-600'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-red-500 animate-ping' : 'bg-emerald-600'}`} />
                 {isListening
                   ? `Listening in ${selectedLangObj.nativeName} (${selectedLangObj.name})...`
-                  : 'Tap the green microphone to speak'}
+                  : 'Tap the microphone to speak'}
               </span>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {isListening
-                  ? 'Speak clearly into your microphone now'
-                  : 'Click the button above whenever you are ready'}
+                {isListening ? 'Speak now... Your words will appear below' : 'Speak in your preferred language or type manually'}
               </p>
             </div>
           </div>
 
-          {/* Error / Permission Diagnostic Banner */}
-          {errorMessage && (
-            <div className="p-4 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-2xl space-y-3 text-left">
-              <div className="flex items-start gap-2.5 text-xs text-rose-700 dark:text-rose-300">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-semibold leading-relaxed">{errorMessage}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Refresh Page
-                </button>
-                <button
-                  type="button"
-                  onClick={handleToggleListening}
-                  className="py-2 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Try Microphone Again
-                </button>
-              </div>
-            </div>
+          {notice && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 py-2 px-3 rounded-xl">
+              {notice}
+            </p>
           )}
 
           {/* Real-Time Live Transcript Preview or Manual Edit */}
           <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-800 text-left space-y-2 min-h-[90px] flex flex-col justify-center">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Live Speech Transcript / Search Text:
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                {isListening && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block" />}
+                Live Transcription / Search Text:
               </span>
               {currentDisplaySpeech && (
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                  ✓ Speech captured
+                  ✓ Ready
                 </span>
               )}
             </div>
@@ -343,7 +267,7 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
                 setTranscript(e.target.value);
                 setInterimTranscript('');
               }}
-              placeholder={isListening ? 'Listening... speak now...' : 'Your spoken words will appear here (or type manually)...'}
+              placeholder={isListening ? 'Speak now... 🎤 Your words will appear here' : 'Speak or type items (e.g. DSLR Camera, Tent)...'}
               className="w-full bg-transparent text-sm sm:text-base font-semibold text-gray-900 dark:text-white outline-none placeholder-gray-400"
             />
 
@@ -367,9 +291,9 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
             onClick={() => {
               setTranscript('');
               setInterimTranscript('');
-              setErrorMessage('');
+              setNotice('');
             }}
-            disabled={!currentDisplaySpeech && !errorMessage}
+            disabled={!currentDisplaySpeech && !notice}
             className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 transition"
           >
             Clear Text
