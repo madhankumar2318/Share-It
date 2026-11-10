@@ -21,7 +21,7 @@ const Login = () => {
 
   // Proactively ping and wake up backend as soon as the Login page loads
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
+    const backendUrl = import.meta.env.VITE_API_URL || '/api';
     fetch(`${backendUrl}/health`, { method: 'GET', keepalive: true }).catch(() => {});
   }, []);
 

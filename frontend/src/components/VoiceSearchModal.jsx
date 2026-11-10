@@ -17,17 +17,43 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
   const selectedLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLang) || SUPPORTED_LANGUAGES[0];
 
   // Battle-tested startVoice pattern (identical to working ai-grievance-system)
-  const startVoice = () => {
+  const startVoice = async () => {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
-      toast.warning('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      toast.warning('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
+    }
+
+    setNotice('');
+
+    // Proactively verify/request media permission if getUserMedia is available
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately release audio track so SpeechRecognition can bind to it cleanly
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (mediaErr) {
+        console.warn('Microphone permission request failed:', mediaErr);
+        setIsListening(false);
+        if (mediaErr.name === 'NotAllowedError' || mediaErr.name === 'PermissionDeniedError') {
+          setNotice('Microphone access is blocked. Please click the tune/lock icon in your browser address bar and set Microphone to "Allow".');
+        } else if (mediaErr.name === 'NotFoundError' || mediaErr.name === 'DevicesNotFoundError') {
+          setNotice('No microphone found on your device. Please plug in a microphone or type below.');
+        } else {
+          setNotice('Could not access microphone: ' + (mediaErr.message || mediaErr.name));
+        }
+        return;
+      }
     }
 
     try {
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.stop();
+          if (recognitionRef.current.abort) {
+            recognitionRef.current.abort();
+          } else {
+            recognitionRef.current.stop();
+          }
         } catch {
           // Ignore
         }
@@ -53,6 +79,11 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
         setInterimTranscript(interim);
       };
 
+      rec.onstart = () => {
+        setIsListening(true);
+        setNotice('');
+      };
+
       rec.onend = () => {
         setIsListening(false);
       };
@@ -64,8 +95,10 @@ const VoiceSearchModal = ({ isOpen, onClose, onSearchSubmit }) => {
           setNotice('Microphone access was not granted. Please check your browser microphone permission.');
         } else if (event.error === 'no-speech') {
           // Normal timeout on pause
-        } else {
-          setNotice('');
+        } else if (event.error === 'network') {
+          setNotice('Speech recognition network error. Please check your internet connection.');
+        } else if (event.error !== 'aborted') {
+          setNotice(event.error ? `Voice recognition notice: ${event.error}` : '');
         }
       };
 

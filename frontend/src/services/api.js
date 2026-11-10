@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
-  return import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
+  return import.meta.env.VITE_API_URL || '/api';
 };
 
 const api = axios.create({

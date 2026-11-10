@@ -37,7 +37,7 @@ function App() {
   // Proactive Backend Pre-Warm & Keep-Alive Ping (Render free tier standby shield)
   useEffect(() => {
     const pingBackend = () => {
-      const backendUrl = import.meta.env.VITE_API_URL || 'https://share-it-xd01.onrender.com/api';
+      const backendUrl = import.meta.env.VITE_API_URL || '/api';
       fetch(`${backendUrl}/health`, { method: 'GET', keepalive: true }).catch(() => {});
     };
 

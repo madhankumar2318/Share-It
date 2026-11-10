@@ -5,8 +5,21 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
-    port: 5173,
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'https://share-it-xd01.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
   },
   build: {
     rollupOptions: {
