@@ -337,19 +337,19 @@ const CommunityWishlist = () => {
                     {getUrgencyBadge(req.urgency)}
                   </div>
 
-                  {/* Title & Category */}
+                  {/* Title & Category & Location */}
                   <div>
                     <h3 className="font-extrabold text-gray-900 dark:text-white text-base leading-snug">
                       {req.title}
                     </h3>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 font-medium text-[11px]">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-semibold text-[11px]">
                         {req.category}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                        <span className="truncate max-w-[180px]">{req.location || 'Local Area'}</span>
-                      </span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 font-semibold text-[11px] max-w-full">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <span className="truncate">{req.location || 'Local Community'}</span>
+                      </div>
                     </div>
                   </div>
 
