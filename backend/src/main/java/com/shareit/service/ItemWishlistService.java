@@ -1,14 +1,17 @@
 package com.shareit.service;
 
 import com.shareit.dto.WishlistOfferDto;
+import com.shareit.dto.WishlistOfferMessageDto;
 import com.shareit.dto.WishlistRequestDto;
 import com.shareit.dto.WishlistResponseDto;
 import com.shareit.model.ItemWishlist;
 import com.shareit.model.User;
 import com.shareit.model.WishlistOffer;
+import com.shareit.model.WishlistOfferMessage;
 import com.shareit.model.WishlistStatus;
 import com.shareit.repository.ItemWishlistRepository;
 import com.shareit.repository.UserRepository;
+import com.shareit.repository.WishlistOfferMessageRepository;
 import com.shareit.repository.WishlistOfferRepository;
 import com.shareit.security.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ public class ItemWishlistService {
 
     private final ItemWishlistRepository wishlistRepository;
     private final WishlistOfferRepository offerRepository;
+    private final WishlistOfferMessageRepository offerMessageRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
@@ -159,16 +163,88 @@ public class ItemWishlistService {
 
         WishlistOffer saved = offerRepository.save(offer);
 
+        // Record initial offer message in the in-app chat thread
+        WishlistOfferMessage initialMessage = WishlistOfferMessage.builder()
+                .offer(saved)
+                .sender(lender)
+                .content(saved.getMessage())
+                .build();
+        offerMessageRepository.save(initialMessage);
+
         // Notify wishlist requester about the new offer
         notificationService.sendNotification(
                 wishlist.getUser(),
                 "🙋 New Offer for Your Wishlist!",
                 lender.getFullName() + " offered to lend their item for your request \"" + wishlist.getTitle() + "\"!",
                 "WISHLIST_OFFER",
-                "/wishlist"
+                "/wishlist?chatOfferId=" + saved.getId()
         );
 
         return mapOfferToDto(saved);
+    }
+
+    @Transactional
+    public WishlistOfferMessageDto addOfferMessage(Long offerId, String content, String userEmail) {
+        WishlistOffer offer = offerRepository.findById(offerId)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found: " + offerId));
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userEmail));
+
+        Long requesterId = offer.getWishlist().getUser().getId();
+        Long lenderId = offer.getLender().getId();
+        Long currentUserId = currentUser.getId();
+
+        // Privacy & Access Control: Only the requester and this lender can exchange messages
+        if (!currentUserId.equals(requesterId) && !currentUserId.equals(lenderId)) {
+            throw new AccessDeniedException("You are not part of this wishlist conversation");
+        }
+
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be empty");
+        }
+
+        WishlistOfferMessage message = WishlistOfferMessage.builder()
+                .offer(offer)
+                .sender(currentUser)
+                .content(HtmlSanitizer.sanitize(content.trim()))
+                .build();
+        WishlistOfferMessage saved = offerMessageRepository.save(message);
+
+        // Notify other party
+        boolean isRequester = currentUserId.equals(requesterId);
+        User recipient = isRequester ? offer.getLender() : offer.getWishlist().getUser();
+        String notificationTitle = isRequester ? "💬 Reply from Requester!" : "💬 New message for your wishlist request!";
+        String snippet = content.trim().length() > 60 ? content.trim().substring(0, 57) + "..." : content.trim();
+        notificationService.sendNotification(
+                recipient,
+                notificationTitle,
+                currentUser.getFullName() + ": \"" + snippet + "\"",
+                "WISHLIST_CHAT",
+                "/wishlist?chatOfferId=" + offerId
+        );
+
+        return mapOfferMessageToDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WishlistOfferMessageDto> getOfferMessages(Long offerId, String userEmail) {
+        WishlistOffer offer = offerRepository.findById(offerId)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found: " + offerId));
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userEmail));
+
+        Long requesterId = offer.getWishlist().getUser().getId();
+        Long lenderId = offer.getLender().getId();
+        Long currentUserId = currentUser.getId();
+
+        if (!currentUserId.equals(requesterId) && !currentUserId.equals(lenderId)) {
+            throw new AccessDeniedException("You are not part of this wishlist conversation");
+        }
+
+        return offerMessageRepository.findByOfferIdOrderByCreatedAtAsc(offerId)
+                .stream()
+                .map(this::mapOfferMessageToDto)
+                .collect(Collectors.toList());
     }
 
     public WishlistResponseDto mapToDto(ItemWishlist w) {
@@ -201,9 +277,20 @@ public class ItemWishlistService {
                 .wishlistId(o.getWishlist().getId())
                 .lenderId(o.getLender().getId())
                 .lenderName(o.getLender().getFullName())
-                .lenderPhone(o.getLender().getPhone())
+                .lenderPhone(null) // Protected: Never expose lender phone number in public feed
                 .message(o.getMessage())
                 .createdAt(o.getCreatedAt())
+                .build();
+    }
+
+    public WishlistOfferMessageDto mapOfferMessageToDto(WishlistOfferMessage m) {
+        return WishlistOfferMessageDto.builder()
+                .id(m.getId())
+                .offerId(m.getOffer().getId())
+                .senderId(m.getSender().getId())
+                .senderName(m.getSender().getFullName())
+                .content(m.getContent())
+                .createdAt(m.getCreatedAt())
                 .build();
     }
 }

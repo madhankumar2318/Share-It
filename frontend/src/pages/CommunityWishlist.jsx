@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import CreateWishlistModal from '../components/CreateWishlistModal';
+import WishlistChatModal from '../components/WishlistChatModal';
 import {
   Sparkles,
   Search,
@@ -16,6 +17,8 @@ import {
   Navigation,
   MessageSquare,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -33,6 +36,7 @@ const CommunityWishlist = () => {
   const { user, isAuthenticated } = useAuth();
   const { selectedLocation, setIsModalOpen: openLocationModal, clearLocation } = useLocationFilter();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
 
   const [wishlists, setWishlists] = useState([]);
@@ -45,6 +49,10 @@ const CommunityWishlist = () => {
   const [offeringId, setOfferingId] = useState(null);
   const [offerMessage, setOfferMessage] = useState('');
   const [submittingOffer, setSubmittingOffer] = useState(false);
+
+  // In-app Wishlist conversation states
+  const [activeChat, setActiveChat] = useState(null);
+  const [expandedOffersWishlistId, setExpandedOffersWishlistId] = useState(null);
 
   const fetchWishlists = async () => {
     setLoading(true);
@@ -71,6 +79,27 @@ const CommunityWishlist = () => {
   useEffect(() => {
     fetchWishlists();
   }, [selectedCategory, selectedLocation]);
+
+  // Automatically open the private chat if navigated from a notification (/wishlist?chatOfferId=...)
+  useEffect(() => {
+    const chatOfferId = searchParams.get('chatOfferId');
+    if (chatOfferId && wishlists.length > 0) {
+      for (const req of wishlists) {
+        const foundOffer = req.offers?.find((o) => String(o.id) === String(chatOfferId));
+        if (foundOffer) {
+          const isAuthor = user && user.id === req.userId;
+          const otherParty = isAuthor ? foundOffer.lenderName : req.userName;
+          setActiveChat({
+            offer: foundOffer,
+            wishlistTitle: req.title,
+            wishlistLocation: req.location,
+            otherPartyName: otherParty,
+          });
+          break;
+        }
+      }
+    }
+  }, [searchParams, wishlists, user]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -116,13 +145,24 @@ const CommunityWishlist = () => {
     }
     setSubmittingOffer(true);
     try {
-      await api.post(`/wishlists/${wishlistId}/offers`, {
+      const res = await api.post(`/wishlists/${wishlistId}/offers`, {
         message: offerMessage.trim() || 'I have this item available and can lend it to you!',
       });
-      toast.success('Your offer was sent to the neighbor successfully! 🎉');
+      toast.success('Your offer was sent to the neighbor! Opening private chat... 🎉');
       setOfferingId(null);
       setOfferMessage('');
       fetchWishlists();
+
+      // Open in-app chat modal directly with the requester
+      const targetWishlist = wishlists.find((w) => w.id === wishlistId);
+      if (res.data && targetWishlist) {
+        setActiveChat({
+          offer: res.data,
+          wishlistTitle: targetWishlist.title,
+          wishlistLocation: targetWishlist.location,
+          otherPartyName: targetWishlist.userName,
+        });
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send offer');
     } finally {
@@ -370,56 +410,79 @@ const CommunityWishlist = () => {
                   {!isAuthor ? (
                     isOpen ? (
                       <div className="space-y-2">
-                        {/* Secure In-app offer */}
-                        {offeringId === req.id ? (
-                          <div className="space-y-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-emerald-200/60 dark:border-emerald-800/60">
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              <span>Private & Secure In-App Offer</span>
-                            </div>
-                            <textarea
-                              rows={2}
-                              value={offerMessage}
-                              onChange={(e) => setOfferMessage(e.target.value)}
-                              placeholder={`Hi ${req.userName}, I have this available near ${req.location || 'your area'} and can lend it!`}
-                              className="w-full text-xs p-2.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-white outline-none resize-none focus:ring-1 focus:ring-emerald-500"
-                            />
-                            <div className="flex items-center gap-2">
+                        {/* Check if current user already offered to lend */}
+                        {(() => {
+                          const myOffer = req.offers?.find((o) => user && o.lenderId === user.id);
+                          if (myOffer) {
+                            return (
                               <button
                                 type="button"
-                                onClick={() => handleSendInAppOffer(req.id)}
-                                disabled={submittingOffer}
-                                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                                onClick={() =>
+                                  setActiveChat({
+                                    offer: myOffer,
+                                    wishlistTitle: req.title,
+                                    wishlistLocation: req.location,
+                                    otherPartyName: req.userName,
+                                  })
+                                }
+                                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center justify-center gap-2"
                               >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                {submittingOffer ? 'Sending...' : 'Send Offer to Neighbor'}
+                                <MessageSquare className="w-4 h-4" />
+                                <span>You Offered to Lend • Chat with Requester</span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setOfferingId(null)}
-                                className="py-2 px-3 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition"
-                              >
-                                Cancel
-                              </button>
+                            );
+                          }
+
+                          return offeringId === req.id ? (
+                            <div className="space-y-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-emerald-200/60 dark:border-emerald-800/60">
+                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Private & Secure In-App Offer</span>
+                              </div>
+                              <textarea
+                                rows={2}
+                                value={offerMessage}
+                                onChange={(e) => setOfferMessage(e.target.value)}
+                                placeholder={`Hi ${req.userName}, I have this available near ${req.location || 'your area'} and can lend it!`}
+                                className="w-full text-xs p-2.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-white outline-none resize-none focus:ring-1 focus:ring-emerald-500"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendInAppOffer(req.id)}
+                                  disabled={submittingOffer}
+                                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  {submittingOffer ? 'Sending...' : 'Send Offer to Neighbor'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setOfferingId(null)}
+                                  className="py-2 px-3 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!isAuthenticated) {
-                                toast.error('Please login to offer an item to your neighbor');
-                                navigate('/login');
-                                return;
-                              }
-                              setOfferingId(req.id);
-                            }}
-                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center justify-center gap-2"
-                          >
-                            <HandHeart className="w-4 h-4 text-emerald-100" />
-                            <span>I Have This! Offer to Lend</span>
-                          </button>
-                        )}
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isAuthenticated) {
+                                  toast.error('Please login to offer an item to your neighbor');
+                                  navigate('/login');
+                                  return;
+                                }
+                                setOfferingId(req.id);
+                              }}
+                              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center justify-center gap-2"
+                            >
+                              <HandHeart className="w-4 h-4 text-emerald-100" />
+                              <span>I Have This! Offer to Lend</span>
+                            </button>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-2 text-xs font-bold text-gray-400">
@@ -427,30 +490,100 @@ const CommunityWishlist = () => {
                       </div>
                     )
                   ) : (
-                    /* Author Controls */
-                    <div className="flex items-center justify-between gap-2">
-                      {isOpen ? (
+                    /* Author Controls & Offers View */
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        {isOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => handleStatusUpdate(req.id, 'FULFILLED')}
+                            className="flex-1 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Mark as Fulfilled</span>
+                          </button>
+                        ) : (
+                          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 className="w-4 h-4" /> Fulfilled
+                          </span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleStatusUpdate(req.id, 'FULFILLED')}
-                          className="flex-1 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          onClick={() => handleDelete(req.id)}
+                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition"
+                          title="Delete Request"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Mark as Fulfilled</span>
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      ) : (
-                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" /> Fulfilled
-                        </span>
+                      </div>
+
+                      {/* Author View of Neighbor Offers */}
+                      {req.offers && req.offers.length > 0 && (
+                        <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedOffersWishlistId((prev) => (prev === req.id ? null : req.id))
+                            }
+                            className="w-full py-1.5 px-3 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-bold transition flex items-center justify-between"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>View Neighbor Offers ({req.offers.length})</span>
+                            </span>
+                            {expandedOffersWishlistId === req.id ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </button>
+
+                          {expandedOffersWishlistId === req.id && (
+                            <div className="mt-2 space-y-2">
+                              {req.offers.map((offer) => (
+                                <div
+                                  key={offer.id}
+                                  className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-700 space-y-2 text-left"
+                                >
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2 font-bold text-gray-800 dark:text-gray-200">
+                                      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
+                                        {offer.lenderName ? offer.lenderName.charAt(0).toUpperCase() : 'N'}
+                                      </div>
+                                      <span>{offer.lenderName || 'Neighbor'}</span>
+                                    </div>
+                                    <span className="text-[10px] text-gray-400">
+                                      {offer.createdAt
+                                        ? new Date(offer.createdAt).toLocaleDateString()
+                                        : 'Recently'}
+                                    </span>
+                                  </div>
+                                  {offer.message && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 italic bg-white dark:bg-slate-900 p-2 rounded-lg border border-gray-100 dark:border-slate-800">
+                                      "{offer.message}"
+                                    </p>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setActiveChat({
+                                        offer,
+                                        wishlistTitle: req.title,
+                                        wishlistLocation: req.location,
+                                        otherPartyName: offer.lenderName,
+                                      })
+                                    }
+                                    className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    <span>Reply to {offer.lenderName} in Private Chat</span>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(req.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition"
-                        title="Delete Request"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   )}
                 </div>
@@ -465,6 +598,23 @@ const CommunityWishlist = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={fetchWishlists}
+      />
+
+      {/* Private & Secure In-App Wishlist Conversation Modal */}
+      <WishlistChatModal
+        isOpen={Boolean(activeChat)}
+        onClose={() => {
+          setActiveChat(null);
+          if (searchParams.get('chatOfferId')) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete('chatOfferId');
+            setSearchParams(nextParams);
+          }
+        }}
+        offer={activeChat?.offer}
+        wishlistTitle={activeChat?.wishlistTitle}
+        wishlistLocation={activeChat?.wishlistLocation}
+        otherPartyName={activeChat?.otherPartyName}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 package com.shareit.controller;
 
 import com.shareit.dto.WishlistOfferDto;
+import com.shareit.dto.WishlistOfferMessageDto;
 import com.shareit.dto.WishlistRequestDto;
 import com.shareit.dto.WishlistResponseDto;
 import com.shareit.model.WishlistStatus;
@@ -78,5 +79,27 @@ public class ItemWishlistController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String message = payload != null ? payload.get("message") : null;
         return new ResponseEntity<>(wishlistService.addOffer(id, message, userDetails.getUsername()), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/offers/{offerId}/messages")
+    public ResponseEntity<List<WishlistOfferMessageDto>> getOfferMessages(
+            @PathVariable Long offerId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(wishlistService.getOfferMessages(offerId, userDetails.getUsername()));
+    }
+
+    @PostMapping("/offers/{offerId}/messages")
+    public ResponseEntity<WishlistOfferMessageDto> sendOfferMessage(
+            @PathVariable Long offerId,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String content = payload != null ? payload.get("content") : null;
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be empty");
+        }
+        return new ResponseEntity<>(
+                wishlistService.addOfferMessage(offerId, content.trim(), userDetails.getUsername()),
+                HttpStatus.CREATED
+        );
     }
 }
