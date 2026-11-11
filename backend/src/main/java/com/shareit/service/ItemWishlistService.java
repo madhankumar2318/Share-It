@@ -186,8 +186,8 @@ public class ItemWishlistService {
                 .status(w.getStatus())
                 .userId(w.getUser().getId())
                 .userName(w.getUser().getFullName())
-                .userEmail(w.getUser().getEmail())
-                .userPhone(w.getUser().getPhone())
+                .userEmail(null) // Protected: Never expose requester email in public feed
+                .userPhone(null) // Protected: Never expose requester phone number in public feed
                 .offersCount(offerDtos.size())
                 .offers(offerDtos)
                 .createdAt(w.getCreatedAt())

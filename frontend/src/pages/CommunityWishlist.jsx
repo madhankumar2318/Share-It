@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import CreateWishlistModal from '../components/CreateWishlistModal';
-import WhatsAppButton from '../components/WhatsAppButton';
 import {
   Sparkles,
   Search,
@@ -16,6 +15,7 @@ import {
   HandHeart,
   Navigation,
   MessageSquare,
+  ShieldCheck,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -167,7 +167,7 @@ const CommunityWishlist = () => {
             Ask your neighbors!
           </h1>
           <p className="text-emerald-100 text-sm sm:text-base">
-            Post what you're looking for. Neighbors who own it can 1-click connect on WhatsApp or offer to lend it.
+            Post what you're looking for. Neighbors who own it can securely connect and offer to lend it.
           </p>
           <div className="pt-2">
             <button
@@ -307,12 +307,6 @@ const CommunityWishlist = () => {
             const isAuthor = user && user.id === req.userId;
             const isOpen = req.status === 'OPEN';
 
-            // Pre-filled WhatsApp message for neighbor offering to lend
-            const whatsAppMessage = `Hi ${req.userName}! I saw your request on Share-It for "${req.title}". I have this available in ${req.location || 'the area'} and can lend it to you! Are you still looking?`;
-            const whatsAppUrl = req.userPhone
-              ? `https://wa.me/${req.userPhone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsAppMessage)}`
-              : null;
-
             return (
               <div
                 key={req.id}
@@ -376,40 +370,34 @@ const CommunityWishlist = () => {
                   {!isAuthor ? (
                     isOpen ? (
                       <div className="space-y-2">
-                        {/* 1-Click WhatsApp Button to lend */}
-                        {req.userPhone && (
-                          <WhatsAppButton
-                            href={whatsAppUrl}
-                            recipientName={req.userName}
-                            label="I Have This! Lend via WhatsApp"
-                            className="w-full justify-center"
-                            size="md"
-                          />
-                        )}
-
-                        {/* In-app offer toggle */}
+                        {/* Secure In-app offer */}
                         {offeringId === req.id ? (
-                          <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-700">
+                          <div className="space-y-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-emerald-200/60 dark:border-emerald-800/60">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Private & Secure In-App Offer</span>
+                            </div>
                             <textarea
                               rows={2}
                               value={offerMessage}
                               onChange={(e) => setOfferMessage(e.target.value)}
-                              placeholder="E.g. I have a Canon 1500D with 18-55mm lens available this weekend!"
-                              className="w-full text-xs p-2.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-white outline-none resize-none"
+                              placeholder={`Hi ${req.userName}, I have this available near ${req.location || 'your area'} and can lend it!`}
+                              className="w-full text-xs p-2.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-white outline-none resize-none focus:ring-1 focus:ring-emerald-500"
                             />
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleSendInAppOffer(req.id)}
                                 disabled={submittingOffer}
-                                className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition"
+                                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
                               >
-                                {submittingOffer ? 'Sending...' : 'Send In-App Offer'}
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                {submittingOffer ? 'Sending...' : 'Send Offer to Neighbor'}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setOfferingId(null)}
-                                className="py-1.5 px-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold"
+                                className="py-2 px-3 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition"
                               >
                                 Cancel
                               </button>
@@ -418,11 +406,18 @@ const CommunityWishlist = () => {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setOfferingId(req.id)}
-                            className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5"
+                            onClick={() => {
+                              if (!isAuthenticated) {
+                                toast.error('Please login to offer an item to your neighbor');
+                                navigate('/login');
+                                return;
+                              }
+                              setOfferingId(req.id);
+                            }}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow flex items-center justify-center gap-2"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Offer via In-App Message</span>
+                            <HandHeart className="w-4 h-4 text-emerald-100" />
+                            <span>I Have This! Offer to Lend</span>
                           </button>
                         )}
                       </div>
