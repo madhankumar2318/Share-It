@@ -45,12 +45,25 @@ import ContactlessDropoffModal from '../components/ContactlessDropoffModal';
 import ContactlessCollectModal from '../components/ContactlessCollectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import WhatsAppButton from '../components/WhatsAppButton';
 import { getDefaultItemImage, resolveItemImageUrl, handleImageError } from '../utils/imageUtils';
 import TrustBadge from '../components/TrustBadge';
 import { DashboardRowSkeleton } from '../components/SkeletonCard';
 import { compressImage } from '../utils/imageCompressor';
-import { buildTransactionWhatsAppUrl, buildReturnPingWhatsAppUrl, getDueDateStatus } from '../utils/whatsapp';
+
+/** Computes due-date status from an endDate string */
+const getDueDateStatus = (endDate) => {
+  if (!endDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((end - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 1) return { type: 'ok', label: `${diffDays} days remaining`, color: 'green' };
+  if (diffDays === 1) return { type: 'ok', label: '1 day remaining', color: 'green' };
+  if (diffDays === 0) return { type: 'due', label: 'Due Today', color: 'amber' };
+  return { type: 'overdue', label: `Overdue by ${Math.abs(diffDays)} day(s)`, color: 'red' };
+};
 
 /** Color-coded due-date countdown badge shown on ACCEPTED requests */
 const DueDateBadge = ({ endDate }) => {
@@ -1074,22 +1087,6 @@ const Dashboard = () => {
                         Chat
                       </button>
 
-                      {req.borrowerPhone && (
-                        <WhatsAppButton
-                          href={buildTransactionWhatsAppUrl({
-                            phone: req.borrowerPhone,
-                            recipientName: req.borrowerName,
-                            itemName: req.itemTitle,
-                            role: 'borrower',
-                            myRoleName: user?.fullName,
-                          })}
-                          recipientName={req.borrowerName}
-                          label="WhatsApp"
-                          size="sm"
-                          variant="compact"
-                        />
-                      )}
-
                       {/* 1-Tap In-App Polite Return Reminder — only shown once item is handed over and not yet returned */}
                       {req.status === 'ACCEPTED' && req.handoverAt && !req.returnedAt && (
                         <button
@@ -1117,29 +1114,6 @@ const Dashboard = () => {
                           )}
                         </button>
                       )}
-
-                      {/* 1-Click Friendly Return Ping — only shown once item is handed over */}
-                      {req.status === 'ACCEPTED' && req.handoverAt && req.borrowerPhone && (() => {
-                        const pingUrl = buildReturnPingWhatsAppUrl({
-                          phone: req.borrowerPhone,
-                          borrowerName: req.borrowerName,
-                          itemTitle: req.itemTitle,
-                          endDate: req.endDate,
-                        });
-                        if (!pingUrl) return null;
-                        return (
-                          <a
-                            href={pingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={`Send a friendly return reminder to ${req.borrowerName}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/60 text-violet-700 dark:text-violet-300 rounded-xl text-xs font-semibold transition border border-violet-200 dark:border-violet-800"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            Return Ping
-                          </a>
-                        );
-                      })()}
 
                       {req.status === 'PENDING' && (() => {
                         const conflict = receivedRequests.find(
@@ -1667,22 +1641,6 @@ const Dashboard = () => {
                       <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Chat
                     </button>
-
-                    {req.ownerPhone && (
-                      <WhatsAppButton
-                        href={buildTransactionWhatsAppUrl({
-                          phone: req.ownerPhone,
-                          recipientName: req.ownerName,
-                          itemName: req.itemTitle,
-                          role: 'lender',
-                          myRoleName: user?.fullName,
-                        })}
-                        recipientName={req.ownerName}
-                        label="WhatsApp"
-                        size="sm"
-                        variant="compact"
-                      />
-                    )}
 
                     {/* 1-Click Request Extension button for active accepted requests */}
                     {req.status === 'ACCEPTED' && !req.returnedAt && req.extensionStatus !== 'PENDING' && (

@@ -180,7 +180,7 @@ const TrustBadge = ({ trust, showScore = true, className = '' }) => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-slate-800/30 text-xs">
                   <span className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                     <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>WhatsApp / Mobile Number</span>
+                    <span>Mobile Number Verification</span>
                   </span>
                   {phoneVerified ? (
                     <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">

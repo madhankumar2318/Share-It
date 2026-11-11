@@ -210,9 +210,9 @@ const NotificationBell = () => {
         )}
       </button>
 
-      {/* Dropdown Menu Drawer */}
+      {/* Dropdown Menu Drawer (Mobile-centered, Desktop-aligned) */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[90vw] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 z-50 overflow-hidden animate-fadeIn">
+        <div className="fixed inset-x-3 top-16 sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:absolute w-auto sm:w-96 max-w-[calc(100vw-24px)] sm:max-w-none bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 z-50 overflow-hidden animate-fadeIn">
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50">
             <div className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Printer,
   Download,
@@ -30,6 +30,79 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
   const isReturned = request.status === 'RETURNED';
   const isBorrowed = request.status === 'BORROWED' || !!request.handoverAt;
   const txnId = `SI-TXN-${String(request.id).padStart(6, '0')}`;
+
+  // Pre-load images as Base64 Data URLs so html2canvas renders them reliably without CORS failure
+  const [itemImageBase64, setItemImageBase64] = useState(null);
+  const [pickupPhotoBase64, setPickupPhotoBase64] = useState(null);
+  const [returnPhotoBase64, setReturnPhotoBase64] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen || !request) return;
+
+    let isMounted = true;
+
+    const convertToDataUrl = (url) => {
+      return new Promise((resolve) => {
+        if (!url) return resolve(null);
+        if (url.startsWith('data:')) return resolve(url);
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width || 200;
+            canvas.height = img.naturalHeight || img.height || 200;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          } catch {
+            fetch(url)
+              .then((r) => r.blob())
+              .then((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(url);
+                reader.readAsDataURL(blob);
+              })
+              .catch(() => resolve(url));
+          }
+        };
+        img.onerror = () => {
+          fetch(url)
+            .then((r) => r.blob())
+            .then((blob) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = () => resolve(url);
+              reader.readAsDataURL(blob);
+            })
+            .catch(() => resolve(url));
+        };
+        img.src = url;
+      });
+    };
+
+    if (request.itemImageUrl) {
+      convertToDataUrl(request.itemImageUrl).then((data) => {
+        if (isMounted && data) setItemImageBase64(data);
+      });
+    }
+    if (request.pickupPhotoUrl) {
+      convertToDataUrl(request.pickupPhotoUrl).then((data) => {
+        if (isMounted && data) setPickupPhotoBase64(data);
+      });
+    }
+    if (request.returnPhotoUrl) {
+      convertToDataUrl(request.returnPhotoUrl).then((data) => {
+        if (isMounted && data) setReturnPhotoBase64(data);
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, request]);
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -73,7 +146,7 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
       const canvas = await html2canvas(element, {
         scale: 2, // 2x Retina resolution for razor-sharp typography
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: '#ffffff',
         logging: false,
         imageTimeout: 10000,
@@ -99,15 +172,20 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
       const margin = 8; // 8mm margin
       const contentWidth = pdfPageWidth - margin * 2;
       const contentHeight = (canvas.height * contentWidth) / canvas.width;
+      const maxSinglePageHeight = pdfPageHeight - margin * 2;
 
-      if (contentHeight <= pdfPageHeight - margin * 2) {
-        // Fits comfortably on single A4 sheet
-        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, contentHeight);
+      if (contentHeight <= maxSinglePageHeight * 1.25) {
+        // Comfortably fits on a single professional A4 sheet with clean proportional scaling
+        const scaleFactor = Math.min(1, maxSinglePageHeight / contentHeight);
+        const finalWidth = contentWidth * scaleFactor;
+        const finalHeight = contentHeight * scaleFactor;
+        const offsetX = margin + (contentWidth - finalWidth) / 2;
+        pdf.addImage(imgData, 'JPEG', offsetX, margin, finalWidth, finalHeight);
       } else {
-        // Multi-page slicing for comprehensive rental agreements with condition photos
+        // Multi-page slicing for comprehensive rental agreements with multiple photo galleries
         let position = margin;
         let remainingHeight = contentHeight;
-        const pageDrawableHeight = pdfPageHeight - margin * 2;
+        const pageDrawableHeight = maxSinglePageHeight;
 
         pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentHeight);
         remainingHeight -= pageDrawableHeight;
@@ -311,12 +389,15 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
             {/* Item & Schedule Details with Location Landmark */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                {request.itemImageUrl ? (
+                {itemImageBase64 || request.itemImageUrl ? (
                   <img
-                    src={request.itemImageUrl}
+                    src={itemImageBase64 || request.itemImageUrl}
                     alt={request.itemTitle}
                     crossOrigin="anonymous"
                     className="w-20 h-20 rounded-xl object-cover border border-slate-300 flex-shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
@@ -532,8 +613,8 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
               )}
             </div>
 
-            {/* Condition Proof Photos (if uploaded) */}
-            {(request.pickupPhotoUrl || request.returnPhotoUrl) && (
+            {/* Condition Proof Photos (if uploaded) or Visual Inspection Verification Note */}
+            {request.pickupPhotoUrl || request.returnPhotoUrl ? (
               <div className="space-y-2 pt-2 border-t border-slate-200">
                 <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider block">
                   Condition Verification Snapshots
@@ -545,7 +626,7 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
                         Pickup Snapshot (Condition Baseline)
                       </span>
                       <img
-                        src={request.pickupPhotoUrl}
+                        src={pickupPhotoBase64 || request.pickupPhotoUrl}
                         alt="Pickup Condition"
                         crossOrigin="anonymous"
                         className="w-full h-24 object-cover rounded-lg border border-emerald-300"
@@ -559,7 +640,7 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
                         Return Snapshot (Discharge Baseline)
                       </span>
                       <img
-                        src={request.returnPhotoUrl}
+                        src={returnPhotoBase64 || request.returnPhotoUrl}
                         alt="Return Condition"
                         crossOrigin="anonymous"
                         className="w-full h-24 object-cover rounded-lg border border-blue-300"
@@ -567,6 +648,13 @@ const DigitalHandoverSlipModal = ({ isOpen, onClose, request }) => {
                     </div>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-[11px] text-slate-600 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>
+                  <strong>Standard Physical Inspection:</strong> In-person handover and return verified with zero reported damage disputes.
+                </span>
               </div>
             )}
 

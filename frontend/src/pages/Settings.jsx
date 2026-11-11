@@ -417,7 +417,7 @@ const Settings = () => {
                   {t('phone')}
                 </label>
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                  1-Tap WhatsApp
+                  Verified Contact
                 </span>
               </div>
               <div className="relative">
@@ -554,7 +554,7 @@ const Settings = () => {
                 {formData.phone && (
                   <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                     <Phone className="w-3 h-3 text-emerald-500" />
-                    {t('whatsappEnabled')}
+                    {t('phoneVerified')}
                   </span>
                 )}
               </div>

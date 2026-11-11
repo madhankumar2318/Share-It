@@ -4,8 +4,6 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationFilter } from '../context/LocationContext';
 import { MapPin, Calendar, ArrowLeft, CheckCircle2, AlertCircle, Star, Lock, ShieldCheck, ShieldAlert, Info, Coins } from 'lucide-react';
-import WhatsAppButton from '../components/WhatsAppButton';
-import { buildItemWhatsAppUrl } from '../utils/whatsapp';
 import SmartCalendar from '../components/SmartCalendar';
 import TrustBadge from '../components/TrustBadge';
 import FavoriteButton from '../components/FavoriteButton';
@@ -139,18 +137,6 @@ const ItemDetail = () => {
   const isOwner = user && user.id === item.ownerId;
   const isAvailable = item.status === 'AVAILABLE';
 
-  const whatsAppUrl =
-    !isOwner && item.ownerPhone
-      ? buildItemWhatsAppUrl({
-          phone: item.ownerPhone,
-          itemName: item.title,
-          ownerName: item.ownerName,
-          borrowerName: user?.fullName,
-          location: item.location,
-          dates: startDate && endDate ? `${startDate} to ${endDate}` : null,
-        })
-      : null;
-
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <Link
@@ -225,33 +211,13 @@ const ItemDetail = () => {
               </div>
             )}
 
-            {/* Direct WhatsApp Contact Button (Only for Authenticated Non-Owners) */}
+            {/* Safe In-App Direct Lending Notice */}
             {!isOwner && (
               <div className="pt-2 border-t border-gray-200/60 dark:border-slate-700/60">
-                {isAuthenticated ? (
-                  whatsAppUrl ? (
-                    <WhatsAppButton
-                      href={whatsAppUrl}
-                      recipientName={item.ownerName}
-                      label="Connect on WhatsApp"
-                      className="w-full justify-center"
-                      size="md"
-                    />
-                  ) : (
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 italic text-center">
-                      Full contact number unlocked once borrow request is accepted.
-                    </p>
-                  )
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/login')}
-                    className="w-full py-2.5 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100/70 dark:hover:bg-emerald-950/60 transition flex items-center justify-center gap-2"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Log in to View Full Contact & Request</span>
-                  </button>
-                )}
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>Protected In-App Handover & Real-Time Chat</span>
+                </div>
               </div>
             )}
           </div>
